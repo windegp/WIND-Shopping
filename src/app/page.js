@@ -194,11 +194,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. قسم تسوق التشكيلة (متحرك + قابل للسحب يدوياً) */}
+      {/* 2. قسم تسوق التشكيلة (حركة لا نهائية وانسيابية) */}
       <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
         <SectionHeader title="تسوق التشكيلة" subTitle="دفء الشتاء في كل قطعة" />
+        {/* الحاوية الأساسية تسمح بالتحريك اليدوي يمين/شمال */}
         <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing">
           <div className="flex gap-6 animate-marquee-slow pause-on-hover" dir="ltr">
+            {/* نكرر المصفوفة 3 مرات لضمان عدم وجود فجوة بيضاء عند انتهاء الحركة */}
             {[...products, ...products, ...products].map((product, index) => (
               <div key={`${product.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
                 <ProductCard {...product} />
