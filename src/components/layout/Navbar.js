@@ -65,8 +65,8 @@ export default function Navbar() {
               <img 
                 src="/logo.jpg" 
                 alt="WIND" 
-                // التعديل هنا: h-14 للموبايل و h-16 للشاشات الأكبر
-                className="h-14 md:h-16 w-auto object-contain hover:scale-105 transition-transform duration-300" 
+                // التعديل هنا: h-16 للموبايل و h-17 للشاشات الأكبر
+                className="h-16 md:h-17 w-auto object-contain hover:scale-105 transition-transform duration-300" 
               />
             </Link>
           </div>
