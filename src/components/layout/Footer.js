@@ -1,82 +1,84 @@
 "use client";
+import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#121212] border-t border-[#333] pt-16 pb-8 text-white">
-      <div className="max-w-[1280px] mx-auto px-4">
+    <footer className="bg-[#121212] border-t border-[#222] pt-20 pb-10 text-white" dir="rtl">
+      <div className="max-w-[1400px] mx-auto px-6">
         
-        {/* الجزء العلوي: روابط السوشيال ميديا واللوجو */}
-        <div className="flex flex-col items-center mb-12 space-y-8">
-          <div className="flex gap-10">
-            <a href="#" className="hover:text-[#F5C518] transition duration-300 transform hover:scale-110">
-              <span className="text-xl md:text-2xl font-black">Instagram</span>
-            </a>
-            <a href="#" className="hover:text-[#F5C518] transition duration-300 transform hover:scale-110">
-              <span className="text-xl md:text-2xl font-black">TikTok</span>
-            </a>
-            <a href="#" className="hover:text-[#F5C518] transition duration-300 transform hover:scale-110">
-              <span className="text-xl md:text-2xl font-black">X</span>
-            </a>
+        {/* الجزء العلوي: اللوجو والوصف */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 mb-16 items-start">
+          
+          {/* البراند - يأخذ مساحة أكبر */}
+          <div className="lg:col-span-2 flex flex-col items-start text-right">
+            <img 
+              src="/logo.jpg" 
+              alt="WIND" 
+              className="h-12 w-auto object-contain mb-6 grayscale hover:grayscale-0 transition-all duration-500" 
+            />
+            <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-sm">
+              أزياء تعكس شخصيتك وتمنحك الثقة. نحن في WIND نهتم بأدق التفاصيل لنقدم لك تجربة تسوق فريدة تجمع بين الدفء والأناقة العصرية.
+            </p>
+            
+            {/* روابط التواصل الاجتماعي - أيقونات نصية بسيطة */}
+            <div className="flex gap-6 mt-8">
+              {['Instagram', 'TikTok', 'Facebook'].map((social) => (
+                <a 
+                  key={social} 
+                  href="#" 
+                  className="text-xs font-black tracking-widest uppercase text-gray-500 hover:text-[#F5C518] transition-colors"
+                >
+                  {social}
+                </a>
+              ))}
+            </div>
           </div>
 
-          {/* لوجو WIND داخل إطار احترافي يتماشى مع الهيدر */}
-          <div className="flex flex-col items-center">
-            <div className="border border-[#F5C518]/30 p-2 rounded-lg bg-[#1a1a1a] shadow-2xl flex items-center justify-center">
-              <img 
-                src="/logo.jpg" 
-                alt="WIND" 
-                className="h-10 md:h-14 w-auto object-contain" 
-              />
+          {/* الأقسام - موزعة بشكل احترافي */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:col-span-3 gap-8 w-full">
+            <div>
+              <h4 className="font-black text-sm mb-6 text-white uppercase tracking-tighter">تسوق معنا</h4>
+              <ul className="space-y-4 text-gray-500 text-sm font-bold">
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">وصل حديثاً</li>
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">الأكثر مبيعاً</li>
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">التشكيلة الكاملة</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-black text-sm mb-6 text-white uppercase tracking-tighter">المساعدة</h4>
+              <ul className="space-y-4 text-gray-500 text-sm font-bold">
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">تتبع الطلب</li>
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">سياسة الاستبدال</li>
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">الشحن والتوصيل</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-black text-sm mb-6 text-white uppercase tracking-tighter">عن WIND</h4>
+              <ul className="space-y-4 text-gray-500 text-sm font-bold">
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">قصتنا</li>
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">تواصل معنا</li>
+                <li className="hover:text-[#F5C518] cursor-pointer transition-colors">سياسة الخصوصية</li>
+              </ul>
             </div>
           </div>
         </div>
 
-        {/* الشبكة الرئيسية للروابط */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 text-right" dir="rtl">
-          <div>
-            <h4 className="font-black text-lg mb-4 text-[#F5C518]">تسوق معنا</h4>
-            <ul className="space-y-2 text-gray-400 text-sm font-bold">
-              <li className="hover:text-[#F5C518] cursor-pointer transition">وصل حديثاً</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">الأكثر مبيعاً</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">مجموعة الشتاء</li>
-            </ul>
+        {/* الجزء السفلي: الحقوق وطرق الدفع */}
+        <div className="border-t border-[#222] pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-right">
+            <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.2em]">
+              © 2026 WIND COLLECTION. ALL RIGHTS RESERVED.
+            </p>
           </div>
           
-          <div>
-            <h4 className="font-black text-lg mb-4 text-[#F5C518]">المساعدة</h4>
-            <ul className="space-y-2 text-gray-400 text-sm font-bold">
-              <li className="hover:text-[#F5C518] cursor-pointer transition">تتبع الطلب</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">الاسترجاع والاستبدال</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">الشحن والتوصيل</li>
-            </ul>
+          {/* أيقونة بسيطة للبراند في الأسفل */}
+          <div className="flex items-center gap-4 opacity-30 grayscale hover:opacity-100 transition-opacity">
+             <span className="text-[10px] font-bold text-gray-500">SECURE PAYMENT</span>
+             <div className="h-4 w-px bg-gray-700"></div>
+             <span className="text-[10px] font-bold text-gray-500">FAST DELIVERY</span>
           </div>
-
-          <div>
-            <h4 className="font-black text-lg mb-4 text-[#F5C518]">عن WIND</h4>
-            <ul className="space-y-2 text-gray-400 text-sm font-bold">
-              <li className="hover:text-[#F5C518] cursor-pointer transition">قصتنا</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">الجودة والاستدامة</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">تواصل معنا</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-black text-lg mb-4 text-[#F5C518]">قانوني</h4>
-            <ul className="space-y-2 text-gray-400 text-sm font-bold">
-              <li className="hover:text-[#F5C518] cursor-pointer transition">سياسة الخصوصية</li>
-              <li className="hover:text-[#F5C518] cursor-pointer transition">شروط الخدمة</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* الجزء السفلي: الحقوق */}
-        <div className="border-t border-[#333] pt-8 text-center">
-          <p className="text-gray-500 text-xs font-bold tracking-widest">
-            © 2026 WIND Shopping | جميع الحقوق محفوظة
-          </p>
-          <p className="text-[#F5C518] text-[10px] mt-2 font-black uppercase tracking-[0.3em]">
-            powered by WIND Technology
-          </p>
         </div>
       </div>
     </footer>
