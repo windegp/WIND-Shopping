@@ -4,28 +4,34 @@ import Footer from "../components/layout/Footer";
 import { CartProvider } from "../context/CartContext";
 import CartDrawer from "../components/layout/CartDrawer";
 import NotificationHandler from "../components/NotificationHandler"; 
-import Script from 'next/script'; // استيراد Script للتعامل مع المكتبات الخارجية
+import Script from 'next/script';
+import { Cairo } from 'next/font/google'; // استيراد الخط من جوجل
+
+// إعداد الخط (نختار الأوزان التي تناسب ستايل IMDb القوي)
+const cairo = Cairo({
+  subsets: ['arabic'],
+  weight: ['400', '700', '900'], // العادي، العريض، والعريض جداً للعناوين
+  display: 'swap',
+});
 
 export const metadata = {
-  title: 'Wind | متجر ويند الرسمي',
-  description: 'أناقة تعكس جوهر الدفء',
+  title: 'WIND Shopping | وينـد للتسوقـ الموقع الرسمي',
+  description: ' تجربة تسوق فريدة مع WIND Shopping! ',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl">
       <head>
-        {/* تحميل مكتبة OneSignal الرسمية */}
         <Script 
           src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" 
           strategy="afterInteractive" 
         />
       </head>
-      <body className="bg-[#121212] text-white antialiased">
+      {/* دمج كلاس الخط هنا ليتم تطبيقه على كل نصوص الموقع */}
+      <body className={`${cairo.className} bg-[#121212] text-white antialiased`}>
         <CartProvider>
-          {/* هذا المكون سيهتم بتفعيل المكتبة وطلب الإذن من العميل */}
           <NotificationHandler />
-
           <Navbar />
           <CartDrawer /> 
 

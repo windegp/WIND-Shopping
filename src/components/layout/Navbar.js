@@ -30,17 +30,17 @@ export default function Navbar() {
           </svg>
         </button>
 
-        {/* اللوجو - تم إضافة flex-1 و justify-center لضمان التوسط الدقيق */}
-        <div className="flex-1 flex justify-center">
-          <Link href="/" className="flex items-center">
-            <img 
-              src="/logo.jpg" 
-              alt="WIND" 
-              className="h-8 w-auto object-contain block" 
-              // أضفنا block و w-auto لضمان عدم تشوه الأبعاد
-            />
-          </Link>
-        </div>
+        {/* اللوجو - تم تكبير الحاوية وضبط الأبعاد ليكون بارزاً */}
+<div className="flex-1 flex justify-center">
+  <Link href="/" className="flex items-center">
+    <img 
+      src="/logo.jpg" 
+      alt="WIND" 
+      className="h-10 md:h-12 w-auto object-contain block transition-transform duration-300 hover:scale-105" 
+      // h-10 للموبايل (40px) و h-12 للشاشات الأكبر (48px)
+    />
+  </Link>
+</div>
 
         {/* أيقونات البحث والسلة */}
         <div className="flex items-center gap-3 flex-shrink-0">

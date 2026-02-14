@@ -26,7 +26,6 @@ export async function POST(req) {
     const { formData, cartItems, total } = await req.json();
     const orderNumber = getNextOrderNumber();
 
-    // 1. إرسال الإيميل
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         throw new Error("بيانات الإيميل غير موجودة في الـ .env");
     }
@@ -39,40 +38,78 @@ export async function POST(req) {
       },
     });
 
-    const itemsHtml = cartItems.map(item => `
-      <div style="border-bottom: 1px solid #eee; padding: 10px 0; text-align: right;" dir="rtl">
-        <p><strong>المنتج:</strong> ${item.title}</p>
-        <p><strong>المقاس:</strong> ${item.selectedSize}</p>
-        <p><strong>الكمية:</strong> ${item.qty}</p>
-        <p><strong>السعر:</strong> ${item.price} EGP</p>
+    // تصميم الفاتورة بستايل WIND الجديد (IMDb Style)
+    const htmlContent = `
+      <div dir="rtl" style="font-family: 'Arial', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #333;">
+        <div style="text-align: center; border-bottom: 2px solid #F5C518; padding-bottom: 20px; margin-bottom: 20px;">
+          <h1 style="color: #F5C518; margin: 0; font-size: 28px; letter-spacing: 2px;">WIND SHOPPING</h1>
+          <p style="color: #a1a1a1; font-size: 14px; margin-top: 5px;">طلب جديد رقم #${orderNumber}</p>
+        </div>
+
+        <div style="background-color: #1a1a1a; padding: 15px; border-radius: 4px; margin-bottom: 25px; border-right: 4px solid #F5C518;">
+          <h3 style="color: #F5C518; margin-top: 0; font-size: 16px;">بيانات العميل:</h3>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>الاسم:</strong> ${formData.firstName} ${formData.lastName}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>الهاتف:</strong> ${formData.phone}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>العنوان:</strong> ${formData.address}, ${formData.governorate}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>البريد:</strong> ${formData.email}</p>
+        </div>
+
+        <h3 style="color: #F5C518; font-size: 16px; margin-bottom: 10px;">ملخص المشتريات:</h3>
+        <table style="width: 100%; border-collapse: collapse; color: #ffffff;">
+          <thead>
+            <tr style="background-color: #222;">
+              <th style="padding: 12px; text-align: right; border-bottom: 1px solid #333; font-size: 13px;">المنتج</th>
+              <th style="padding: 12px; text-align: center; border-bottom: 1px solid #333; font-size: 13px;">الكمية</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 13px;">السعر</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cartItems.map(item => `
+              <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #222; font-size: 13px;">
+                  <span style="font-weight: bold; color: #eee;">${item.title}</span><br/>
+                  <small style="color: #F5C518;">المقاس: ${item.selectedSize}</small>
+                </td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #222;">${item.qty}</td>
+                <td style="padding: 12px; text-align: left; border-bottom: 1px solid #222; font-weight: bold;">${item.price} EGP</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 30px; padding: 15px; background-color: #F5C518; color: #000; border-radius: 4px; text-align: center;">
+          <span style="font-size: 14px; font-weight: bold;">الإجمالي الكلي المستحق</span>
+          <h2 style="margin: 5px 0 0 0; font-size: 24px; font-weight: 900;">${total} EGP</h2>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: #555; font-size: 11px;">
+          <p>© 2026 WIND Shopping. All rights reserved.</p>
+        </div>
       </div>
-    `).join('');
+    `;
 
     const adminMailOptions = {
-      from: `"WIND Store" <${process.env.EMAIL_USER}>`,
+      from: `"WIND Shopping" <${process.env.EMAIL_USER}>`,
       to: "windegp@gmail.com",
-      subject: `طلب جديد رقم #${orderNumber} - من ${formData.firstName}`,
-      html: `<div dir="rtl" style="font-family: Arial;"><h2>طلب جديد #${orderNumber}</h2>${itemsHtml}<h3>الإجمالي: ${total} EGP</h3></div>`,
+      subject: `💰 طلب جديد #${orderNumber} - ${formData.firstName}`,
+      html: htmlContent,
     };
 
     await transporter.sendMail(adminMailOptions);
 
-    // 2. إرسال الإشعار لـ OneSignal (تم تصحيح الـ Headers)
+    // 2. إرسال الإشعار لـ OneSignal
     const appId = process.env.ONESIGNAL_APP_ID;
     const restKey = process.env.ONESIGNAL_REST_API_KEY;
 
     if (appId && restKey) {
       try {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
-        // تنظيف المفتاح من أي مسافات أو حروف غريبة
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://windshopping.com";
         const cleanRestKey = restKey.trim();
 
         await fetch("https://onesignal.com/api/v1/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            // الحل هنا: نكتب Basic كـ String ونضيف المفتاح النظيف
             "Authorization": "Basic " + cleanRestKey 
           },
           body: JSON.stringify({
