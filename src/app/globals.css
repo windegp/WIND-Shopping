@@ -1,0 +1,38 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* تعريف الألوان الخاصة بهوية Wind */
+:root {
+  --wind-bg-deep: #121212;      /* الأسود الفخم للخلفية */
+  --wind-bg-card: #1f1f1f;      /* رمادي داكن للأقسام والكروت */
+  --wind-accent: #F5C518;       /* الأصفر الذهبي للتفاعل والتمييز */
+  --wind-text-main: #ffffff;    /* الأبيض الناصع للنصوص */
+  --wind-text-sub: #a3a3a3;     /* الرمادي الهادئ للنصوص الفرعية */
+}
+
+body {
+  background-color: var(--wind-bg-deep);
+  color: var(--wind-text-main);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* تنسيق شريط التمرير بأسلوب Wind */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--wind-bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--wind-accent);
+}
