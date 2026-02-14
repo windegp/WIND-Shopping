@@ -9,6 +9,10 @@ module.exports = {
       colors: {
         windGold: '#F5C518',
       },
+      fontFamily: {
+        // نربط الخط الأساسي للمشروع بمتغير خط Cairo
+        sans: ['var(--font-cairo)', 'Cairo', 'sans-serif'],
+      },
     },
   },
   plugins: [],

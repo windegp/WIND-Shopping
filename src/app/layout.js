@@ -5,30 +5,31 @@ import { CartProvider } from "../context/CartContext";
 import CartDrawer from "../components/layout/CartDrawer";
 import NotificationHandler from "../components/NotificationHandler"; 
 import Script from 'next/script';
-import { Cairo } from 'next/font/google'; // استيراد الخط من جوجل
+import { Cairo } from 'next/font/google';
 
-// إعداد الخط (نختار الأوزان التي تناسب ستايل IMDb القوي)
+// 1. إعداد الخط مع إضافة خاصية variable لربطه بـ Tailwind
 const cairo = Cairo({
   subsets: ['arabic'],
-  weight: ['400', '700', '900'], // العادي، العريض، والعريض جداً للعناوين
+  weight: ['400', '700', '900'],
   display: 'swap',
+  variable: '--font-cairo', // تعريف المتغير هنا
 });
 
 export const metadata = {
-  title: 'WIND Shopping | وينـد للتسوقـ الموقع الرسمي',
-  description: ' تجربة تسوق فريدة مع WIND Shopping! ',
+  title: 'WIND | الأناقة والدفء في مكان واحد',
+  description: 'اكتشف مجموعات WIND الفريدة من الشيلان والملابس الراقية المصممة بعناية.',
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" className={cairo.variable}> 
       <head>
         <Script 
           src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" 
           strategy="afterInteractive" 
         />
       </head>
-      {/* دمج كلاس الخط هنا ليتم تطبيقه على كل نصوص الموقع */}
+      {/* 2. دمج المتغير والكلاس في الـ body لضمان سيطرة الخط على الموقع بالكامل */}
       <body className={`${cairo.className} bg-[#121212] text-white antialiased`}>
         <CartProvider>
           <NotificationHandler />
