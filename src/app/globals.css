@@ -10,11 +10,12 @@
   --wind-sub: #A1A1A1;     /* رمادي النصوص الفرعية */
 }
 
+/* التعديل هنا لضمان عمل Cairo */
 body {
   background-color: var(--wind-bg);
   color: var(--wind-text);
-  /* استخدام خط افتراضي نظيف وصغير */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* حذفنا قائمة الخطوط القديمة وتركنا الأولوية لـ Cairo */
+  font-family: var(--font-cairo), sans-serif !important; 
   margin: 0;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -22,17 +23,17 @@ body {
 
 /* تصغير الخطوط العامة لتناسب الموبايل */
 html {
-  font-size: 14px; /* الأساس للموبايل بدل 16px */
+  font-size: 14px; 
 }
 
 @layer utilities {
-  /* كلاسات مساعدة لتقليل الحجم */
   .text-xxs {
-    font-size: 0.65rem; /* 10px - للمعلومات الثانوية جداً */
+    font-size: 0.65rem;
     line-height: 1rem;
   }
 }
-/* إخفاء شريط التمرير لكن مع الحفاظ على وظيفة السحب */
+
+/* إخفاء شريط التمرير مع الحفاظ على وظيفة السحب */
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
