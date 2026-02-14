@@ -59,21 +59,24 @@ export default function Home() {
         0% { transform: scale(1); }
         100% { transform: scale(1.15); }
       }
+      /* حركة التقييمات - سريعة ومنتظمة */
       @keyframes marquee {
         0% { transform: translateX(0); }
-        100% { transform: translateX(100%); }
+        100% { transform: translateX(50%); }
       }
-      @keyframes marquee-reverse {
+      /* حركة التشكيلة - عكس الاتجاه ولا نهائية */
+      @keyframes marquee-infinite {
         0% { transform: translateX(0); }
-        100% { transform: translateX(-100%); }
+        100% { transform: translateX(-50%); }
       }
       .animate-marquee {
         display: flex;
-        animation: marquee 30s linear infinite; /* تسريع التقييمات */
+        animation: marquee 25s linear infinite;
       }
-      .animate-marquee-slow {
+      .animate-marquee-infinite {
         display: flex;
-        animation: marquee-reverse 40s linear infinite; /* تسريع التشكيلة قليلاً */
+        width: max-content;
+        animation: marquee-infinite 35s linear infinite;
       }
       .pause-on-hover:hover {
         animation-play-state: paused;
@@ -194,14 +197,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. قسم تسوق التشكيلة (حركة لا نهائية وانسيابية) */}
+      {/* 2. قسم تسوق التشكيلة - تعديل الحركة اللانهائية وعكس الاتجاه */}
       <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
         <SectionHeader title="تسوق التشكيلة" subTitle="دفء الشتاء في كل قطعة" />
-        {/* الحاوية الأساسية تسمح بالتحريك اليدوي يمين/شمال */}
-        <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing">
-          <div className="flex gap-6 animate-marquee-slow pause-on-hover" dir="ltr">
-            {/* نكرر المصفوفة 3 مرات لضمان عدم وجود فجوة بيضاء عند انتهاء الحركة */}
-            {[...products, ...products, ...products].map((product, index) => (
+        <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
+          <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
+            {/* نكرر المنتجات مرتين فقط مع ضبط الـ Keyframes لضمان اتصال لا نهائي */}
+            {[...products, ...products].map((product, index) => (
               <div key={`${product.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
                 <ProductCard {...product} />
               </div>
@@ -256,7 +258,7 @@ export default function Home() {
         <CollectionsSection />
       </div>
 
-      {/* 6. آراء وتجارب عائلة WIND (أسرع وبدون تحريك يدوي) */}
+      {/* 6. آراء وتجارب عائلة WIND - أسرع وبدون تحريك يدوي */}
       <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
@@ -272,9 +274,10 @@ export default function Home() {
               + أضف تجربتك
             </button>
           </div>
-          <div className="relative flex overflow-hidden pointer-events-none md:pointer-events-auto">
+          {/* تم منع السحب اليدوي هنا بـ pointer-events-none على الحاوية */}
+          <div className="relative flex overflow-hidden pointer-events-none">
             <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
-              {[...reviews, ...reviews, ...reviews].map((rev, index) => (
+              {[...reviews, ...reviews].map((rev, index) => (
                 <div key={`${rev.id}-${index}`} className="min-w-[300px] md:min-w-[400px] bg-[#121212] border border-[#333] p-6 rounded-lg hover:border-[#F5C518]/50 transition-all duration-500">
                   <div className="flex items-center gap-4 mb-4" dir="rtl">
                     {rev.userImage ? (
@@ -300,6 +303,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* الباقي من الكود يظل كما هو مع التأكد من SectionHeader وتصنيفات المنتجات */}
       {/* 7. وصل حديثاً */}
       <section className="my-12">
         <SectionHeader title="وصل حديثاً" subTitle="أحدث صيحات الشتاء" />
