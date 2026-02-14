@@ -46,7 +46,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 2. النافبار الرئيسية - تم ضبط الارتفاع ليكون متوازناً (h-20) */}
+      {/* 2. النافبار الرئيسية */}
       <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-2xl">
         <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between relative">
           
@@ -59,13 +59,14 @@ export default function Navbar() {
             </svg>
           </button>
 
-          {/* اللوجو - تم تصغيره ليناسب "البار" تماماً ويكون مريحاً للعين */}
+          {/* اللوجو - تم تكبيره ليكون واضحاً ومناسباً لارتفاع البار */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
             <Link href="/" className="block">
               <img 
                 src="/logo.jpg" 
                 alt="WIND" 
-                className="h-10 md:h-12 w-auto object-contain hover:scale-105 transition-transform duration-300" 
+                // التعديل هنا: h-14 للموبايل و h-16 للشاشات الأكبر
+                className="h-14 md:h-16 w-auto object-contain hover:scale-105 transition-transform duration-300" 
               />
             </Link>
           </div>
@@ -90,15 +91,13 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* المنيو الجانبية (Mobile Menu) */}
+        {/* المنيو الجانبية (Mobile Menu) - كما هي تماماً */}
         {isMenuOpen && (
           <div className="fixed inset-0 z-[200] flex" dir="rtl">
-            {/* الخلفية المظلمة - جعلتها أقل قتامة قليلاً لراحة العين */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
             
             <div className="relative bg-[#1a1a1a] w-[80%] max-w-[300px] h-full shadow-2xl flex flex-col border-l border-[#333] animate-[slideInRight_0.3s_ease-out]">
               
-              {/* ترويسة القائمة - تم ضبط المسافات لتبدأ من تحت شريط المتصفح مباشرة */}
               <div className="p-6 pt-10 bg-[#222] border-b border-[#333] flex justify-between items-center">
                 <h3 className="text-[#F5C518] font-black text-xl tracking-tighter">القائمة</h3>
                 <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-white p-1">
