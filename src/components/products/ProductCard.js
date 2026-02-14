@@ -1,74 +1,59 @@
 "use client";
-import Link from "next/link"; // الخطوة 1: استدعاء المكون المسؤول عن الروابط
+import Link from "next/link";
 
-// أضفنا id هنا عشان نستخدمه في رابط الصفحة
 export default function ProductCard({ id, title, price, oldPrice, rating, category, folderName, mainImage }) {
   
-  const imagePath = `/images/products/${folderName}/${mainImage}`;
   const discount = oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : null;
 
   return (
-    // الخطوة 2: تغليف الكارت بالكامل بـ Link
-    // المسار هيروح لـ /product/[id]
-    <Link href={`/product/${id}`} className="group block">
-      <div className="bg-[#1a1a1a] rounded-sm border border-[#333] overflow-hidden hover:border-[#F5C518]/50 transition-all duration-500 shadow-2xl">
+    <Link href={`/product/${id}`} className="block group h-full">
+      {/* كارت بستايل IMDb: خلفية رمادية داكنة، حواف دائرية بسيطة */}
+      <div className="bg-[#1A1A1A] rounded-[4px] overflow-hidden flex flex-col h-full shadow-md hover:shadow-[#F5C518]/10 transition-shadow border border-[#333]">
         
-        {/* منطقة الصورة */}
-        <div className="relative aspect-[2/3] overflow-hidden bg-[#222]">
-          
+        {/* منطقة الصورة - نسبة 2:3 مثل بوسترات الأفلام */}
+        <div className="relative aspect-[2/3] bg-[#222]">
           {discount && (
-            <div className="absolute top-2 right-2 z-10 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-sm shadow-lg animate-pulse">
-              خصم {discount}%
+            <div className="absolute top-0 left-0 bg-[#F5C518] text-black text-[10px] font-bold px-2 py-0.5 z-10">
+              %{discount}
             </div>
           )}
-
-          {!discount && category && (
-            <div className="absolute top-2 right-2 z-10 bg-[#F5C518] text-black text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-tighter">
-              {category}
-            </div>
-          )}
-
-          <button className="absolute top-2 left-2 z-10 text-white/50 hover:text-[#F5C518] transition-colors">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-            </svg>
-          </button>
-
           <img 
-            src={imagePath} 
+            src={`/images/products/${folderName}/${mainImage}`} 
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100"
+            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+            loading="lazy"
           />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
 
-        {/* تفاصيل المنتج */}
-        <div className="p-4 space-y-2">
-          <div className="flex items-center gap-1">
-            <span className="text-[#F5C518] text-xs">★</span>
-            <span className="text-gray-400 text-[10px] font-bold mt-0.5">{rating || "4.8"}</span>
+        {/* تفاصيل الكارت - مضغوطة جداً */}
+        <div className="p-3 flex flex-col flex-grow">
+          
+          {/* التقييم + الفئة */}
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-[#F5C518] text-[10px]">★</span>
+            <span className="text-gray-400 text-[10px]">{rating || "4.8"}</span>
+            <span className="text-gray-600 text-[10px] px-1">•</span>
+            <span className="text-gray-500 text-[9px] truncate">{category}</span>
           </div>
 
-          <h3 className="text-white font-bold text-sm line-clamp-1 group-hover:text-[#F5C518] transition-colors">
+          {/* العنوان - خط صغير وكثيف */}
+          <h3 className="text-white text-[13px] font-semibold leading-tight mb-2 line-clamp-2 min-h-[2.2em]">
             {title}
           </h3>
 
-          <div className="flex items-baseline gap-2 pt-1">
-            <span className="text-[#F5C518] font-black text-lg tracking-tighter">
-              {price} <small className="text-[10px] mr-0.5">EGP</small>
-            </span>
-            
-            {oldPrice && (
-              <span className="text-gray-500 text-xs line-through decoration-[#F5C518]/40">
-                {oldPrice} <small className="text-[10px]">EGP</small>
-              </span>
-            )}
-          </div>
+          {/* السعر والزر في الأسفل */}
+          <div className="mt-auto pt-2">
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-white font-bold text-sm">{price} <span className="text-[9px] font-normal text-gray-400">EGP</span></span>
+              {oldPrice && (
+                <span className="text-gray-600 text-[10px] line-through">{oldPrice}</span>
+              )}
+            </div>
 
-          {/* زر العرض (تم تغيير النص ليكون أكثر منطقية مع الرابط) */}
-          <div className="w-full mt-4 bg-[#252525] group-hover:bg-[#F5C518] text-white group-hover:text-black font-black py-2.5 rounded-sm text-[10px] text-center uppercase tracking-widest transition-all duration-300 shadow-lg">
-            أضف إلى السلة +
+            {/* زر يحاكي زر "Watchlist" أو "Trailer" */}
+            <button className="w-full bg-[#2C2C2C] hover:bg-[#333] text-[#5799ef] hover:text-white text-[11px] font-bold py-1.5 rounded-[4px] border-none transition-colors">
+              عرض التفاصيل
+            </button>
           </div>
         </div>
       </div>
