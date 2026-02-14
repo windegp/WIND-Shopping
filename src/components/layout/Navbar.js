@@ -16,7 +16,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ستايل الأنيميشن للشريط المتحرك */}
       <style jsx global>{`
         @keyframes marquee {
           0% { transform: translateX(100%); }
@@ -36,8 +35,8 @@ export default function Navbar() {
         }
       `}</style>
 
-      {/* 1. الشريط العلوي المتحرك (Top Bar) - z-index أقل من القائمة */}
-      <div className="bg-[#F5C518] text-black text-xs md:text-sm font-black py-2 overflow-hidden relative z-[50] marquee-container border-b-2 border-black">
+      {/* 1. الشريط العلوي المتحرك */}
+      <div className="bg-[#F5C518] text-black text-xs md:text-sm font-black py-2 overflow-hidden relative z-[50] marquee-container border-b border-black">
         <div className="animate-marquee w-full text-center tracking-widest">
           <span className="mx-8">🚚 توصيل سريع لجميع محافظات مصر</span>
           <span className="mx-8">•</span>
@@ -47,32 +46,30 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 2. النافبار الرئيسية - تم زيادة الارتفاع ليتناسب مع اللوجو الكبير */}
-      <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-24 w-full shadow-2xl">
+      {/* 2. النافبار الرئيسية - تم ضبط الارتفاع ليكون متوازناً (h-20) */}
+      <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-2xl">
         <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between relative">
           
-          {/* زر القائمة الجانبية */}
           <button 
             onClick={() => setIsMenuOpen(true)} 
             className="text-white p-2 hover:bg-[#222] rounded-full transition-colors z-20"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
 
-          {/* اللوجو - تم تكبيره ليصبح h-18 على الموبايل و h-22 على الشاشات الكبيرة */}
+          {/* اللوجو - تم تصغيره ليناسب "البار" تماماً ويكون مريحاً للعين */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
             <Link href="/" className="block">
               <img 
                 src="/logo.jpg" 
                 alt="WIND" 
-                className="h-18 md:h-22 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-[0_0_15px_rgba(245,197,24,0.2)]" 
+                className="h-10 md:h-12 w-auto object-contain hover:scale-105 transition-transform duration-300" 
               />
             </Link>
           </div>
 
-          {/* أيقونات البحث والسلة */}
           <div className="flex items-center gap-4 z-20">
             <button className="text-white p-2 hover:text-[#F5C518] transition-colors hidden md:block">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,11 +78,11 @@ export default function Navbar() {
             </button>
             
             <button onClick={toggleCart} className="relative p-2 group">
-              <svg className="w-8 h-8 text-white group-hover:text-[#F5C518] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-7 h-7 text-white group-hover:text-[#F5C518] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartItems?.length > 0 && (
-                <span className="absolute top-1 right-0 bg-[#F5C518] text-black text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#121212]">
+                <span className="absolute top-1 right-0 bg-[#F5C518] text-black text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-black">
                   {cartItems.length}
                 </span>
               )}
@@ -96,46 +93,42 @@ export default function Navbar() {
         {/* المنيو الجانبية (Mobile Menu) */}
         {isMenuOpen && (
           <div className="fixed inset-0 z-[200] flex" dir="rtl">
-            {/* الخلفية المظلمة */}
-            <div className="absolute inset-0 bg-black/95 backdrop-blur-md transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
+            {/* الخلفية المظلمة - جعلتها أقل قتامة قليلاً لراحة العين */}
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
             
-            {/* جسم القائمة - تم إضافة pt-8 لضمان عدم تداخل النص مع البار العلوي */}
-            <div className="relative bg-[#1a1a1a] w-[85%] max-w-[320px] h-full shadow-[5px_0_50px_rgba(0,0,0,0.9)] flex flex-col border-l border-[#333] animate-[slideInRight_0.3s_ease-out]">
+            <div className="relative bg-[#1a1a1a] w-[80%] max-w-[300px] h-full shadow-2xl flex flex-col border-l border-[#333] animate-[slideInRight_0.3s_ease-out]">
               
-              {/* ترويسة القائمة - مع مسافة علوية كافية */}
-              <div className="p-8 pt-12 bg-[#222] border-b border-[#333] flex justify-between items-center">
-                <h3 className="text-[#F5C518] font-black text-2xl tracking-tighter">القائمة</h3>
-                <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-white transition-colors bg-[#333] rounded-full p-1">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              {/* ترويسة القائمة - تم ضبط المسافات لتبدأ من تحت شريط المتصفح مباشرة */}
+              <div className="p-6 pt-10 bg-[#222] border-b border-[#333] flex justify-between items-center">
+                <h3 className="text-[#F5C518] font-black text-xl tracking-tighter">القائمة</h3>
+                <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-white p-1">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
-              {/* روابط القائمة */}
-              <div className="flex-1 overflow-y-auto py-6">
-                <ul className="space-y-3 px-4">
+              <div className="flex-1 overflow-y-auto py-4">
+                <ul className="space-y-1 px-4">
                   {categories.map((cat, i) => (
                     <li key={i}>
                       <Link 
                         href={cat.link} 
                         onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center justify-between p-4 rounded-md transition-all duration-200 
+                        className={`flex items-center justify-between p-4 rounded-sm transition-all duration-200 
                           ${cat.highlight 
-                            ? 'bg-[#F5C518] text-black font-black hover:bg-[#ffdb4d] scale-[1.02]' 
+                            ? 'bg-[#F5C518] text-black font-black' 
                             : 'text-gray-200 hover:bg-[#252525] hover:text-[#F5C518] font-bold border-b border-[#333]/30'
                           }`}
                       >
-                        <span className="text-lg">{cat.name}</span>
-                        {!cat.highlight && <span className="text-xl text-gray-600">›</span>}
+                        <span className="text-base">{cat.name}</span>
+                        {!cat.highlight && <span className="text-gray-600">›</span>}
                       </Link>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* تذييل القائمة */}
-              <div className="p-8 border-t border-[#333] bg-[#222]">
-                 <img src="/logo.jpg" alt="WIND" className="h-10 w-auto mx-auto opacity-50 mb-4 grayscale" />
-                 <p className="text-gray-500 text-[10px] text-center uppercase tracking-widest font-bold">WIND Essential Collection © 2026</p>
+              <div className="p-6 border-t border-[#333] bg-[#222]">
+                 <p className="text-gray-500 text-[10px] text-center uppercase tracking-widest font-bold">WIND © 2026</p>
               </div>
             </div>
           </div>
