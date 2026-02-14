@@ -22,7 +22,7 @@ const styles = {
   }
 };
 
-// --- مكون الهيدر (كما هو) ---
+// --- مكون الهيدر ---
 const SectionHeader = ({ title, subTitle, link = "#" }) => (
   <div className="flex items-center justify-between mb-6 px-4 pt-10" dir="rtl">
     <div className="flex items-center gap-3">
@@ -41,27 +41,51 @@ const SectionHeader = ({ title, subTitle, link = "#" }) => (
 export default function Home() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false); // حالة المودال
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false); 
   const [newReview, setNewReview] = useState({ name: '', comment: '', rating: 10, image: null });
 
   // تصنيف المنتجات
   const bestSellers = products.slice(0, 4);
-  const newArrivals = products.slice(4, 9); // زدنا العدد لتصميم الـ Grid
+  const newArrivals = products.slice(4, 9);
   const topRated = products.filter(p => parseFloat(p.rating) >= 4.9);
   const isdalat = products.filter(p => p.category === 'isdal');
   const shawls = products.filter(p => p.category === 'shawl');
   const discounts = products.filter(p => p.oldPrice);
 
   useEffect(() => {
-    // إضافة Keyframes للأنيميشن ديناميكياً
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
       @keyframes kenburns {
         0% { transform: scale(1); }
         100% { transform: scale(1.15); }
       }
+      /* حركة من اليمين لليسار (للآراء) */
+      @keyframes marquee {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(100%); }
+      }
+      /* حركة من اليسار لليمين (للتشكيلة) - سرعة أبطأ 60 ثانية */
+      @keyframes marquee-reverse {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-100%); }
+      }
+      .animate-marquee {
+        display: flex;
+        animation: marquee 50s linear infinite;
+      }
+      .animate-marquee-slow {
+        display: flex;
+        animation: marquee-reverse 60s linear infinite;
+      }
+      .pause-on-hover:hover {
+        animation-play-state: paused;
+      }
       .scrollbar-hide::-webkit-scrollbar { display: none; }
       .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
     `;
     document.head.appendChild(styleSheet);
 
@@ -72,9 +96,12 @@ export default function Home() {
     }, (error) => {
       console.error("Error fetching reviews:", error);
     });
+
     return () => {
       unsubscribe();
-      document.head.removeChild(styleSheet);
+      if (document.head.contains(styleSheet)) {
+        document.head.removeChild(styleSheet);
+      }
     };
   }, []);
 
@@ -85,11 +112,9 @@ export default function Home() {
     try {
       let url = "";
       if (newReview.image) {
-        console.log("Uploading image...");
         const imageRef = ref(storage, `reviews/${Date.now()}_${newReview.image.name}`);
         const snapshot = await uploadBytes(imageRef, newReview.image);
         url = await getDownloadURL(snapshot.ref);
-        console.log("Image uploaded:", url);
       }
       
       await addDoc(collection(db, "reviews"), {
@@ -102,7 +127,7 @@ export default function Home() {
       });
       
       setNewReview({ name: '', comment: '', rating: 10, image: null });
-      setIsReviewModalOpen(false); // إغلاق المودال بعد النجاح
+      setIsReviewModalOpen(false);
       alert("شكراً لتقييمك! تم النشر بنجاح.");
     } catch (error) {
       console.error("Error adding document: ", error);
@@ -116,7 +141,7 @@ export default function Home() {
       
       {/* ===== REVIEW POPUP MODAL ===== */}
       {isReviewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={styles.modalOverlay}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={styles.modalOverlay}>
           <div className="bg-[#1A1A1A] w-full max-w-lg rounded-sm border border-[#F5C518] shadow-[0_0_30px_rgba(245,197,24,0.1)] relative animate-[fadeIn_0.3s_ease-out]">
             <button 
               onClick={() => setIsReviewModalOpen(false)}
@@ -127,7 +152,7 @@ export default function Home() {
               <h3 className="text-[#F5C518] text-2xl font-black mb-1 text-center">اترك بصمتك</h3>
               <p className="text-gray-400 text-xs text-center mb-6">شاركنا تجربتك مع منتجات WIND</p>
               
-              <form onSubmit={handleSendReview} className="space-y-4">
+              <form onSubmit={handleSendReview} className="space-y-4 text-right">
                 <input 
                   type="text" placeholder="الاسم" 
                   className="w-full bg-[#121212] border border-[#333] p-3 text-sm text-white focus:border-[#F5C518] outline-none rounded-sm"
@@ -159,7 +184,7 @@ export default function Home() {
 
       <HeroSection />
 
-      {/* 1. أهم الاختيارات لك (Carousel Classis) */}
+      {/* 1. أهم الاختيارات لك */}
       <section>
         <SectionHeader title="أهم الاختيارات لك" subTitle="بناءً على ذوقك الرفيع" />
         <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
@@ -171,20 +196,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. الأكثر مبيعاً (تصميم Highlight - كارت كبير بجانبه قائمة) */}
+      {/* 2. قسم تسوق التشكيلة (المتحرك من اليسار لليمين) */}
+      <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
+        <SectionHeader title="تسوق التشكيلة" subTitle="دفء الشتاء في كل قطعة" />
+        <div className="relative flex group">
+          <div className="flex gap-6 animate-marquee-slow pause-on-hover" dir="ltr">
+            {/* تكرار المنتجات لضمان استمرارية الحركة */}
+            {[...products, ...products].map((product, index) => (
+              <div key={`${product.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
+                <ProductCard {...product} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. الأكثر مبيعاً */}
       <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
         <div className="px-4 mb-4" dir="rtl">
            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">الأكثر مبيعاً</h2>
         </div>
         <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto">
-          {/* الكارت المميز الكبير */}
           {bestSellers[0] && (
             <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
               <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأول مبيعاً #1</div>
               <ProductCard {...bestSellers[0]} />
             </div>
           )}
-          {/* باقي القائمة Grid */}
           <div className="md:w-2/3 w-full grid grid-cols-2 gap-3">
              {bestSellers.slice(1, 5).map(p => (
                <div key={p.id} className="scale-90 origin-top-right"><ProductCard {...p} /></div>
@@ -193,7 +231,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. التقييمات العامة (شريط الثقة) */}
+      {/* 4. شريط الثقة */}
       <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
         <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
           <div className="group">
@@ -213,53 +251,57 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. مجموعات مميزة (Grid Layout) */}
+      {/* 5. مجموعات مميزة */}
       <div className="my-10">
         <SectionHeader title="مجموعات مميزة" />
         <CollectionsSection />
       </div>
 
-      {/* 5. آراء وتجارب العملاء (مع زر المودال) */}
-      <section className="bg-[#1a1a1a] py-16 relative overflow-hidden">
-        {/* خلفية جمالية خفيفة */}
+      {/* 6. آراء وتجارب عائلة WIND */}
+      <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
-        
-        <div className="max-w-[1280px] mx-auto px-4 relative z-10">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
-             <div>
-                <h2 className="text-2xl md:text-3xl font-black text-white">آراء عائلة WIND</h2>
-                <p className="text-[#F5C518] text-xs font-bold mt-2 uppercase tracking-wide">أصوات حقيقية .. تجارب دافئة</p>
-             </div>
-             <button 
-               onClick={() => setIsReviewModalOpen(true)}
-               className="bg-[#F5C518] text-black px-6 py-3 font-black text-sm hover:scale-105 transition-transform shadow-[0_4px_14px_0_rgba(245,197,24,0.39)]"
-             >
-               + أضف تجربتك
-             </button>
+        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-right" dir="rtl">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter">آراء عائلة WIND</h2>
+              <p className="text-[#F5C518] text-sm font-bold mt-2 uppercase tracking-[0.2em]">أصوات حقيقية - تجارب صادقة</p>
+            </div>
+            <button 
+              onClick={() => setIsReviewModalOpen(true)}
+              className="bg-transparent border-2 border-[#F5C518] text-[#F5C518] px-8 py-3 font-black text-sm hover:bg-[#F5C518] hover:text-black transition-all duration-300 rounded-full"
+            >
+              + أضف تجربتك
+            </button>
           </div>
-
-          {/* Masonry-style Grid للتقييمات */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {reviews.slice(0, 6).map((rev, index) => (
-              <div key={rev.id} className={`bg-[#222] border border-[#333] p-5 rounded-sm hover:border-[#F5C518] transition-colors duration-300 ${index === 0 ? 'md:col-span-2 md:row-span-1 bg-[#252525]' : ''}`}>
-                <div className="flex justify-between items-start mb-3">
-                   <div className="flex items-center gap-2">
-                     {rev.userImage ? <img src={rev.userImage} className="w-10 h-10 rounded-full object-cover border border-[#444]" /> : <div className="w-10 h-10 rounded-full bg-[#333] flex items-center justify-center text-[#F5C518] font-bold">{rev.userName.charAt(0)}</div>}
-                     <div>
-                       <h4 className="text-white font-bold text-xs">{rev.userName}</h4>
-                       <span className="text-[#F5C518] font-black text-xs">★ {rev.rating}</span>
-                     </div>
-                   </div>
-                   <span className="text-[10px] text-gray-500">{rev.timestamp?.toDate ? new Date(rev.timestamp.toDate()).toLocaleDateString('ar-EG') : ''}</span>
+          <div className="relative flex overflow-hidden group">
+            <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
+              {[...reviews, ...reviews].map((rev, index) => (
+                <div key={`${rev.id}-${index}`} className="min-w-[300px] md:min-w-[400px] bg-[#121212] border border-[#333] p-6 rounded-lg hover:border-[#F5C518]/50 transition-all duration-500">
+                  <div className="flex items-center gap-4 mb-4" dir="rtl">
+                    {rev.userImage ? (
+                      <img src={rev.userImage} className="w-12 h-12 rounded-full object-cover border-2 border-[#F5C518]/20" alt="" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center text-[#F5C518] font-black border border-[#333]">
+                        {rev.userName?.charAt(0)}
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <h4 className="text-white font-black text-sm">{rev.userName}</h4>
+                      <div className="flex gap-0.5 mt-1">
+                        {[...Array(5)].map((_, i) => (<span key={i} className="text-[#F5C518] text-[10px]">★</span>))}
+                        <span className="text-gray-500 text-[9px] mr-2 italic">({rev.rating}/10)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-sm leading-relaxed italic text-right" dir="rtl">"{rev.userComment}"</p>
                 </div>
-                <p className={`text-gray-300 text-sm italic leading-relaxed ${index === 0 ? 'text-base' : 'line-clamp-4'}`}>"{rev.userComment}"</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 6. وصل حديثاً (تصميم شريطي) */}
+      {/* 7. وصل حديثاً */}
       <section className="my-12">
         <SectionHeader title="وصل حديثاً" subTitle="أحدث صيحات الشتاء" />
         <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
@@ -271,16 +313,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. آخر الأخبار (Magazine Style) */}
+      {/* 8. Magazine Style */}
       <section className="px-4 max-w-[1280px] mx-auto my-16">
         <SectionHeader title="WIND Magazine" subTitle="مقالات في الأناقة" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-          {[{ id: 1, title: "فن اختيار الشال المناسب لبشرتك", tag: "نصائح", img: "/images/blog1.webp" }, { id: 2, title: "رحلة الخيط: من المصنع إليك", tag: "قصتنا", img: "/images/blog2.webp" }].map((art) => (
-            <div key={art.id} className="relative h-64 group cursor-pointer overflow-hidden">
+          {[{ id: 1, title: "فن اختيار الشال المناسب لبشرتك", tag: "نصائح" }, { id: 2, title: "رحلة الخيط: من المصنع إليك", tag: "قصتنا" }].map((art) => (
+            <div key={art.id} className="relative h-64 group cursor-pointer overflow-hidden bg-[#222]">
               <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all z-10"></div>
-              {/* هنا المفروض صورة المقال، استبدلتها بلون للتوضيح */}
               <div className="absolute inset-0 bg-[#333] group-hover:scale-110 transition-transform duration-[2s]"></div> 
-              <div className="absolute bottom-0 right-0 p-6 z-20 w-full bg-gradient-to-t from-black via-black/60 to-transparent">
+              <div className="absolute bottom-0 right-0 p-6 z-20 w-full bg-gradient-to-t from-black via-black/60 to-transparent text-right">
                 <span className="bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 mb-2 inline-block">{art.tag}</span>
                 <h3 className="text-white font-black text-xl group-hover:text-[#F5C518] transition-colors">{art.title}</h3>
               </div>
@@ -289,7 +330,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 8. الأعلى تقييماً */}
+      {/* 9. الأعلى تقييماً */}
       <section className="px-4 mb-12">
         <SectionHeader title="الأعلى تقييماً" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -297,10 +338,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 9. قصة WIND (مع تأثير Zoom Out المتحرك) */}
+      {/* 10. قصة WIND */}
       <section className="relative h-[400px] overflow-hidden border-t border-[#333]">
         <div className="absolute inset-0 bg-black/50 z-10"></div>
-        {/* الصورة مع تأثير الحركة */}
         <img 
           src="/images/story-bg.webp" 
           className="absolute inset-0 w-full h-full object-cover" 
@@ -318,28 +358,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 10 & 11. الأقسام المتخصصة (Tabs Style) */}
+      {/* 11 & 12. تسوق حسب الفئة */}
       <div className="bg-[#151515] py-12 border-t border-[#222]">
         <SectionHeader title="تسوق حسب الفئة" />
-        <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-8">
-           {/* الإسدالات */}
+        <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
            <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
               <h3 className="text-2xl font-black text-white mb-4 z-10 relative">الإسدالات</h3>
-              <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10">
+              <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
                  {isdalat.slice(0,3).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
               </div>
            </div>
-           {/* الشيلان */}
            <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
               <h3 className="text-2xl font-black text-white mb-4 z-10 relative">الشيلان</h3>
-              <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10">
+              <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
                  {shawls.slice(0,3).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
               </div>
            </div>
         </div>
       </div>
 
-      {/* 12. تخفيضات (Full Grid) */}
+      {/* 13. تخفيضات */}
       <section className="py-12 px-4">
         <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest">
           تخفيضات حصرية - لفترة محدودة
@@ -348,7 +386,6 @@ export default function Home() {
           {discounts.map((product) => <ProductCard key={product.id} {...product} />)}
         </div>
       </section>
-
     </main>
   );
 }
