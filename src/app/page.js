@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import HeroSection from "../components/sections/HeroSection";
 import CollectionsSection from "../components/sections/CollectionsSection";
 import ProductCard from "../components/products/ProductCard";
-import { products } from "../lib/products";
+import { products as staticProducts } from "../lib/products";
 import Link from 'next/link';
 
 // استيراد إعدادات Firebase
@@ -11,7 +11,7 @@ import { db, storage } from "../lib/firebase";
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// --- تأثيرات الحركة (CSS في JS) ---
+// --- تأثيرات الحركة (CSS في JS) - كما هي تماماً ---
 const styles = {
   kenBurns: {
     animation: 'kenburns 20s infinite alternate',
@@ -22,7 +22,7 @@ const styles = {
   }
 };
 
-// --- مكون الهيدر ---
+// --- مكون الهيدر - كما هو تماماً ---
 const SectionHeader = ({ title, subTitle, link = "#" }) => (
   <div className="flex items-center justify-between mb-6 px-4 pt-10" dir="rtl">
     <div className="flex items-center gap-3">
@@ -43,28 +43,30 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false); 
   const [newReview, setNewReview] = useState({ name: '', comment: '', rating: 10, image: null });
+  
+  // الحالة الجديدة لحفظ المنتجات القادمة من Firebase
+  const [allProducts, setAllProducts] = useState(staticProducts);
 
-  // تصنيف المنتجات
-  const bestSellers = products.slice(0, 4);
-  const newArrivals = products.slice(4, 9);
-  const topRated = products.filter(p => parseFloat(p.rating) >= 4.9);
-  const isdalat = products.filter(p => p.category === 'isdal');
-  const shawls = products.filter(p => p.category === 'shawl');
-  const discounts = products.filter(p => p.oldPrice);
+  // تصنيف المنتجات (تم ربطها بـ allProducts بدلاً من products الثابتة)
+  const bestSellers = allProducts.slice(0, 4);
+  const newArrivals = allProducts.slice(0, 5);
+  const topRated = allProducts.filter(p => parseFloat(p.rating) >= 4.8);
+  const isdalat = allProducts.filter(p => p.category === 'isdal');
+  const shawls = allProducts.filter(p => p.category === 'shawl' || p.category === 'shawls');
+  const discounts = allProducts.filter(p => p.oldPrice || p.compareAtPrice);
 
   useEffect(() => {
+    // 1. إضافة الـ CSS Styles
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
       @keyframes kenburns {
         0% { transform: scale(1); }
         100% { transform: scale(1.15); }
       }
-      /* حركة التقييمات - سريعة ومنتظمة */
       @keyframes marquee {
         0% { transform: translateX(0); }
         100% { transform: translateX(50%); }
       }
-      /* حركة التشكيلة - عكس الاتجاه ولا نهائية */
       @keyframes marquee-infinite {
         0% { transform: translateX(0); }
         100% { transform: translateX(-50%); }
@@ -90,16 +92,33 @@ export default function Home() {
     `;
     document.head.appendChild(styleSheet);
 
-    const q = query(collection(db, "reviews"), orderBy("timestamp", "desc"));
-    const unsubscribe = onSnapshot(q, (snap) => {
+    // 2. جلب التقييمات من Firebase
+    const qReviews = query(collection(db, "reviews"), orderBy("timestamp", "desc"));
+    const unsubReviews = onSnapshot(qReviews, (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setReviews(data);
-    }, (error) => {
-      console.error("Error fetching reviews:", error);
+    });
+
+    // 3. جلب المنتجات من Firebase (التعديل المطلوب)
+    const qProducts = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const unsubProducts = onSnapshot(qProducts, (snap) => {
+      if (!snap.empty) {
+        const firebaseData = snap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            // التأكد من أن الصورة هي أول صورة من المصفوفة لتناسب المكون القديم
+            image: data.images ? data.images[0] : data.image 
+          };
+        });
+        setAllProducts(firebaseData);
+      }
     });
 
     return () => {
-      unsubscribe();
+      unsubReviews();
+      unsubProducts();
       if (document.head.contains(styleSheet)) {
         document.head.removeChild(styleSheet);
       }
@@ -140,7 +159,7 @@ export default function Home() {
   return (
     <main className="pb-20 bg-[#121212] min-h-screen text-white relative" dir="rtl">
       
-      {/* ===== REVIEW POPUP MODAL ===== */}
+      {/* ===== REVIEW POPUP MODAL - كما هو تماماً ===== */}
       {isReviewModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={styles.modalOverlay}>
           <div className="bg-[#1A1A1A] w-full max-w-lg rounded-sm border border-[#F5C518] shadow-[0_0_30px_rgba(245,197,24,0.1)] relative animate-[fadeIn_0.3s_ease-out]">
@@ -189,7 +208,7 @@ export default function Home() {
       <section>
         <SectionHeader title="أهم الاختيارات لك" subTitle="بناءً على ذوقك الرفيع" />
         <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-          {products.slice(0, 4).map((product) => (
+          {bestSellers.map((product) => (
             <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
               <ProductCard {...product} />
             </div>
@@ -197,13 +216,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. قسم تسوق التشكيلة - تعديل الحركة اللانهائية وعكس الاتجاه */}
+      {/* 2. قسم تسوق التشكيلة */}
       <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
         <SectionHeader title="تسوق التشكيلة" subTitle="دفء الشتاء في كل قطعة" />
         <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
           <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
-            {/* نكرر المنتجات مرتين فقط مع ضبط الـ Keyframes لضمان اتصال لا نهائي */}
-            {[...products, ...products].map((product, index) => (
+            {[...allProducts, ...allProducts].map((product, index) => (
               <div key={`${product.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
                 <ProductCard {...product} />
               </div>
@@ -232,7 +250,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. شريط الثقة */}
+      {/* 4. شريط الثقة - كما هو تماماً */}
       <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
         <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
           <div className="group">
@@ -258,7 +276,7 @@ export default function Home() {
         <CollectionsSection />
       </div>
 
-      {/* 6. آراء وتجارب عائلة WIND - أسرع وبدون تحريك يدوي */}
+      {/* 6. آراء وتجارب عائلة WIND */}
       <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
@@ -274,7 +292,6 @@ export default function Home() {
               + أضف تجربتك
             </button>
           </div>
-          {/* تم منع السحب اليدوي هنا بـ pointer-events-none على الحاوية */}
           <div className="relative flex overflow-hidden pointer-events-none">
             <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
               {[...reviews, ...reviews].map((rev, index) => (
@@ -303,7 +320,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* الباقي من الكود يظل كما هو مع التأكد من SectionHeader وتصنيفات المنتجات */}
       {/* 7. وصل حديثاً */}
       <section className="my-12">
         <SectionHeader title="وصل حديثاً" subTitle="أحدث صيحات الشتاء" />
@@ -316,7 +332,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 8. Magazine Style */}
+      {/* 8. Magazine Style - كما هو تماماً */}
       <section className="px-4 max-w-[1280px] mx-auto my-16">
         <SectionHeader title="WIND Magazine" subTitle="مقالات في الأناقة" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
@@ -341,7 +357,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 10. قصة WIND */}
+      {/* 10. قصة WIND - كما هو تماماً */}
       <section className="relative h-[400px] overflow-hidden border-t border-[#333]">
         <div className="absolute inset-0 bg-black/50 z-10"></div>
         <img 

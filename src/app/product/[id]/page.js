@@ -1,30 +1,74 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { products } from "../../../lib/products";
+import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
+
+// استيراد إعدادات Firebase
+import { db } from "../../../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function ProductPage() {
   const { id } = useParams();
-  const product = products.find((p) => p.id === parseInt(id));
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
 
   const [activeImage, setActiveImage] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
 
   useEffect(() => {
-    if (product) {
-      setActiveImage(product.mainImage);
-      if (product.sizes.length > 0) setSelectedSize(product.sizes[0]);
-    }
-  }, [product]);
+    const fetchProduct = async () => {
+      setLoading(true);
+      // 1. البحث في المنتجات الثابتة أولاً
+      const staticProduct = staticProducts.find((p) => p.id.toString() === id.toString());
+      
+      if (staticProduct) {
+        setProduct(staticProduct);
+        setActiveImage(staticProduct.mainImage);
+        if (staticProduct.sizes && staticProduct.sizes.length > 0) setSelectedSize(staticProduct.sizes[0]);
+        setLoading(false);
+      } else {
+        // 2. إذا لم يوجد، البحث في Firebase
+        try {
+          const docRef = doc(db, "products", id);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const fbProduct = { id: docSnap.id, ...data };
+            setProduct(fbProduct);
+            // ضبط الصورة الأولى كصورة نشطة
+            const firstImg = fbProduct.images ? fbProduct.images[0] : fbProduct.image;
+            setActiveImage(firstImg);
+            if (fbProduct.sizes && fbProduct.sizes.length > 0) setSelectedSize(fbProduct.sizes[0]);
+          }
+        } catch (error) {
+          console.error("Error fetching product:", error);
+        }
+        setLoading(false);
+      }
+    };
 
-  if (!product) return <div className="text-white text-center py-20">جاري التحميل...</div>;
+    fetchProduct();
+  }, [id]);
 
-  const gallery = [
-    product.mainImage,
-    ...Array.from({ length: product.imagesCount }, (_, i) => `${i + 1}.webp`)
-  ];
+  if (loading) return <div className="text-white text-center py-20 bg-[#121212] min-h-screen">جاري التحميل...</div>;
+  if (!product) return <div className="text-white text-center py-20 bg-[#121212] min-h-screen">المنتج غير موجود</div>;
+
+  // دالة ذكية لتحديد مسار الصورة
+  const getImageUrl = (imgName) => {
+    if (!imgName) return "";
+    // إذا كان الرابط يبدأ بـ http فهو من Firebase
+    if (imgName.startsWith("http")) return imgName;
+    // وإلا فهو من المجلدات المحلية
+    return `/images/products/${product.folderName}/${imgName}`;
+  };
+
+  // إنشاء معرض الصور بناءً على نوع المنتج (ثابت أم Firebase)
+  const gallery = product.images 
+    ? product.images // إذا كان من Firebase (مصفوفة روابط)
+    : [product.mainImage, ...Array.from({ length: product.imagesCount || 0 }, (_, i) => `${i + 1}.webp`)];
 
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-24">
@@ -40,19 +84,18 @@ export default function ProductPage() {
           </div>
         </div>
         <div className="flex flex-col items-center">
-          <span className="text-[#F5C518] font-black text-lg">★ {product.rating}</span>
+          <span className="text-[#F5C518] font-black text-lg">★ {product.rating || "4.9"}</span>
           <span className="text-gray-500 text-[10px]">تقييم WIND</span>
         </div>
       </div>
 
-      {/* 2. منطقة الميديا (مثل تريلر الفيلم) */}
+      {/* 2. منطقة الميديا */}
       <div className="relative w-full aspect-[3/4] md:aspect-video bg-black">
         <img 
-          src={`/images/products/${product.folderName}/${activeImage}`} 
+          src={getImageUrl(activeImage)} 
           alt={product.title} 
           className="w-full h-full object-contain md:object-cover mx-auto"
         />
-        {/* زر تشغيل وهمي لإعطاء طابع الفيديو (اختياري) */}
       </div>
 
       {/* 3. شريط الصور المصغرة (Gallery Strip) */}
@@ -63,15 +106,15 @@ export default function ProductPage() {
             onClick={() => setActiveImage(img)}
             className={`flex-shrink-0 w-20 h-28 rounded overflow-hidden border-2 transition-all ${activeImage === img ? "border-[#F5C518] opacity-100" : "border-transparent opacity-60"}`}
           >
-            <img src={`/images/products/${product.folderName}/${img}`} className="w-full h-full object-cover" />
+            <img src={getImageUrl(img)} className="w-full h-full object-cover" alt={`gallery-${idx}`} />
           </button>
         ))}
       </div>
 
-      {/* 4. التفاصيل والاختيارات (القصة والكاست) */}
+      {/* 4. التفاصيل والاختيارات */}
       <div className="px-4 py-6 space-y-6" dir="rtl">
         
-        {/* وصف المنتج (Storyline) */}
+        {/* وصف المنتج */}
         <div>
           <h3 className="flex items-center gap-2 font-bold text-lg mb-2">
             <div className="w-1 h-5 bg-[#F5C518] rounded-full"></div>
@@ -80,25 +123,27 @@ export default function ProductPage() {
           <p className="text-gray-300 text-sm leading-relaxed">{product.description}</p>
         </div>
 
-        {/* اختيار المقاس (مثل اختيار الممثلين) */}
-        <div>
-          <h3 className="font-bold text-sm text-white mb-3">المقاسات المتاحة:</h3>
-          <div className="flex flex-wrap gap-3">
-            {product.sizes.map((size) => (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                className={`px-6 py-2 text-sm font-bold rounded border transition-all ${
-                  selectedSize === size 
-                  ? "bg-[#F5C518] text-black border-[#F5C518]" 
-                  : "bg-[#222] text-gray-300 border-[#444] hover:bg-[#333]"
-                }`}
-              >
-                {size}
-              </button>
-            ))}
+        {/* اختيار المقاس */}
+        {product.sizes && product.sizes.length > 0 && (
+          <div>
+            <h3 className="font-bold text-sm text-white mb-3">المقاسات المتاحة:</h3>
+            <div className="flex flex-wrap gap-3">
+              {product.sizes.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`px-6 py-2 text-sm font-bold rounded border transition-all ${
+                    selectedSize === size 
+                    ? "bg-[#F5C518] text-black border-[#F5C518]" 
+                    : "bg-[#222] text-gray-300 border-[#444] hover:bg-[#333]"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* السعر وزر الشراء (Fixed Bottom Action) */}
         <div className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a]/95 backdrop-blur-md border-t border-[#333] p-4 z-50">
@@ -109,10 +154,12 @@ export default function ProductPage() {
             </div>
             
             <button 
-              onClick={() => addToCart({ ...product, selectedSize })}
+              onClick={() => addToCart({ ...product, selectedSize, image: getImageUrl(activeImage) })}
               className="flex-1 bg-[#F5C518] hover:bg-[#e3b616] text-black font-bold py-3 rounded text-base flex justify-center items-center gap-2 transition shadow-lg"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
               أضف للسلة
             </button>
           </div>

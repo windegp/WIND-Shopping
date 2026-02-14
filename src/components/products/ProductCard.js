@@ -3,10 +3,14 @@ import Link from "next/link";
 // استيراد السلة
 import { useCart } from "../../context/CartContext";
 
-export default function ProductCard({ id, title, price, oldPrice, rating, category, folderName, mainImage }) {
+export default function ProductCard({ id, title, price, oldPrice, rating, category, folderName, mainImage, image }) {
   
   const { addToCart } = useCart() || {};
   const discount = oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : null;
+
+  // تحديد رابط الصورة: إذا كانت قادمة من Firebase (image) نستخدمها مباشرة، 
+  // وإذا لم توجد نستخدم المسار القديم المبني على المجلدات.
+  const productImage = image || `/images/products/${folderName}/${mainImage}`;
 
   // دالة الإضافة للسلة
   const handleAddToCart = (e) => {
@@ -16,10 +20,9 @@ export default function ProductCard({ id, title, price, oldPrice, rating, catego
         id,
         title,
         price,
-        image: `/images/products/${folderName}/${mainImage}`,
+        image: productImage,
         quantity: 1
       });
-      // يمكنك هنا إضافة Notification بسيط إذا أردت
     }
   };
 
@@ -37,7 +40,7 @@ export default function ProductCard({ id, title, price, oldPrice, rating, catego
               </div>
             )}
             <img 
-              src={`/images/products/${folderName}/${mainImage}`} 
+              src={productImage} 
               alt={title}
               className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
               loading="lazy"
