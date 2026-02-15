@@ -8,28 +8,40 @@ import Link from "next/link";
 
 export default function CategoryPage() {
   const params = useParams();
-  const slug = params.slug; // بناخد الـ slug من اسم الفولدر [slug]
+  const slug = params.slug; 
   
   const [products, setProducts] = useState([]);
   const [categoryData, setCategoryData] = useState({ name: "التشكيلة", description: "" });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchEverything = async () => {
       if (!slug) return;
       setLoading(true);
       try {
-        // 1. جلب بيانات القسم أولاً (عشان الاسم والوصف)
-        const catQuery = query(collection(db, "collections"), where("slug", "in", [slug, `/${slug}`]));
+        // 1. جلب بيانات القسم بالـ slug
+        // جربنا نبحث بالـ slug الصريح والـ slug اللي بيبدأ بسلاش
+        const catQuery = query(
+          collection(db, "collections"), 
+          where("slug", "in", [slug, `/${slug}`])
+        );
         const catSnapshot = await getDocs(catQuery);
+        
+        let currentCatName = "";
         if (!catSnapshot.empty) {
-          setCategoryData(catSnapshot.docs[0].data());
+          const data = catSnapshot.docs[0].data();
+          setCategoryData(data);
+          currentCatName = data.name;
         }
 
-        // 2. جلب المنتجات (البحث في المصفوفة لضمان التسميع)
+        // 2. جلب المنتجات (البحث بـ 3 احتمالات لضمان الظهور)
+        // بنبحث بالـ slug، والـ slug بسلاش، والاسم العربي للقسم
+        const searchTerms = [slug, `/${slug}`];
+        if (currentCatName) searchTerms.push(currentCatName);
+
         const pQuery = query(
           collection(db, "products"),
-          where("categories", "array-contains-any", [slug, `/${slug}`, categoryData.name]),
+          where("categories", "array-contains-any", searchTerms),
           limit(40)
         );
         
@@ -38,21 +50,22 @@ export default function CategoryPage() {
           id: doc.id,
           ...doc.data()
         }));
+        
         setProducts(productsData);
       } catch (error) {
-        console.error("WIND Error:", error);
+        console.error("WIND Fetch Error:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchData();
-  }, [slug, categoryData.name]);
+    fetchEverything();
+  }, [slug]); // شيلنا categoryData.name من هنا عشان الدالة تشتغل مرة واحدة صح
 
   return (
     <main className="min-h-screen bg-[#121212] pt-24 pb-12" dir="rtl">
       <div className="max-w-[1400px] mx-auto px-4">
         
-        {/* رأس الصفحة بتصميم WIND الدافئ */}
         <div className="mb-16 text-center">
           <h1 className="text-4xl md:text-7xl font-black text-white mb-4 uppercase tracking-tighter">
             {categoryData.name}
@@ -74,19 +87,19 @@ export default function CategoryPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5C518]"></div>
-            <p className="mt-4 text-gray-500">جاري تحميل مجموعة WIND...</p>
+            <p className="mt-4 text-gray-500 font-bold">جاري تحميل تشكيلة WIND...</p>
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 animate-in fade-in duration-700">
             {products.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-32 border border-dashed border-[#333] rounded-lg">
-            <p className="text-gray-500 mb-6">لا توجد قطع متوفرة في "{categoryData.name}" حالياً.</p>
-            <Link href="/" className="bg-[#F5C518] text-black px-8 py-3 font-black text-sm hover:bg-white transition-colors">
-              العودة للرئيسية
+          <div className="text-center py-32 border border-[#333] rounded-3xl bg-[#1a1a1a]/50">
+            <p className="text-gray-400 mb-8 text-lg">لا توجد قطع متوفرة في "{categoryData.name}" حالياً.</p>
+            <Link href="/" className="bg-[#F5C518] text-black px-10 py-4 font-black text-sm hover:bg-white transition-all rounded-full active:scale-95">
+              اكتشف باقي المجموعات
             </Link>
           </div>
         )}

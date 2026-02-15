@@ -1,4 +1,5 @@
 "use client";
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc, query, where, increment } from "firebase/firestore";
 import { useState, useEffect, Suspense } from 'react';
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc } from "firebase/firestore";
@@ -171,7 +172,7 @@ function ProductFormContent() {
     }
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     setLoading(true);
     try {
       let imageUrls = [...previews.filter(p => p.startsWith('http'))]; 
@@ -198,6 +199,8 @@ function ProductFormContent() {
         compareAtPrice: Number(product.compareAtPrice) || 0,
         costPerItem: Number(product.costPerItem) || 0,
         quantity: Number(product.quantity) || 0,
+        // تأكد من تخزين الكاتيجوري بشكل نظيف (بدون سلاشات زائدة لو حبيت)
+        categories: product.categories || [],
         tags: product.tags ? (Array.isArray(product.tags) ? product.tags : product.tags.split(',').map(t => t.trim())) : [],
         options: {
           colors: finalColors,
@@ -220,9 +223,32 @@ function ProductFormContent() {
         alert("✅ تم تحديث منتج WIND بنجاح!");
       } else {
         productData.createdAt = serverTimestamp();
-        await addDoc(collection(db, "products"), productData);
-        alert("✅ تم إضافة منتج جديد لـ WIND!");
+        // 1. حفظ المنتج أولاً
+        const newProductRef = await addDoc(collection(db, "products"), productData);
+        
+        // 2. تحديث عداد الأقسام (تعديل الـ productCount)
+        if (product.categories && product.categories.length > 0) {
+          for (const catSlug of product.categories) {
+            // بنعمل search في كولكشن الأقسام عشان نجيب الـ ID بتاع القسم بالـ slug بتاعه
+            const q = query(collection(db, "collections"), where("slug", "==", catSlug));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+              const categoryDoc = querySnapshot.docs[0];
+              const categoryRef = doc(db, "collections", categoryDoc.id);
+              
+              // تحديث العداد بزيادة 1
+              await updateDoc(categoryRef, {
+                productCount: increment(1)
+              });
+            }
+          }
+        }
+        
+        alert("✅ تم إضافة منتج جديد لـ WIND وتحديث عداد الأقسام!");
       }
+      
+      // توجيه لصفحة المنتجات أو ريفريش
       window.location.reload();
       
     } catch (error) {
@@ -231,7 +257,6 @@ function ProductFormContent() {
     }
     setLoading(false);
   };
-
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20" dir="rtl">
       <div className="flex justify-between items-center">
