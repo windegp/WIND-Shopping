@@ -10,8 +10,10 @@ import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(
   async () => {
     const { default: RQ } = await import("react-quill");
-    // هذا السطر يضمن توافق المراجع (Refs) في النسخ الحديثة
-    return ({ forwardedRef, ...props }) => <RQ ref={forwardedRef} {...props} />;
+    // هذا السطر يضمن توافق المراجع (Refs) وحل مشكلة الانهيار في المتصفح
+    return function QuillComponent({ forwardedRef, ...props }) {
+      return <RQ ref={forwardedRef} {...props} />;
+    };
   },
   { 
     ssr: false, 
