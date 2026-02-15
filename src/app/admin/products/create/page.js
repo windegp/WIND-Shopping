@@ -23,11 +23,12 @@ function ProductFormContent() {
   
   const [loading, setLoading] = useState(false);
   const [productsList, setProductsList] = useState([]);
-  
+  const [availableCollections, setAvailableCollections] = useState([]); // الدولة الجديدة للأقسام
+
   const [product, setProduct] = useState({
     title: '', description: '', price: '', compareAtPrice: '',
     costPerItem: '', sku: '', quantity: 0, 
-    categories: ['shawls'], 
+    categories: [], // تبدأ فارغة ليتم الاختيار
     tags: '', sizes: '', seoTitle: '', seoDesc: '', handle: '',
     mainImageUrl: '',
     seoCategory: '',
@@ -46,6 +47,16 @@ function ProductFormContent() {
 
   useEffect(() => {
     const fetchData = async () => {
+      // 1. جلب الأقسام الديناميكية أولاً
+      try {
+        const colSnapshot = await getDocs(collection(db, "collections"));
+        const cols = colSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAvailableCollections(cols);
+      } catch (err) {
+        console.error("Error fetching collections:", err);
+      }
+
+      // 2. جلب بيانات المنتج إذا كان في وضع التعديل
       if (id) {
         const docRef = doc(db, "products", id);
         const docSnap = await getDoc(docRef);
@@ -61,13 +72,15 @@ function ProductFormContent() {
           if (data.images) setPreviews([...data.images]);
         }
       }
+
+      // 3. جلب قائمة المنتجات للإدارة أسفل الصفحة
       const querySnapshot = await getDocs(collection(db, "products"));
       setProductsList(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
     fetchData();
   }, [id]);
 
-  // --- وظائف السحب والإفلات (الجديدة) ---
+  // --- وظائف السحب والإفلات ---
   const onDragEndImages = (result) => {
     if (!result.destination) return;
     const items = Array.from(previews);
@@ -96,16 +109,17 @@ function ProductFormContent() {
     if (e.key === 'Enter' && product.mainImageUrl.trim() !== '') {
       e.preventDefault(); 
       if (!previews.includes(product.mainImageUrl)) {
-        setPreviews(prev => [...prev, product.mainImageUrl]); // الإضافة للآخر لسهولة الترتيب
+        setPreviews(prev => [...prev, product.mainImageUrl]);
         setProduct(prev => ({ ...prev, mainImageUrl: '' }));
       }
     }
   };
 
-  const handleCategoryChange = (cat) => {
-    const updatedCats = product.categories?.includes(cat)
-      ? product.categories.filter(c => c !== cat)
-      : [...(product.categories || []), cat];
+  // تحديث الأقسام بناءً على الاختيار الديناميكي
+  const handleCategoryChange = (catSlug) => {
+    const updatedCats = product.categories?.includes(catSlug)
+      ? product.categories.filter(c => c !== catSlug)
+      : [...(product.categories || []), catSlug];
     setProduct(prev => ({ ...prev, categories: updatedCats }));
   };
 
@@ -197,7 +211,7 @@ function ProductFormContent() {
           handle: product.handle || "",
           seoCategory: product.seoCategory || ""
         },
-        images: imageUrls, // تستخدم المصفوفة المرتبة حالياً
+        images: imageUrls,
         updatedAt: serverTimestamp(),
       };
 
@@ -259,7 +273,6 @@ function ProductFormContent() {
                 placeholder="أضف رابط صورة مباشر واضغط Enter للمعاينة" 
              />
              
-             {/* السحب والإفلات للصور */}
              <DragDropContext onDragEnd={onDragEndImages}>
                <Droppable droppableId="images-grid" direction="horizontal">
                  {(provided) => (
@@ -303,7 +316,6 @@ function ProductFormContent() {
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
             <h3 className="font-bold mb-4 text-[#F5C518]">الخيارات والألوان (اسحب للترتيب)</h3>
             
-            {/* السحب والإفلات للألوان */}
             <DragDropContext onDragEnd={onDragEndColors}>
               <Droppable droppableId="colors-list">
                 {(provided) => (
@@ -393,19 +405,23 @@ function ProductFormContent() {
                     <div><label className="text-xs text-gray-500">الكمية بالمخزن</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
                     
                     <div className="pt-2">
-                        <label className="text-xs text-gray-500 block mb-2">الأقسام</label>
-                        <div className="space-y-2 bg-[#121212] p-3 rounded border border-[#333]">
-                          {['shawls', 'winter', 'new', 'accessories'].map(cat => (
-                            <label key={cat} className="flex items-center gap-2 text-sm text-white cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                checked={product.categories?.includes(cat)} 
-                                onChange={() => handleCategoryChange(cat)}
-                                className="accent-[#F5C518]"
-                              />
-                              {cat === 'shawls' ? 'شيلان' : cat === 'winter' ? 'شتوي' : cat === 'new' ? 'وصل حديثاً' : 'إكسسوارات'}
-                            </label>
-                          ))}
+                        <label className="text-xs text-gray-500 block mb-2 font-bold">الأقسام (مستمدة من صفحة الأقسام)</label>
+                        <div className="space-y-2 bg-[#121212] p-3 rounded border border-[#333] max-h-60 overflow-y-auto custom-scrollbar">
+                          {availableCollections.length > 0 ? (
+                            availableCollections.map(col => (
+                              <label key={col.id} className="flex items-center gap-2 text-sm text-white cursor-pointer hover:bg-[#1a1a1a] p-1 rounded transition-colors">
+                                <input 
+                                  type="checkbox" 
+                                  checked={product.categories?.includes(col.slug)} 
+                                  onChange={() => handleCategoryChange(col.slug)}
+                                  className="accent-[#F5C518] w-4 h-4"
+                                />
+                                {col.name}
+                              </label>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">لا توجد أقسام حالياً. أضف بعضها من صفحة "الأقسام".</p>
+                          )}
                         </div>
                     </div>
 
