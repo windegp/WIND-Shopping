@@ -4,10 +4,26 @@ import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// استيراد المحرر بشكل ديناميكي ليتوافق مع Next.js
+// استيراد المحرر بشكل ديناميكي مطور ليتوافق مع React 19
 import dynamic from 'next/dynamic';
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css'; // تنسيق المحرر
+
+const ReactQuill = dynamic(
+  async () => {
+    const { default: RQ } = await import("react-quill");
+    // هذا السطر يضمن توافق المراجع (Refs) في النسخ الحديثة
+    return ({ forwardedRef, ...props }) => <RQ ref={forwardedRef} {...props} />;
+  },
+  { 
+    ssr: false, 
+    loading: () => (
+      <div className="h-[250px] w-full bg-gray-100 flex items-center justify-center border border-dashed border-gray-400 rounded">
+        <span className="text-gray-500 animate-pulse">جاري تحميل محرر WIND المطور...</span>
+      </div>
+    )
+  }
+);
+
+import 'react-quill/dist/quill.snow.css';
 
 export default function CreateProductPage() {
   const [loading, setLoading] = useState(false);
