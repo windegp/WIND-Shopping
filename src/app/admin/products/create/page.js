@@ -35,11 +35,9 @@ function ProductFormContent() {
   const [previews, setPreviews] = useState([]);
   const [colorVariants, setColorVariants] = useState([]);
 
-  // رؤوس الجدول
   const [chartHeaders, setChartHeaders] = useState({
     col1: 'المقاس', col2: 'الطول', col3: 'الصدر', col4: 'الوسط', col5: 'الوزن (كجم)'
   });
-  // بيانات الجدول
   const [sizeChart, setSizeChart] = useState([
     { size: 'S', length: '', chest: '', waist: '', weight: '' }
   ]);
@@ -80,6 +78,7 @@ function ProductFormContent() {
       e.preventDefault(); 
       if (!previews.includes(product.mainImageUrl)) {
         setPreviews(prev => [product.mainImageUrl, ...prev]);
+        setProduct(prev => ({ ...prev, mainImageUrl: '' })); // تفريغ الحقل بعد الإضافة
       }
     }
   };
@@ -98,7 +97,12 @@ function ProductFormContent() {
     setPreviews(prev => [...prev, ...newPreviews]);
   };
 
-  // تعديل: إضافة اللون الجديد في آخر القائمة
+  // --- وظيفة حذف صورة من المعاينة ---
+  const removeImage = (indexToRemove) => {
+    setPreviews(prev => prev.filter((_, i) => i !== indexToRemove));
+    setImages(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   const addColorVariant = () => {
     setColorVariants([...colorVariants, { name: '', swatch: '', preview: '', swatchUrl: '' }]);
   };
@@ -140,10 +144,6 @@ function ProductFormContent() {
     try {
       let imageUrls = [...previews.filter(p => p.startsWith('http'))]; 
       
-      if (product.mainImageUrl && !imageUrls.includes(product.mainImageUrl)) {
-        imageUrls.unshift(product.mainImageUrl);
-      }
-
       if (images.length > 0) {
         for (let img of images) {
           try {
@@ -240,9 +240,22 @@ function ProductFormContent() {
                 className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4 focus:border-[#F5C518] outline-none" 
                 placeholder="أضف رابط صورة مباشر واضغط Enter للمعاينة" 
              />
+             
+             {/* تعديل: عرض الصور مع زر الحذف */}
              <div className="grid grid-cols-4 gap-2 mb-4">
-                 {previews.map((src, i) => <img key={i} src={src} className="h-20 w-full object-cover rounded border border-[#333]" />)}
+                 {previews.map((src, i) => (
+                   <div key={i} className="relative group">
+                     <img src={src} className="h-20 w-full object-cover rounded border border-[#333]" />
+                     <button 
+                       onClick={() => removeImage(i)}
+                       className="absolute -top-2 -left-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700 shadow-lg z-10"
+                     >
+                       ×
+                     </button>
+                   </div>
+                 ))}
              </div>
+
              <div className="border-2 border-dashed border-[#333] p-6 text-center rounded relative hover:bg-[#222]">
                  <input type="file" multiple onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                  <span className="text-gray-400 text-sm">اضغط لرفع صور إضافية من جهازك</span>
@@ -335,7 +348,6 @@ function ProductFormContent() {
                         </div>
                     </div>
 
-                    {/* إرجاع حقل المقاسات الذي تم فقده */}
                     <div className="pt-2">
                         <label className="text-xs text-gray-500 block mb-1">المقاسات المتاحة (افصل بفاصلة)</label>
                         <input name="sizes" value={product.sizes} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" placeholder="S, M, L, XL" />
