@@ -35,9 +35,11 @@ function ProductFormContent() {
   const [previews, setPreviews] = useState([]);
   const [colorVariants, setColorVariants] = useState([]);
 
+  // رؤوس الجدول
   const [chartHeaders, setChartHeaders] = useState({
     col1: 'المقاس', col2: 'الطول', col3: 'الصدر', col4: 'الوسط', col5: 'الوزن (كجم)'
   });
+  // بيانات الجدول
   const [sizeChart, setSizeChart] = useState([
     { size: 'S', length: '', chest: '', waist: '', weight: '' }
   ]);
@@ -50,9 +52,12 @@ function ProductFormContent() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setProduct({ ...data, id: docSnap.id });
-          // تحسين 1: التأكد من تحميل دليل القياسات والهيدرز
+          
+          // تأكيد تحميل البيانات المنفصلة
+          if (data.options?.chartHeaders) {
+            setChartHeaders({ ...data.options.chartHeaders });
+          }
           if (data.options?.sizeChart) setSizeChart([...data.options.sizeChart]);
-          if (data.options?.chartHeaders) setChartHeaders({...data.options.chartHeaders});
           if (data.options?.colors) setColorVariants([...data.options.colors]);
           if (data.images) setPreviews([...data.images]);
         }
@@ -85,12 +90,10 @@ function ProductFormContent() {
     setPreviews(prev => [...prev, ...newPreviews]);
   };
 
-  // تحسين 2: إضافة لون جديد بدون تصفير الروابط الحالية
   const addColorVariant = () => {
     setColorVariants([...colorVariants, { name: '', swatch: '', preview: '', swatchUrl: '' }]);
   };
 
-  // تحسين 3: حذف لون بأمان بدون التسبب في خطأ الـ Map
   const removeColorVariant = (index) => {
     const updated = colorVariants.filter((_, i) => i !== index);
     setColorVariants(updated);
@@ -126,7 +129,6 @@ function ProductFormContent() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // تحسين 4: دمج الصور المرفوعة يدوياً مع الروابط (ImgBB) والصور القديمة
       let imageUrls = [...previews.filter(p => p.startsWith('http'))]; 
       
       if (product.mainImageUrl && !imageUrls.includes(product.mainImageUrl)) {
@@ -144,12 +146,12 @@ function ProductFormContent() {
         }
       }
 
-      // تحسين 5: معالجة ألوان المنتجات (دعم الرابط المباشر swatchUrl)
       let finalColors = colorVariants.map(v => ({
         name: v.name || "",
         swatch: v.swatchUrl || v.swatch || v.preview || ""
       }));
 
+      // بناء البيانات النهائية مع ضمان وجود كل الحقول المطلوبة
       const productData = {
         ...product,
         price: Number(product.price) || 0,
@@ -160,16 +162,16 @@ function ProductFormContent() {
         options: {
           colors: finalColors,
           sizes: product.sizes ? (Array.isArray(product.sizes) ? product.sizes : product.sizes.split(',').map(s => s.trim())) : [],
-          sizeChart: [...sizeChart], // التأكد من إرسال مصفوفة جديدة
-          chartHeaders: {...chartHeaders}, // التأكد من إرسال كائن جديد
+          sizeChart: [...sizeChart],
+          chartHeaders: { ...chartHeaders }, // تعديل: إرسال الرؤوس لضمان الحفظ
         },
         seo: {
           title: product.seoTitle || product.title || "",
-          description: product.seoDesc || product.description || "",
+          description: product.seoDesc || product.description || "", // تم التأكد من وجود الوصف
           handle: product.handle || "",
           seoCategory: product.seoCategory || ""
         },
-        images: [...new Set(imageUrls)], // حذف التكرار
+        images: [...new Set(imageUrls)],
         updatedAt: serverTimestamp(),
       };
 
@@ -205,7 +207,7 @@ function ProductFormContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          {/* اسم ووصف المنتج */}
+          
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <label className="block text-sm font-bold mb-2 text-[#F5C518]">اسم المنتج</label>
              <input name="title" value={product.title} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-3 rounded text-white focus:border-[#F5C518] outline-none" placeholder="مثال: عباية كتان أسود" />
@@ -220,7 +222,6 @@ function ProductFormContent() {
              ></textarea>
           </div>
 
-          {/* الصور */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <h3 className="font-bold mb-4 text-[#F5C518]">الصور</h3>
              <input name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="أضف رابط صورة مباشر هنا (مثلاً من ImgBB)" />
@@ -233,7 +234,6 @@ function ProductFormContent() {
              </div>
           </div>
           
-          {/* الخيارات والألوان */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
             <h3 className="font-bold mb-4 text-[#F5C518]">الخيارات والألوان</h3>
             <div className="space-y-3">
@@ -255,7 +255,6 @@ function ProductFormContent() {
             </div>
           </div>
 
-          {/* دليل القياسات */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333] mt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-[#F5C518]">دليل القياسات (بالسنتيمتر)</h3>
@@ -295,7 +294,6 @@ function ProductFormContent() {
           </div>
         </div>
 
-        {/* الجانب الأيسر: السعر والأقسام و SEO */}
         <div className="space-y-6">
             <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
                 <h3 className="font-bold mb-4 text-[#F5C518]">السعر والمخزن</h3>
@@ -330,6 +328,11 @@ function ProductFormContent() {
                     <label className="text-xs text-gray-500 block mb-1">Page title</label>
                     <input name="seoTitle" value={product.seoTitle} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
                   </div>
+                  {/* إرجاع الـ Meta Description المفقود */}
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Meta description</label>
+                    <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm h-20 text-white resize-none"></textarea>
+                  </div>
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">URL handle</label>
                     <input name="handle" value={product.handle} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
@@ -345,7 +348,6 @@ function ProductFormContent() {
 
       <hr className="border-[#333] my-10" />
 
-      {/* جدول عرض المنتجات */}
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-[#F5C518]">إدارة منتجات WIND الحالية</h3>
         <div className="bg-[#1a1a1a] rounded border border-[#333] overflow-hidden">
