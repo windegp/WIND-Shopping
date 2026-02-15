@@ -5,6 +5,8 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, d
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
+// إضافة المكتبة المطلوبة للسحب والإفلات
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function CreateProductPage() {
   return (
@@ -65,6 +67,23 @@ function ProductFormContent() {
     fetchData();
   }, [id]);
 
+  // --- وظائف السحب والإفلات (الجديدة) ---
+  const onDragEndImages = (result) => {
+    if (!result.destination) return;
+    const items = Array.from(previews);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setPreviews(items);
+  };
+
+  const onDragEndColors = (result) => {
+    if (!result.destination) return;
+    const items = Array.from(colorVariants);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setColorVariants(items);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduct(prev => ({ ...prev, [name]: value }));
@@ -77,8 +96,8 @@ function ProductFormContent() {
     if (e.key === 'Enter' && product.mainImageUrl.trim() !== '') {
       e.preventDefault(); 
       if (!previews.includes(product.mainImageUrl)) {
-        setPreviews(prev => [product.mainImageUrl, ...prev]);
-        setProduct(prev => ({ ...prev, mainImageUrl: '' })); // تفريغ الحقل بعد الإضافة
+        setPreviews(prev => [...prev, product.mainImageUrl]); // الإضافة للآخر لسهولة الترتيب
+        setProduct(prev => ({ ...prev, mainImageUrl: '' }));
       }
     }
   };
@@ -97,7 +116,6 @@ function ProductFormContent() {
     setPreviews(prev => [...prev, ...newPreviews]);
   };
 
-  // --- وظيفة حذف صورة من المعاينة ---
   const removeImage = (indexToRemove) => {
     setPreviews(prev => prev.filter((_, i) => i !== indexToRemove));
     setImages(prev => prev.filter((_, i) => i !== indexToRemove));
@@ -179,7 +197,7 @@ function ProductFormContent() {
           handle: product.handle || "",
           seoCategory: product.seoCategory || ""
         },
-        images: [...new Set(imageUrls)],
+        images: imageUrls, // تستخدم المصفوفة المرتبة حالياً
         updatedAt: serverTimestamp(),
       };
 
@@ -231,7 +249,7 @@ function ProductFormContent() {
           </div>
 
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
-             <h3 className="font-bold mb-4 text-[#F5C518]">الصور</h3>
+             <h3 className="font-bold mb-4 text-[#F5C518]">الصور (اسحب للترتيب)</h3>
              <input 
                 name="mainImageUrl" 
                 value={product.mainImageUrl} 
@@ -241,20 +259,40 @@ function ProductFormContent() {
                 placeholder="أضف رابط صورة مباشر واضغط Enter للمعاينة" 
              />
              
-             {/* تعديل: عرض الصور مع زر الحذف */}
-             <div className="grid grid-cols-4 gap-2 mb-4">
-                 {previews.map((src, i) => (
-                   <div key={i} className="relative group">
-                     <img src={src} className="h-20 w-full object-cover rounded border border-[#333]" />
-                     <button 
-                       onClick={() => removeImage(i)}
-                       className="absolute -top-2 -left-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700 shadow-lg z-10"
-                     >
-                       ×
-                     </button>
+             {/* السحب والإفلات للصور */}
+             <DragDropContext onDragEnd={onDragEndImages}>
+               <Droppable droppableId="images-grid" direction="horizontal">
+                 {(provided) => (
+                   <div 
+                     {...provided.droppableProps} 
+                     ref={provided.innerRef} 
+                     className="grid grid-cols-4 gap-2 mb-4"
+                   >
+                     {previews.map((src, i) => (
+                       <Draggable key={`img-${i}`} draggableId={`img-${i}`} index={i}>
+                         {(provided) => (
+                           <div 
+                             ref={provided.innerRef}
+                             {...provided.draggableProps}
+                             {...provided.dragHandleProps}
+                             className="relative group cursor-grab active:cursor-grabbing"
+                           >
+                             <img src={src} className="h-24 w-full object-cover rounded border border-[#F5C518]" />
+                             <button 
+                               onClick={() => removeImage(i)}
+                               className="absolute -top-2 -left-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700 shadow-lg z-10"
+                             >
+                               ×
+                             </button>
+                           </div>
+                         )}
+                       </Draggable>
+                     ))}
+                     {provided.placeholder}
                    </div>
-                 ))}
-             </div>
+                 )}
+               </Droppable>
+             </DragDropContext>
 
              <div className="border-2 border-dashed border-[#333] p-6 text-center rounded relative hover:bg-[#222]">
                  <input type="file" multiple onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -263,24 +301,47 @@ function ProductFormContent() {
           </div>
           
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
-            <h3 className="font-bold mb-4 text-[#F5C518]">الخيارات والألوان</h3>
-            <div className="space-y-3">
-                {colorVariants.map((v, i) => (
-                    <div key={i} className="flex gap-2 items-center bg-[#121212] p-2 rounded border border-[#333]">
-                        <div className="w-8 h-8 rounded-full bg-black overflow-hidden border border-[#F5C518] shrink-0">
-                             {(v.preview || v.swatchUrl || v.swatch) && <img src={v.preview || v.swatchUrl || v.swatch} className="w-full h-full object-cover" />}
-                        </div>
-                        <input placeholder="اسم اللون" value={v.name} className="bg-transparent text-white text-sm outline-none flex-1" 
-                            onChange={(e) => { const n = [...colorVariants]; n[i].name = e.target.value; setColorVariants(n); }} 
-                        />
-                        <input placeholder="رابط صورة اللون" value={v.swatchUrl || v.swatch || ""} className="bg-[#222] text-[#F5C518] text-xs p-1 rounded w-1/2"
-                            onChange={(e) => { const n = [...colorVariants]; n[i].swatchUrl = e.target.value; setColorVariants(n); }}
-                        />
-                        <button onClick={() => removeColorVariant(i)} className="text-red-500 px-2">×</button>
-                    </div>
-                ))}
-                <button onClick={addColorVariant} className="text-[#F5C518] text-xs font-bold">+ إضافة لون جديد</button>
-            </div>
+            <h3 className="font-bold mb-4 text-[#F5C518]">الخيارات والألوان (اسحب للترتيب)</h3>
+            
+            {/* السحب والإفلات للألوان */}
+            <DragDropContext onDragEnd={onDragEndColors}>
+              <Droppable droppableId="colors-list">
+                {(provided) => (
+                  <div 
+                    {...provided.droppableProps} 
+                    ref={provided.innerRef} 
+                    className="space-y-3"
+                  >
+                    {colorVariants.map((v, i) => (
+                      <Draggable key={`color-${i}`} draggableId={`color-${i}`} index={i}>
+                        {(provided) => (
+                          <div 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className="flex gap-2 items-center bg-[#121212] p-2 rounded border border-[#333]"
+                          >
+                            <div {...provided.dragHandleProps} className="text-gray-500 px-1 cursor-grab">⠿</div>
+                            <div className="w-8 h-8 rounded-full bg-black overflow-hidden border border-[#F5C518] shrink-0">
+                                 {(v.preview || v.swatchUrl || v.swatch) && <img src={v.preview || v.swatchUrl || v.swatch} className="w-full h-full object-cover" />}
+                            </div>
+                            <input placeholder="اسم اللون" value={v.name} className="bg-transparent text-white text-sm outline-none flex-1" 
+                                onChange={(e) => { const n = [...colorVariants]; n[i].name = e.target.value; setColorVariants(n); }} 
+                            />
+                            <input placeholder="رابط صورة اللون" value={v.swatchUrl || v.swatch || ""} className="bg-[#222] text-[#F5C518] text-xs p-1 rounded w-1/2"
+                                onChange={(e) => { const n = [...colorVariants]; n[i].swatchUrl = e.target.value; setColorVariants(n); }}
+                            />
+                            <button onClick={() => removeColorVariant(i)} className="text-red-500 px-2 text-xl">×</button>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+            
+            <button onClick={addColorVariant} className="text-[#F5C518] text-xs font-bold mt-4">+ إضافة لون جديد</button>
           </div>
 
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333] mt-6">
@@ -312,7 +373,7 @@ function ProductFormContent() {
                       <td className="p-1"><input value={row.waist} onChange={(e) => handleSizeChartChange(index, 'waist', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
                       <td className="p-1"><input value={row.weight} onChange={(e) => handleSizeChartChange(index, 'weight', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
                       <td className="p-1 text-center">
-                        <button onClick={() => removeSizeRow(index)} className="text-red-500 hover:text-red-400">×</button>
+                        <button onClick={() => removeSizeRow(index)} className="text-red-500 hover:text-red-400 text-xl">×</button>
                       </td>
                     </tr>
                   ))}
