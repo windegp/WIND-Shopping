@@ -1,33 +1,47 @@
-import { db } from "@/lib/firebase";
+"use client";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { db } from "../../../lib/firebase"; // مسار نسبي مضمون
 import { collection, query, where, getDocs } from "firebase/firestore";
-import ProductCard from "@/components/products/ProductCard";
-import SectionHeader from "@/components/sections/SectionHeader";
+import ProductCard from "../../../components/products/ProductCard"; // مسار نسبي مضمون
 
-export default async function CategoryPage({ params }) {
-  // 1. الحصول على اسم القسم من الرابط (Slug)
-  const { categorySlug } = params;
+export default function CategoryPage() {
+  const { categorySlug } = useParams();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 2. جلب المنتجات من Firebase التي تنتمي لهذا القسم فقط
-  const q = query(
-    collection(db, "products"),
-    where("category", "==", categorySlug)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  const categoryProducts = querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const q = query(
+          collection(db, "products"),
+          where("category", "==", categorySlug)
+        );
+        const querySnapshot = await getDocs(q);
+        const productsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+      setLoading(false);
+    };
 
-  // فك تشفير الاسم للعرض (مثلاً: shawls تصبح "الشيلات")
+    fetchProducts();
+  }, [categorySlug]);
+
+  // فك تشفير الاسم للعرض
   const categoryTitle = categorySlug === 'isdal' ? 'الإسدالات' : 
-                       categorySlug === 'shawls' ? 'الشيلان' : 'التشكيلة';
+                        categorySlug === 'shawls' ? 'الشيلان' : 'التشكيلة';
 
   return (
     <main className="min-h-screen bg-[#121212] pt-24 pb-12" dir="rtl">
       <div className="max-w-[1400px] mx-auto px-4">
         
-        {/* رأس الصفحة الديناميكي */}
+        {/* رأس الصفحة - قمت بدمجه هنا مباشرة بدلاً من استيراد ملف مفقود */}
         <div className="mb-10 text-center">
           <h1 className="text-4xl md:text-6xl font-black text-white mb-4 uppercase tracking-tighter">
             {categoryTitle}
@@ -37,10 +51,11 @@ export default async function CategoryPage({ params }) {
           </p>
         </div>
 
-        {/* شبكة المنتجات - تظهر تلقائياً بمجرد إضافة منتج في Firebase */}
-        {categoryProducts.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-20 text-gray-500">جاري تحميل المجموعة...</div>
+        ) : products.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
-            {categoryProducts.map((product) => (
+            {products.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
