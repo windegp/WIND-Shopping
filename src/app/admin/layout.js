@@ -7,11 +7,12 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
-  const menuItems = [
+const menuItems = [
     { name: 'الرئيسية', path: '/admin', icon: '🏠' },
     { name: 'المنتجات', path: '/admin/products', icon: '👕' },
     { name: 'إضافة منتج', path: '/admin/products/create', icon: '➕' },
     { name: 'الأقسام', path: '/admin/collections', icon: '📂' },
+    { name: 'إدارة المنيو', path: '/admin/menu', icon: '📋' }, // التعديل هنا
     { name: 'الصفحات', path: '/admin/pages', icon: '📄' },
   ];
 

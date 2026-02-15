@@ -191,13 +191,13 @@ export default function MenuManager() {
 
       {/* منطقة السحب والإفلات */}
       <div className="menu-builder-area">
-        <Nestable
-          items={items}
-          renderItem={renderItem}
-          onChange={(newItems) => setItems(newItems)}
-          maxDepth={5} // أقصى عمق للقوائم (مثلاً 5 مستويات)
-          threshold={30} // حساسية السحب لليمين لعمل قائمة فرعية
-        />
+     <Nestable
+  items={Array.isArray(items) ? items : []} // تأكد إنها مصفوفة، لو مش مصفوفة ابعت واحدة فاضية
+  renderItem={renderItem}
+  onChange={(newItems) => setItems(newItems)}
+  maxDepth={5}
+  threshold={30}
+/>
       </div>
 
       {/* رسالة مساعدة لو القائمة فاضية */}
