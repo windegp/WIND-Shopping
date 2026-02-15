@@ -1,18 +1,37 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // أضفنا useEffect
 import Link from 'next/link';
 import { useCart } from "../../context/CartContext";
+import { db } from "../../lib/firebase"; // تأكد من صحة مسار ملف الفايربيز
+import { doc, onSnapshot } from "firebase/firestore"; // استخدام onSnapshot للتحديث اللحظي
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { cartItems = [], toggleCart } = useCart() || {};
-
-  const categories = [
+  
+  // الحالة الابتدائية هي المصفوفة الحالية لضمان عدم ظهور المنيو فارغاً أبداً
+  const [categories, setCategories] = useState([
     { name: "الرئيسية", link: "/" },
     { name: "وصل حديثاً", link: "/new-arrivals" },
     { name: "الأكثر مبيعاً", link: "/best-sellers" },
     { name: "تخفيضات", link: "/sale", highlight: true },
-  ];
+  ]);
+
+  // جلب البيانات من Firebase وتحديثها لحظياً بمجرد الحفظ من لوحة التحكم
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "navigation"), (doc) => {
+      if (doc.exists() && doc.data().menuItems) {
+        // تحويل أسامي الحقول لتناسب الكود الحالي (title -> name)
+        const formattedMenu = doc.data().menuItems.map(item => ({
+          name: item.title,
+          link: item.link,
+          highlight: item.title === "تخفيضات" || item.highlight // الحفاظ على تمييز التخفيضات
+        }));
+        setCategories(formattedMenu);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   return (
     <>
@@ -59,13 +78,12 @@ export default function Navbar() {
             </svg>
           </button>
 
-          {/* اللوجو - تم تكبيره ليكون واضحاً ومناسباً لارتفاع البار */}
+          {/* اللوجو */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
             <Link href="/" className="block">
               <img 
                 src="/logo.jpg" 
                 alt="WIND" 
-                // التعديل هنا: h-16 للموبايل و h-17 للشاشات الأكبر
                 className="h-16 md:h-17 w-auto object-contain hover:scale-105 transition-transform duration-300" 
               />
             </Link>
@@ -91,7 +109,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* المنيو الجانبية (Mobile Menu) - كما هي تماماً */}
+        {/* المنيو الجانبية (Mobile Menu) */}
         {isMenuOpen && (
           <div className="fixed inset-0 z-[200] flex" dir="rtl">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
@@ -110,7 +128,7 @@ export default function Navbar() {
                   {categories.map((cat, i) => (
                     <li key={i}>
                       <Link 
-                        href={cat.link} 
+                        href={cat.link || "/"} 
                         onClick={() => setIsMenuOpen(false)}
                         className={`flex items-center justify-between p-4 rounded-sm transition-all duration-200 
                           ${cat.highlight 
