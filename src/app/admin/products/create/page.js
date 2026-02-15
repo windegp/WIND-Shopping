@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, Suspense } from 'react'; // أضفنا Suspense
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc } from "firebase/firestore"; // أضفنا getDocs و deleteDoc للجدول
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useParams, useSearchParams } from "next/navigation"; // أضفنا useSearchParams كخيار احتياطي
+import Link from "next/link"; // أضفنا Link لزر التعديل في الجدول
 
 // المكون الرئيسي المغلف لضمان عمل "زر التعديل" وقراءة الـ ID
 export default function CreateProductPage() {
@@ -23,6 +24,7 @@ function ProductFormContent() {
   const id = params.id || searchParams.get('id'); 
   
   const [loading, setLoading] = useState(false);
+  const [productsList, setProductsList] = useState([]); // حالة لتخزين قائمة المنتجات للجدول
   
   const [product, setProduct] = useState({
     title: '', description: '', price: '', compareAtPrice: '',
@@ -44,9 +46,11 @@ function ProductFormContent() {
     { size: 'S', length: '', chest: '', waist: '', weight: '' }
   ]);
 
+  // تعديل useEffect لجلب قائمة المنتجات بجانب جلب منتج التعديل
   useEffect(() => {
-    if (id) {
-      const fetchProduct = async () => {
+    const fetchData = async () => {
+      // جلب بيانات المنتج المراد تعديله
+      if (id) {
         const docRef = doc(db, "products", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -57,9 +61,12 @@ function ProductFormContent() {
           if (data.options?.colors) setColorVariants(data.options.colors);
           if (data.images) setPreviews(data.images);
         }
-      };
-      fetchProduct();
-    }
+      }
+      // جلب جميع المنتجات لعرضها في الجدول تحت
+      const querySnapshot = await getDocs(collection(db, "products"));
+      setProductsList(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchData();
   }, [id]);
 
   const handleChange = (e) => {
@@ -101,6 +108,19 @@ function ProductFormContent() {
   const removeSizeRow = (index) => {
     const newChart = sizeChart.filter((_, i) => i !== index);
     setSizeChart(newChart);
+  };
+
+  // وظيفة الحذف للجدول
+  const handleDelete = async (productId) => {
+    if (confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+      try {
+        await deleteDoc(doc(db, "products", productId));
+        setProductsList(productsList.filter(p => p.id !== productId));
+        alert("تم الحذف بنجاح");
+      } catch (error) {
+        alert("خطأ في الحذف: " + error.message);
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -163,8 +183,9 @@ function ProductFormContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20" dir="rtl">
+      {/* ----------------- الجزء الأول: فورم الإضافة والتعديل (بدون تغيير) ----------------- */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">{id ? 'تعديل منتج' : 'إضافة منتج جديد'}</h2>
+        <h2 className="text-2xl font-bold text-white">{id ? 'تعديل منتج' : 'إضافة منتج جديد'}</h2>
         <button 
           onClick={handleSave}
           disabled={loading}
@@ -235,7 +256,7 @@ function ProductFormContent() {
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full text-center text-sm">
+              <table className="w-full text-center text-sm text-white">
                 <thead>
                   <tr className="text-gray-500 border-b border-[#333]">
                     <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col1} onChange={(e)=>setChartHeaders({...chartHeaders, col1: e.target.value})} /></th>
@@ -295,7 +316,7 @@ function ProductFormContent() {
 
              <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
                 <h3 className="font-bold mb-4 text-[#F5C518]">Search engine listing</h3>
-                <div className="space-y-4">
+                <div className="space-y-4 text-white">
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Page title</label>
                     <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="عنوان الصفحة" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
@@ -314,6 +335,54 @@ function ProductFormContent() {
                   </div>
                 </div>
             </div>
+        </div>
+      </div>
+
+      <hr className="border-[#333] my-10" />
+
+      {/* ----------------- الجزء الثاني: جدول عرض المنتجات (إضافتك المطلوبة) ----------------- */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-[#F5C518]">جميع المنتجات الحالية</h3>
+        <div className="bg-[#1a1a1a] rounded border border-[#333] overflow-hidden">
+          <table className="w-full text-right text-sm text-white">
+            <thead className="bg-[#222] text-[#F5C518]">
+              <tr>
+                <th className="p-4">الصورة</th>
+                <th className="p-4">المنتج</th>
+                <th className="p-4">السعر</th>
+                <th className="p-4">القسم</th>
+                <th className="p-4">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#333]">
+              {productsList.map((p) => (
+                <tr key={p.id} className="hover:bg-[#222] transition">
+                  <td className="p-4">
+                    <img src={p.images?.[0] || p.mainImageUrl} className="w-12 h-12 object-cover rounded border border-[#333]" alt="" />
+                  </td>
+                  <td className="p-4 font-bold">{p.title}</td>
+                  <td className="p-4">{p.price} ج.م</td>
+                  <td className="p-4 text-xs text-gray-400">{p.categories?.join(', ')}</td>
+                  <td className="p-4">
+                    <div className="flex gap-4">
+                      <Link 
+                        href={`/admin/products/create?id=${p.id}`} 
+                        className="text-blue-400 hover:text-blue-300 font-bold"
+                      >
+                        تعديل
+                      </Link>
+                      <button 
+                        onClick={() => handleDelete(p.id)}
+                        className="text-red-500 hover:text-red-400 font-bold"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
