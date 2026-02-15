@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -8,42 +8,51 @@ export default function CreateProductPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
 
-  // الحالة الشاملة للمنتج (State)
+  // الحالة الشاملة للمنتج
   const [product, setProduct] = useState({
-    title: '',
-    description: '',
-    price: '',
-    compareAtPrice: '',
-    costPerItem: '', // لن يظهر للعميل
-    sku: '',
-    quantity: 0,
-    category: 'shawls',
-    tags: '', // مفصول بفواصل
-    colors: '', // مفصول بفواصل
-    sizes: '',  // مفصول بفواصل
-    seoTitle: '',
-    seoDesc: '',
-    handle: '', // رابط الصفحة (Slug)
+    title: '', description: '', price: '', compareAtPrice: '',
+    costPerItem: '', sku: '', quantity: 0, category: 'shawls',
+    tags: '', sizes: '', seoTitle: '', seoDesc: '', handle: '',
   });
 
   const [images, setImages] = useState([]);
+  const [previews, setPreviews] = useState([]); // للمعاينة
+  const [colorVariants, setColorVariants] = useState([]); // للألوان بالصور
 
   // دالة التعامل مع التغييرات
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduct(prev => ({ ...prev, [name]: value }));
-    
-    // توليد الرابط تلقائياً من العنوان إذا كان فارغاً
     if (name === 'title' && !product.handle) {
       setProduct(prev => ({ ...prev, handle: value.toLowerCase().replace(/\s+/g, '-') }));
     }
+  };
+
+  // معالجة الصور الرئيسية
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    setImages(prev => [...prev, ...files]);
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setPreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  // إضافة خيار لون بصورة
+  const addColorVariant = () => {
+    setColorVariants([...colorVariants, { name: '', file: null, preview: '' }]);
+  };
+
+  const handleColorFile = (index, file) => {
+    const newVariants = [...colorVariants];
+    newVariants[index].file = file;
+    newVariants[index].preview = URL.createObjectURL(file);
+    setColorVariants(newVariants);
   };
 
   // دالة الحفظ
   const handleSave = async () => {
     setLoading(true);
     try {
-      // 1. رفع الصور (يمكن تطويرها لرفع متعدد)
+      // 1. رفع الصور الرئيسية
       let imageUrls = [];
       for (let img of images) {
         const imgRef = ref(storage, `products/${Date.now()}-${img.name}`);
@@ -52,22 +61,34 @@ export default function CreateProductPage() {
         imageUrls.push(url);
       }
 
-      // 2. تجهيز البيانات للإرسال
+      // 2. رفع صور الألوان
+      let finalColors = [];
+      for (let variant of colorVariants) {
+        let swatchUrl = "";
+        if (variant.file) {
+          const vRef = ref(storage, `variants/${Date.now()}-${variant.file.name}`);
+          const vSnap = await uploadBytes(vRef, variant.file);
+          swatchUrl = await getDownloadURL(vSnap.ref);
+        }
+        finalColors.push({ name: variant.name, swatch: swatchUrl });
+      }
+
+      // 3. تجهيز البيانات
       const productData = {
         ...product,
         price: Number(product.price),
         compareAtPrice: Number(product.compareAtPrice),
-        costPerItem: Number(product.costPerItem), // لحساب ربحك
+        costPerItem: Number(product.costPerItem),
         quantity: Number(product.quantity),
         tags: product.tags.split(',').map(t => t.trim()),
         options: {
-          colors: product.colors.split(',').map(c => c.trim()),
+          colors: finalColors, // الآن الألوان أصبحت مصفوفة كائنات (اسم وصورة)
           sizes: product.sizes.split(',').map(s => s.trim()),
         },
         seo: {
           title: product.seoTitle || product.title,
           description: product.seoDesc || product.description.substring(0, 160),
-          slug: product.handle // الرابط المخصص
+          slug: product.handle
         },
         images: imageUrls,
         createdAt: serverTimestamp(),
@@ -75,7 +96,8 @@ export default function CreateProductPage() {
       };
 
       await addDoc(collection(db, "products"), productData);
-      alert("تم إنشاء المنتج بنجاح! الرابط: /product/" + product.handle);
+      alert("تم الحفظ بنجاح!");
+      window.location.reload();
       
     } catch (error) {
       console.error(error);
@@ -85,10 +107,10 @@ export default function CreateProductPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1f1f1] pb-20" dir="rtl">
-      {/* الشريط العلوي */}
-      <div className="bg-[#1a1a1a] text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
-        <h1 className="font-bold text-lg">WIND Admin <span className="text-[#F5C518] text-xs">PRO</span></h1>
+    <div className="min-h-screen bg-[#121212] text-white pb-20 font-sans" dir="rtl">
+      {/* الشريط العلوي - معدل ليكون واضحاً */}
+      <div className="bg-[#1a1a1a] border-b border-[#333] p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <h1 className="font-bold text-lg text-white">WIND Admin <span className="text-[#F5C518] text-xs">PRO</span></h1>
         <div className="flex gap-3">
           <button className="text-gray-400 text-sm hover:text-white">إلغاء</button>
           <button 
@@ -102,142 +124,119 @@ export default function CreateProductPage() {
       </div>
 
       <div className="max-w-5xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
-        
-        {/* العمود الرئيسي (يمين) */}
         <div className="md:col-span-2 space-y-6">
           
-          {/* 1. المعلومات الأساسية */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <label className="block text-sm font-bold mb-2">عنوان المنتج</label>
+          {/* 1. المعلومات الأساسية - خلفية داكنة لنصوص واضحة */}
+          <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
+            <label className="block text-sm font-bold mb-2 text-[#F5C518]">عنوان المنتج</label>
             <input 
               name="title" value={product.title} onChange={handleChange}
-              type="text" className="w-full border p-2 rounded focus:ring-2 focus:ring-[#F5C518] outline-none" placeholder="مثال: شال كشمير شتوي" 
+              type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none focus:border-[#F5C518]" 
+              placeholder="مثال: شال كشمير شتوي" 
             />
             
-            <label className="block text-sm font-bold mt-4 mb-2">الوصف</label>
+            <label className="block text-sm font-bold mt-4 mb-2 text-[#F5C518]">الوصف</label>
             <textarea 
               name="description" value={product.description} onChange={handleChange}
-              className="w-full border p-2 rounded h-40 focus:ring-2 focus:ring-[#F5C518] outline-none" placeholder="اكتب تفاصيل المنتج..." 
+              className="w-full bg-[#121212] border border-[#333] p-2 rounded h-40 text-white outline-none focus:border-[#F5C518]" 
+              placeholder="اكتب تفاصيل المنتج..." 
             />
           </div>
 
-          {/* 2. الوسائط (الصور) */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <h3 className="font-bold mb-4">الوسائط</h3>
-            <div className="border-2 border-dashed border-gray-300 p-8 text-center rounded hover:bg-gray-50 cursor-pointer relative">
+          {/* 2. الوسائط (مع المعاينة) */}
+          <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
+            <h3 className="font-bold mb-4 text-[#F5C518]">الوسائط</h3>
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {previews.map((src, i) => (
+                <img key={i} src={src} className="w-full h-24 object-cover rounded border border-[#333]" />
+              ))}
+            </div>
+            <div className="border-2 border-dashed border-[#333] p-8 text-center rounded hover:bg-[#222] cursor-pointer relative">
               <input 
-                type="file" multiple onChange={(e) => setImages([...e.target.files])}
+                type="file" multiple onChange={handleImageChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
-              <p className="text-gray-500">
-                {images.length > 0 ? `تم اختيار ${images.length} صور` : "اضغط لرفع الصور أو اسحبها هنا"}
-              </p>
+              <p className="text-gray-500">اضغط لرفع الصور أو اسحبها هنا</p>
             </div>
           </div>
 
-          {/* 3. التسعير (شامل التكلفة والربح) */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <h3 className="font-bold mb-4">التسعير</h3>
+          {/* 3. التسعير */}
+          <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
+            <h3 className="font-bold mb-4 text-[#F5C518]">التسعير</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-600 block mb-1">السعر (للعميل)</label>
-                <input name="price" value={product.price} onChange={handleChange} type="number" className="w-full border p-2 rounded" placeholder="0.00" />
+                <label className="text-xs text-gray-400 block mb-1">السعر (للعميل)</label>
+                <input name="price" value={product.price} onChange={handleChange} type="number" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" />
               </div>
               <div>
-                <label className="text-xs text-gray-600 block mb-1">السعر قبل الخصم</label>
-                <input name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} type="number" className="w-full border p-2 rounded" placeholder="0.00" />
+                <label className="text-xs text-gray-400 block mb-1">السعر قبل الخصم</label>
+                <input name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} type="number" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" />
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+            <div className="mt-4 pt-4 border-t border-[#333] grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-600 block mb-1">التكلفة عليك (Cost per item)</label>
-                <input name="costPerItem" value={product.costPerItem} onChange={handleChange} type="number" className="w-full border p-2 rounded" placeholder="0.00" />
-                <p className="text-[10px] text-gray-400 mt-1">لن يرى العملاء هذا الرقم.</p>
+                <label className="text-xs text-gray-400 block mb-1">التكلفة عليك</label>
+                <input name="costPerItem" value={product.costPerItem} onChange={handleChange} type="number" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" />
               </div>
-              <div className="flex items-center text-sm text-green-600 pt-6">
+              <div className="flex items-center text-sm text-green-500 pt-6">
                 الربح المتوقع: {product.price && product.costPerItem ? product.price - product.costPerItem : 0} ج.م
               </div>
             </div>
           </div>
 
-          {/* 4. المخزون والخيارات */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <h3 className="font-bold mb-4">المخزون والخيارات</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-xs text-gray-600 block mb-1">وحدة التخزين (SKU)</label>
-                <input name="sku" value={product.sku} onChange={handleChange} type="text" className="w-full border p-2 rounded" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-600 block mb-1">الكمية المتاحة</label>
-                <input name="quantity" value={product.quantity} onChange={handleChange} type="number" className="w-full border p-2 rounded" />
-              </div>
+          {/* 4. المخزون والخيارات (تم تعديل الألوان لتكون بصور) */}
+          <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
+            <h3 className="font-bold mb-4 text-[#F5C518]">المخزون والخيارات</h3>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <input name="sku" value={product.sku} onChange={handleChange} placeholder="SKU" className="bg-[#121212] border border-[#333] p-2 rounded" />
+              <input name="quantity" value={product.quantity} onChange={handleChange} type="number" placeholder="الكمية" className="bg-[#121212] border border-[#333] p-2 rounded" />
             </div>
             
-            <label className="text-xs text-gray-600 block mb-1">الألوان (افصل بفاصلة)</label>
-            <input name="colors" value={product.colors} onChange={handleChange} type="text" className="w-full border p-2 rounded mb-3" placeholder="أحمر, أسود, أبيض" />
+            <label className="text-xs text-gray-400 block mb-2">الألوان المتاحة (صور الدوائر)</label>
+            <div className="space-y-3 mb-4">
+              {colorVariants.map((v, i) => (
+                <div key={i} className="flex items-center gap-3 bg-[#121212] p-2 rounded border border-[#333]">
+                  <div className="w-10 h-10 rounded-full border border-[#F5C518] overflow-hidden bg-black">
+                    {v.preview && <img src={v.preview} className="w-full h-full object-cover" />}
+                  </div>
+                  <input 
+                    placeholder="اسم اللون" 
+                    className="bg-transparent border-b border-[#333] outline-none text-sm flex-1"
+                    onChange={(e) => {
+                      const n = [...colorVariants];
+                      n[i].name = e.target.value;
+                      setColorVariants(n);
+                    }}
+                  />
+                  <input type="file" className="hidden" id={`color-${i}`} onChange={(e) => handleColorFile(i, e.target.files[0])} />
+                  <label htmlFor={`color-${i}`} className="text-[10px] bg-[#333] p-1 cursor-pointer rounded">اختر صورة اللون</label>
+                </div>
+              ))}
+              <button onClick={addColorVariant} className="text-[#F5C518] text-sm">+ إضافة لون جديد</button>
+            </div>
             
-            <label className="text-xs text-gray-600 block mb-1">المقاسات (افصل بفاصلة)</label>
-            <input name="sizes" value={product.sizes} onChange={handleChange} type="text" className="w-full border p-2 rounded" placeholder="S, M, L, XL" />
+            <label className="text-xs text-gray-400 block mb-1">المقاسات (افصل بفاصلة)</label>
+            <input name="sizes" value={product.sizes} onChange={handleChange} type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded" placeholder="S, M, L" />
           </div>
 
-          {/* 5. تحسين محركات البحث (SEO) */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold">معاينة محرك البحث (SEO)</h3>
-              <span className="text-xs text-[#F5C518] cursor-pointer">تعديل</span>
-            </div>
-            <div className="bg-gray-50 p-4 rounded mb-4 text-left" dir="ltr">
-              <h4 className="text-blue-600 text-lg hover:underline cursor-pointer truncate">{product.seoTitle || product.title}</h4>
-              <p className="text-green-700 text-sm">wind-eg.com/products/{product.handle}</p>
-              <p className="text-gray-600 text-sm truncate">{product.seoDesc || product.description}</p>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-600 block mb-1">عنوان الصفحة (Page Title)</label>
-                <input name="seoTitle" value={product.seoTitle} onChange={handleChange} type="text" className="w-full border p-2 rounded" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-600 block mb-1">الوصف (Meta Description)</label>
-                <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} className="w-full border p-2 rounded h-20 resize-none" maxLength={320} />
-              </div>
-              <div>
-                <label className="text-xs text-gray-600 block mb-1">رابط الصفحة (URL Handle)</label>
-                <input name="handle" value={product.handle} onChange={handleChange} type="text" className="w-full border p-2 rounded bg-gray-50" />
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* العمود الجانبي (يسار) */}
+        {/* العمود الجانبي */}
         <div className="space-y-6">
-          {/* حالة المنتج */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <h3 className="font-bold mb-4">حالة المنتج</h3>
-            <select className="w-full border p-2 rounded bg-white">
-              <option>نشط (Active)</option>
-              <option>مسودة (Draft)</option>
-            </select>
-          </div>
-
-          {/* تنظيم المنتج */}
-          <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-            <h3 className="font-bold mb-4">التنظيم</h3>
-            
-            <label className="text-xs text-gray-600 block mb-1">القسم (Collection)</label>
-            <select name="category" value={product.category} onChange={handleChange} className="w-full border p-2 rounded mb-4">
+          <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
+            <h3 className="font-bold mb-4 text-[#F5C518]">القسم</h3>
+            <select name="category" value={product.category} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white">
               <option value="shawls">شيلان</option>
               <option value="isdal">إسدالات</option>
               <option value="winter">شتوي</option>
-              <option value="new">وصل حديثاً</option>
             </select>
-
-            <label className="text-xs text-gray-600 block mb-1">Tags (الكلمات المفتاحية)</label>
-            <input name="tags" value={product.tags} onChange={handleChange} type="text" className="w-full border p-2 rounded" placeholder="قطن, خصم, جديد" />
+          </div>
+          <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
+            <h3 className="font-bold mb-4 text-[#F5C518]">تحسين محركات البحث</h3>
+            <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="عنوان SEO" className="w-full bg-[#121212] border border-[#333] p-2 rounded mb-2 text-sm" />
+            <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} placeholder="وصف SEO" className="w-full bg-[#121212] border border-[#333] p-2 rounded h-20 text-sm" />
           </div>
         </div>
-
       </div>
     </div>
   );
