@@ -1,139 +1,96 @@
-import { db } from "@/lib/firebase";
+"use client";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { db } from "../../../lib/firebase"; 
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import ProductCard from "../../../components/products/ProductCard";
 import Link from "next/link";
 
-// تأمين جلب البيانات ديناميكياً من فيرسيل وضمان تحديثها
-export const dynamic = 'force-dynamic';
+export default function CategoryPage() {
+  const params = useParams();
+  const slug = params.slug; // بناخد الـ slug من اسم الفولدر [slug]
+  
+  const [products, setProducts] = useState([]);
+  const [categoryData, setCategoryData] = useState({ name: "التشكيلة", description: "" });
+  const [loading, setLoading] = useState(true);
 
-// 1. دعم الـ SEO الديناميكي
-export async function generateMetadata({ params }) {
-    const slugArray = await params.slug;
-    const slugPath = `/${slugArray.join('/')}`;
-    
-    const q = query(collection(db, "collections"), where("slug", "==", slugPath));
-    const querySnapshot = await getDocs(q);
-    const category = querySnapshot.docs[0]?.data();
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!slug) return;
+      setLoading(true);
+      try {
+        // 1. جلب بيانات القسم أولاً (عشان الاسم والوصف)
+        const catQuery = query(collection(db, "collections"), where("slug", "in", [slug, `/${slug}`]));
+        const catSnapshot = await getDocs(catQuery);
+        if (!catSnapshot.empty) {
+          setCategoryData(catSnapshot.docs[0].data());
+        }
 
-    return {
-        title: category?.name ? `${category.name} | WIND` : "تشكيلة WIND",
-        description: category?.description || "اكتشف الأناقة والراحة في تشكيلة WIND الفريدة.",
-        openGraph: {
-            title: category?.name,
-            description: category?.description,
-            images: category?.image ? [{ url: category.image }] : [],
-        },
-    }
-}
+        // 2. جلب المنتجات (البحث في المصفوفة لضمان التسميع)
+        const pQuery = query(
+          collection(db, "products"),
+          where("categories", "array-contains-any", [slug, `/${slug}`, categoryData.name]),
+          limit(40)
+        );
+        
+        const pSnapshot = await getDocs(pQuery);
+        const productsData = pSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setProducts(productsData);
+      } catch (error) {
+        console.error("WIND Error:", error);
+      }
+      setLoading(false);
+    };
 
-export default async function CategoryPage({ params }) {
-    const slugArray = await params.slug;
-    const slugPath = `/${slugArray.join('/')}`;
-    // صيغة بديلة للمسار بدون السلاش الأولى لضمان مرونة البحث
-    const cleanSlug = slugArray.join('/'); 
+    fetchData();
+  }, [slug, categoryData.name]);
 
-    // جلب بيانات القسم
-    const categoryQuery = query(collection(db, "collections"), where("slug", "==", slugPath));
-    const categorySnap = await getDocs(categoryQuery);
-    const categoryData = categorySnap.docs[0]?.data() || { name: "القسم", description: "" };
-
-    /* تعديل مرن: جلب المنتجات التي تحتوي على المسار بـ / أو بدونه
-       Next.js سيعالج المصفوفة هنا ويجلب المنتجات التي تطابق أي من الصيغتين
-    */
-    const productsQuery = query(
-        collection(db, "products"), 
-        where("categories", "array-contains-any", [slugPath, cleanSlug]),
-        limit(40) 
-    );
-    
-    const productsSnap = await getDocs(productsQuery);
-    const products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    return (
-        <div className="min-h-screen bg-white text-black font-sans" dir="rtl">
-            {/* 2. هيدر القسم - Warm & Stylish */}
-            <header className="bg-[#fcfcfc] py-20 px-4 border-b border-gray-50">
-                <div className="max-w-6xl mx-auto text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-[#1a1a1a]">
-                        {categoryData.name}
-                    </h1>
-                    
-                    {categoryData.description && (
-                        <p className="text-gray-500 max-w-2xl mx-auto leading-relaxed text-lg font-light italic">
-                            {categoryData.description}
-                        </p>
-                    )}
-
-                    <nav className="mt-8 flex justify-center items-center gap-3 text-[11px] uppercase tracking-widest text-gray-400">
-                        <Link href="/" className="hover:text-black transition-colors">الرئيسية</Link>
-                        <span className="text-gray-300">/</span>
-                        <span className="text-black font-semibold">{categoryData.name}</span>
-                    </nav>
-                </div>
-            </header>
-
-            {/* 3. شبكة المنتجات */}
-            <main className="max-w-7xl mx-auto px-4 py-16">
-                {products.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
-                        {products.map((product) => (
-                            <Link key={product.id} href={`/product/${product.handle}`} className="group block">
-                                <div className="relative aspect-[3/4] overflow-hidden bg-[#f5f5f5] rounded-sm">
-                                    <img 
-                                        src={product.images?.[0] || product.mainImageUrl} 
-                                        alt={product.title}
-                                        className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                    {product.compareAtPrice > product.price && (
-                                        <div className="absolute top-3 right-3 bg-black text-white text-[10px] px-2.5 py-1 font-bold tracking-tighter">
-                                            خصم خاص
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="mt-5 space-y-1.5 text-center md:text-right">
-                                    <h3 className="text-[14px] md:text-[16px] text-[#333] font-medium group-hover:text-gray-600 transition-colors">
-                                        {product.title}
-                                    </h3>
-                                    <div className="flex flex-col md:flex-row gap-1 md:gap-3 items-center md:items-baseline">
-                                        <span className="font-bold text-[15px] md:text-[17px] text-black">
-                                            {product.price} ج.م
-                                        </span>
-                                        {product.compareAtPrice > 0 && (
-                                            <span className="text-gray-400 line-through text-xs md:text-sm">
-                                                {product.compareAtPrice} ج.م
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-32 border-2 border-dashed border-gray-50 rounded-xl">
-                        <p className="text-gray-400 text-lg">نعمل حالياً على تجهيز قطع جديدة لتنضم لـ {categoryData.name}.</p>
-                        <Link href="/" className="inline-block mt-6 text-sm underline underline-offset-4 hover:text-[#F5C518]">
-                            العودة لتصفح جديدنا
-                        </Link>
-                    </div>
-                )}
-            </main>
-
-            {/* 4. فوتر القسم المخصص للـ SEO */}
-            {categoryData.footerText && (
-                <section className="bg-[#fafafa] border-t border-gray-100 py-20 mt-10">
-                    <div className="max-w-4xl mx-auto px-6 text-center md:text-right">
-                        <div className="prose prose-sm max-w-none">
-                            <h2 className="text-[#1a1a1a] text-xl font-bold mb-6">
-                                تصفحي مجموعة {categoryData.name} من WIND
-                            </h2>
-                            <div className="text-gray-500 leading-8 text-[15px] font-light whitespace-pre-line">
-                                {categoryData.footerText}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
+  return (
+    <main className="min-h-screen bg-[#121212] pt-24 pb-12" dir="rtl">
+      <div className="max-w-[1400px] mx-auto px-4">
+        
+        {/* رأس الصفحة بتصميم WIND الدافئ */}
+        <div className="mb-16 text-center">
+          <h1 className="text-4xl md:text-7xl font-black text-white mb-4 uppercase tracking-tighter">
+            {categoryData.name}
+          </h1>
+          <div className="flex justify-center items-center gap-4">
+            <span className="h-[1px] w-10 bg-[#F5C518]"></span>
+            <p className="text-[#F5C518] font-bold tracking-[0.3em] text-xs md:text-sm">
+              WIND ESSENTIALS
+            </p>
+            <span className="h-[1px] w-10 bg-[#F5C518]"></span>
+          </div>
+          {categoryData.description && (
+            <p className="mt-6 text-gray-400 max-w-2xl mx-auto font-light leading-relaxed italic">
+              {categoryData.description}
+            </p>
+          )}
         </div>
-    );
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5C518]"></div>
+            <p className="mt-4 text-gray-500">جاري تحميل مجموعة WIND...</p>
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+            {products.map((product) => (
+              <ProductCard key={product.id} {...product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-32 border border-dashed border-[#333] rounded-lg">
+            <p className="text-gray-500 mb-6">لا توجد قطع متوفرة في "{categoryData.name}" حالياً.</p>
+            <Link href="/" className="bg-[#F5C518] text-black px-8 py-3 font-black text-sm hover:bg-white transition-colors">
+              العودة للرئيسية
+            </Link>
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }
