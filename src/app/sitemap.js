@@ -1,11 +1,11 @@
-import { db } from "@/lib/firebase"; // تأكد أن المسار @/lib/firebase صحيح
+import { db } from "@/lib/firebase"; 
 import { collection, getDocs } from "firebase/firestore";
-import { products as staticProducts } from "@/lib/products"; // تأكد أن المسار @/lib/products صحيح
+import { products as staticProducts } from "@/lib/products";
 
 export default async function sitemap() {
   const baseUrl = "https://www.windeg.com";
 
-  // 1. جلب المنتجات من Firebase (Firestore)
+  // 1. جلب المنتجات من Firebase
   let fbProducts = [];
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
@@ -15,26 +15,45 @@ export default async function sitemap() {
     }));
   } catch (error) {
     console.error("Error fetching products for sitemap:", error);
-    // في حال حدث خطأ، سنكتفي بالمنتجات الثابتة لضمان عدم فشل الـ Build
   }
 
-  // 2. دمج المنتجات الثابتة مع منتجات Firebase لضمان شمولية الروابط
+  // 2. دمج المنتجات
   const allProducts = [...staticProducts, ...fbProducts];
 
-  // 3. تحويل قائمة المنتجات إلى روابط (Product Entries)
+  // 3. تحويل المنتجات لروابط مع معالجة ذكية للتاريخ
   const productEntries = allProducts.map((p) => {
-    // نستخدم الـ id أو الـ handle حسب الطريقة التي تتبعها في روابط موقعك
     const identifier = p.id || p.handle; 
     
+    // --- معالجة التاريخ لضمان عدم حدوث Error ---
+    let finalDate = new Date(); // افتراضياً تاريخ اليوم
+
+    if (p.updatedAt) {
+      try {
+        // إذا كان التاريخ جاي من Firebase Timestamp
+        if (p.updatedAt.seconds) {
+          finalDate = new Date(p.updatedAt.seconds * 1000);
+        } else {
+          // إذا كان التاريخ نصي أو Date عادي
+          const parsedDate = new Date(p.updatedAt);
+          if (!isNaN(parsedDate.getTime())) {
+            finalDate = parsedDate;
+          }
+        }
+      } catch (e) {
+        // لو حصل أي فشل في التحويل، هيفضل تاريخ اليوم هو البديل الآمن
+        finalDate = new Date();
+      }
+    }
+
     return {
       url: `${baseUrl}/product/${identifier}`,
-      lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(),
+      lastModified: finalDate,
       changeFrequency: 'daily',
       priority: 0.7,
     };
   });
 
-  // 4. إرجاع الروابط كاملة (الصفحة الرئيسية + روابط المنتجات)
+  // 4. إرجاع الروابط النهائية
   return [
     {
       url: baseUrl,
