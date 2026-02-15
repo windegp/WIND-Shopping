@@ -1,28 +1,42 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react'; // أضفنا Suspense
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useParams } from "next/navigation"; // للإمساك بمعرف المنتج عند التعديل
+import { useParams, useSearchParams } from "next/navigation"; // أضفنا useSearchParams كخيار احتياطي
 
+// المكون الرئيسي المغلف لضمان عمل "زر التعديل" وقراءة الـ ID
 export default function CreateProductPage() {
-  const { id } = useParams(); // إذا كان هناك ID في الرابط، نحن في وضع التعديل
+  return (
+    <Suspense fallback={<div className="text-white text-center p-10">جاري تحميل البيانات...</div>}>
+      <ProductFormContent />
+    </Suspense>
+  );
+}
+
+// محتوى الصفحة الأصلي بدون حذف أي سطر
+function ProductFormContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  
+  // هذه السطور تضمن رؤية الـ ID بأي شكل كان (سواء في المسار أو في الرابط)
+  const id = params.id || searchParams.get('id'); 
+  
   const [loading, setLoading] = useState(false);
   
   const [product, setProduct] = useState({
     title: '', description: '', price: '', compareAtPrice: '',
     costPerItem: '', sku: '', quantity: 0, 
-    categories: ['shawls'], // غيرنا category إلى categories كمصفوفة
+    categories: ['shawls'], 
     tags: '', sizes: '', seoTitle: '', seoDesc: '', handle: '',
     mainImageUrl: '',
-    seoCategory: '', // خانة الـ SEO Category الجديدة
+    seoCategory: '',
   });
 
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [colorVariants, setColorVariants] = useState([]);
 
-  // 1. تعريف حالة جدول القياسات مع العناوين القابلة للتعديل
   const [chartHeaders, setChartHeaders] = useState({
     col1: 'المقاس', col2: 'الطول', col3: 'الصدر', col4: 'الوسط', col5: 'الوزن (كجم)'
   });
@@ -30,7 +44,6 @@ export default function CreateProductPage() {
     { size: 'S', length: '', chest: '', waist: '', weight: '' }
   ]);
 
-  // --- ميزة التعديل: جلب بيانات المنتج إذا كان موجوداً ---
   useEffect(() => {
     if (id) {
       const fetchProduct = async () => {
@@ -57,7 +70,6 @@ export default function CreateProductPage() {
     }
   };
 
-  // دالة التعامل مع الأقسام المتعددة
   const handleCategoryChange = (cat) => {
     const updatedCats = product.categories.includes(cat)
       ? product.categories.filter(c => c !== cat)
@@ -120,7 +132,7 @@ export default function CreateProductPage() {
           colors: finalColors,
           sizes: product.sizes ? (Array.isArray(product.sizes) ? product.sizes : product.sizes.split(',').map(s => s.trim())) : [],
           sizeChart: sizeChart,
-          chartHeaders: chartHeaders, // حفظ العناوين المعدلة
+          chartHeaders: chartHeaders,
         },
         seo: {
           title: product.seoTitle || product.title,
@@ -164,7 +176,6 @@ export default function CreateProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          {/* تفاصيل المنتج */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <label className="block text-sm font-bold mb-2 text-[#F5C518]">اسم المنتج</label>
              <input name="title" value={product.title} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-3 rounded text-white focus:border-[#F5C518] outline-none" placeholder="مثال: عباية كتان أسود" />
@@ -179,7 +190,6 @@ export default function CreateProductPage() {
              ></textarea>
           </div>
 
-          {/* الصور */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <h3 className="font-bold mb-4 text-[#F5C518]">الصور</h3>
              <input name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="رابط مباشر (ImgBB) - اختياري" />
@@ -192,7 +202,6 @@ export default function CreateProductPage() {
              </div>
           </div>
           
-          {/* الخيارات والألوان */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
             <h3 className="font-bold mb-4 text-[#F5C518]">الخيارات والألوان</h3>
             <div className="space-y-3">
@@ -217,7 +226,6 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 4. واجهة جدول دليل القياسات مع إمكانية تعديل المسميات */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333] mt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-[#F5C518]">دليل القياسات (بالسنتيمتر)</h3>
@@ -257,18 +265,15 @@ export default function CreateProductPage() {
           </div>
         </div>
 
-        {/* القسم الأيسر */}
         <div className="space-y-6">
             <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
                 <h3 className="font-bold mb-4 text-[#F5C518]">السعر، التكلفة والمخزن</h3>
                 <div className="space-y-3">
                     <div><label className="text-xs text-gray-500">السعر</label><input type="number" name="price" value={product.price} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
                     <div><label className="text-xs text-gray-500">قبل الخصم</label><input type="number" name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
-                    {/* 1. إضافة خانة التكلفة والمخزن */}
                     <div><label className="text-xs text-gray-500">تكلفة القطعة</label><input type="number" name="costPerItem" value={product.costPerItem} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0.00"/></div>
                     <div><label className="text-xs text-gray-500">المخزن (الكمية)</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
                     
-                    {/* 2. اختيار أكثر من قسم */}
                     <div className="pt-2">
                         <label className="text-xs text-gray-500 block mb-2">الأقسام</label>
                         <div className="space-y-2 bg-[#121212] p-3 rounded border border-[#333]">
@@ -288,27 +293,21 @@ export default function CreateProductPage() {
                 </div>
             </div>
 
-             {/* قسم SEO المطور بالمسميات المطلوبة */}
              <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
                 <h3 className="font-bold mb-4 text-[#F5C518]">Search engine listing</h3>
-                
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Page title</label>
                     <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="عنوان الصفحة" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
                   </div>
-
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Meta description</label>
                     <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} placeholder="الوصف" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm h-20 resize-none text-white"></textarea>
                   </div>
-
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">URL handle</label>
                     <input name="handle" value={product.handle} onChange={handleChange} placeholder="url-handle" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
                   </div>
-
-                  {/* 5. خانة Category للـ SEO */}
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Category (جوجل SEO)</label>
                     <input name="seoCategory" value={product.seoCategory} onChange={handleChange} placeholder="مثال: الملابس > أردية" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-[#F5C518]" />
