@@ -53,7 +53,6 @@ function ProductFormContent() {
           const data = docSnap.data();
           setProduct({ ...data, id: docSnap.id });
           
-          // تأكيد تحميل البيانات المنفصلة
           if (data.options?.chartHeaders) {
             setChartHeaders({ ...data.options.chartHeaders });
           }
@@ -73,6 +72,16 @@ function ProductFormContent() {
     setProduct(prev => ({ ...prev, [name]: value }));
     if (name === 'title' && !product.handle) {
       setProduct(prev => ({ ...prev, handle: value.toLowerCase().replace(/\s+/g, '-') }));
+    }
+  };
+
+  // وظيفة إضافة رابط الصورة للمعاينة عند الضغط على Enter
+  const handleImageUrlKeyDown = (e) => {
+    if (e.key === 'Enter' && product.mainImageUrl.trim() !== '') {
+      e.preventDefault(); // منع إرسال الفورم
+      if (!previews.includes(product.mainImageUrl)) {
+        setPreviews(prev => [product.mainImageUrl, ...prev]);
+      }
     }
   };
 
@@ -151,7 +160,6 @@ function ProductFormContent() {
         swatch: v.swatchUrl || v.swatch || v.preview || ""
       }));
 
-      // بناء البيانات النهائية مع ضمان وجود كل الحقول المطلوبة
       const productData = {
         ...product,
         price: Number(product.price) || 0,
@@ -163,11 +171,11 @@ function ProductFormContent() {
           colors: finalColors,
           sizes: product.sizes ? (Array.isArray(product.sizes) ? product.sizes : product.sizes.split(',').map(s => s.trim())) : [],
           sizeChart: [...sizeChart],
-          chartHeaders: { ...chartHeaders }, // تعديل: إرسال الرؤوس لضمان الحفظ
+          chartHeaders: { ...chartHeaders },
         },
         seo: {
           title: product.seoTitle || product.title || "",
-          description: product.seoDesc || product.description || "", // تم التأكد من وجود الوصف
+          description: product.seoDesc || product.description || "",
           handle: product.handle || "",
           seoCategory: product.seoCategory || ""
         },
@@ -224,7 +232,14 @@ function ProductFormContent() {
 
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <h3 className="font-bold mb-4 text-[#F5C518]">الصور</h3>
-             <input name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="أضف رابط صورة مباشر هنا (مثلاً من ImgBB)" />
+             <input 
+                name="mainImageUrl" 
+                value={product.mainImageUrl} 
+                onChange={handleChange} 
+                onKeyDown={handleImageUrlKeyDown}
+                className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4 focus:border-[#F5C518] outline-none" 
+                placeholder="أضف رابط صورة مباشر واضغط Enter للمعاينة" 
+             />
              <div className="grid grid-cols-4 gap-2 mb-4">
                  {previews.map((src, i) => <img key={i} src={src} className="h-20 w-full object-cover rounded border border-[#333]" />)}
              </div>
@@ -300,7 +315,9 @@ function ProductFormContent() {
                 <div className="space-y-3">
                     <div><label className="text-xs text-gray-500">السعر الحالي</label><input type="number" name="price" value={product.price} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
                     <div><label className="text-xs text-gray-500">قبل الخصم</label><input type="number" name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
-                    <div><label className="text-xs text-gray-500">الكمية</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
+                    {/* الحقل المعاد إضافته */}
+                    <div><label className="text-xs text-gray-500">تكلفة المنتج (لصاحب الموقع)</label><input type="number" name="costPerItem" value={product.costPerItem} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
+                    <div><label className="text-xs text-gray-500">الكمية بالمخزن</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
                     
                     <div className="pt-2">
                         <label className="text-xs text-gray-500 block mb-2">الأقسام</label>
@@ -328,7 +345,6 @@ function ProductFormContent() {
                     <label className="text-xs text-gray-500 block mb-1">Page title</label>
                     <input name="seoTitle" value={product.seoTitle} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
                   </div>
-                  {/* إرجاع الـ Meta Description المفقود */}
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Meta description</label>
                     <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm h-20 text-white resize-none"></textarea>
