@@ -5,6 +5,14 @@ export default function SizeChartModal({ isOpen, onClose, product }) {
   if (!isOpen) return null;
 
   const chartData = product?.options?.sizeChart || [];
+  // جلب العناوين من الداتابيز أو استخدام العناوين الافتراضية لو مش موجودة
+  const headers = product?.options?.chartHeaders || {
+    col1: 'المقاس',
+    col2: 'الطول (CM)',
+    col3: 'الصدر (CM)',
+    col4: 'الوسط (CM)',
+    col5: 'الوزن (كجم)'
+  };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm bg-black/70 animate-fadeIn" dir="rtl">
@@ -39,10 +47,13 @@ export default function SizeChartModal({ isOpen, onClose, product }) {
               <table className="w-full text-center text-sm md:text-base">
                 <thead className="bg-[#F5C518] text-black">
                   <tr>
-                    <th className="py-3 font-bold">المقاس</th>
-                    <th className="py-3 font-bold">الطول (CM)</th>
-                    <th className="py-3 font-bold">الصدر (CM)</th>
-                    <th className="py-3 font-bold">الوسط (CM)</th>
+                    {/* تحديث: الرؤوس الآن تقرأ من متغير headers الديناميكي */}
+                    <th className="py-3 font-bold">{headers.col1}</th>
+                    <th className="py-3 font-bold">{headers.col2}</th>
+                    <th className="py-3 font-bold">{headers.col3}</th>
+                    <th className="py-3 font-bold">{headers.col4}</th>
+                    {/* إظهار العمود الخامس فقط إذا كان له عنوان وقيمة */}
+                    {headers.col5 && <th className="py-3 font-bold">{headers.col5}</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#333] bg-[#121212]">
@@ -52,6 +63,7 @@ export default function SizeChartModal({ isOpen, onClose, product }) {
                       <td className="py-3" style={{direction: 'ltr'}}>{row.length}</td>
                       <td className="py-3" style={{direction: 'ltr'}}>{row.chest}</td>
                       <td className="py-3" style={{direction: 'ltr'}}>{row.waist}</td>
+                      {headers.col5 && <td className="py-3" style={{direction: 'ltr'}}>{row.weight}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -63,16 +75,16 @@ export default function SizeChartModal({ isOpen, onClose, product }) {
 
           {/* Footer Tips */}
           <div className="mt-6 space-y-2">
-             <div className="flex items-start gap-2 text-xs text-gray-400 bg-[#222] p-3 rounded">
+              <div className="flex items-start gap-2 text-xs text-gray-400 bg-[#222] p-3 rounded">
                 <span className="text-[#F5C518] text-lg">•</span>
                 <p>يتم أخذ القياسات والقطعة مفرودة على سطح مستوٍ. قد تختلف القياسات الفعلية بمقدار بسيط (1-2 سم).</p>
-             </div>
-             {chartData.some(r => r.weight) && (
+              </div>
+              {chartData.some(r => r.weight) && (
                 <div className="flex items-start gap-2 text-xs text-gray-400 bg-[#222] p-3 rounded">
                     <span className="text-[#F5C518] text-lg">•</span>
                     <p>الأوزان المقترحة هي قيم تقديرية وقد تختلف حسب بنية الجسم والطول.</p>
                 </div>
-             )}
+              )}
           </div>
 
         </div>
