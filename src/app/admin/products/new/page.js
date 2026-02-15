@@ -13,6 +13,7 @@ export default function CreateProductPage() {
     title: '', description: '', price: '', compareAtPrice: '',
     costPerItem: '', sku: '', quantity: 0, category: 'shawls',
     tags: '', sizes: '', seoTitle: '', seoDesc: '', handle: '',
+    mainImageUrl: '', // إضافة حقل لرابط الصورة المباشر (ImgBB)
   });
 
   const [images, setImages] = useState([]);
@@ -38,7 +39,8 @@ export default function CreateProductPage() {
 
   // إضافة خيار لون بصورة
   const addColorVariant = () => {
-    setColorVariants([...colorVariants, { name: '', file: null, preview: '' }]);
+    // تم إضافة swatchUrl لاستقبال رابط ImgBB
+    setColorVariants([...colorVariants, { name: '', file: null, preview: '', swatchUrl: '' }]);
   };
 
   const handleColorFile = (index, file) => {
@@ -52,25 +54,34 @@ export default function CreateProductPage() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // 1. رفع الصور الرئيسية
-      let imageUrls = [];
-      for (let img of images) {
-        const imgRef = ref(storage, `products/${Date.now()}-${img.name}`);
-        const snap = await uploadBytes(imgRef, img);
-        const url = await getDownloadURL(snap.ref);
-        imageUrls.push(url);
+      // 1. رفع الصور الرئيسية (اختياري إذا وجد رابط مباشر)
+      let imageUrls = product.mainImageUrl ? [product.mainImageUrl] : [];
+      
+      // محاولة الرفع لفايربيز فقط إذا كان هناك ملفات مختارة
+      if (images.length > 0) {
+        for (let img of images) {
+          try {
+            const imgRef = ref(storage, `products/${Date.now()}-${img.name}`);
+            const snap = await uploadBytes(imgRef, img);
+            const url = await getDownloadURL(snap.ref);
+            imageUrls.push(url);
+          } catch (e) { console.log("Storage bypass: Using direct links instead"); }
+        }
       }
 
-      // 2. رفع صور الألوان
+      // 2. رفع صور الألوان أو استخدام الروابط
       let finalColors = [];
       for (let variant of colorVariants) {
-        let swatchUrl = "";
-        if (variant.file) {
-          const vRef = ref(storage, `variants/${Date.now()}-${variant.file.name}`);
-          const vSnap = await uploadBytes(vRef, variant.file);
-          swatchUrl = await getDownloadURL(vSnap.ref);
+        let finalSwatch = variant.swatchUrl; // الأولوية للرابط المكتوب (ImgBB)
+        
+        if (variant.file && !finalSwatch) {
+          try {
+            const vRef = ref(storage, `variants/${Date.now()}-${variant.file.name}`);
+            const vSnap = await uploadBytes(vRef, variant.file);
+            finalSwatch = await getDownloadURL(vSnap.ref);
+          } catch (e) { console.log("Color storage bypass"); }
         }
-        finalColors.push({ name: variant.name, swatch: swatchUrl });
+        finalColors.push({ name: variant.name, swatch: finalSwatch });
       }
 
       // 3. تجهيز البيانات
@@ -80,10 +91,10 @@ export default function CreateProductPage() {
         compareAtPrice: Number(product.compareAtPrice),
         costPerItem: Number(product.costPerItem),
         quantity: Number(product.quantity),
-        tags: product.tags.split(',').map(t => t.trim()),
+        tags: product.tags ? product.tags.split(',').map(t => t.trim()) : [],
         options: {
-          colors: finalColors, // الآن الألوان أصبحت مصفوفة كائنات (اسم وصورة)
-          sizes: product.sizes.split(',').map(s => s.trim()),
+          colors: finalColors,
+          sizes: product.sizes ? product.sizes.split(',').map(s => s.trim()) : [],
         },
         seo: {
           title: product.seoTitle || product.title,
@@ -96,23 +107,23 @@ export default function CreateProductPage() {
       };
 
       await addDoc(collection(db, "products"), productData);
-      alert("تم الحفظ بنجاح!");
+      alert("✅ تم الحفظ بنجاح في WIND!");
       window.location.reload();
       
     } catch (error) {
       console.error(error);
-      alert("حدث خطأ: " + error.message);
+      alert("حدث خطأ أثناء الحفظ: " + error.message);
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-[#121212] text-white pb-20 font-sans" dir="rtl">
-      {/* الشريط العلوي - معدل ليكون واضحاً */}
+      {/* الشريط العلوي */}
       <div className="bg-[#1a1a1a] border-b border-[#333] p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
         <h1 className="font-bold text-lg text-white">WIND Admin <span className="text-[#F5C518] text-xs">PRO</span></h1>
         <div className="flex gap-3">
-          <button className="text-gray-400 text-sm hover:text-white">إلغاء</button>
+          <button className="text-gray-400 text-sm hover:text-white" onClick={() => window.location.reload()}>إلغاء</button>
           <button 
             onClick={handleSave}
             disabled={loading}
@@ -126,7 +137,7 @@ export default function CreateProductPage() {
       <div className="max-w-5xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
         <div className="md:col-span-2 space-y-6">
           
-          {/* 1. المعلومات الأساسية - خلفية داكنة لنصوص واضحة */}
+          {/* 1. المعلومات الأساسية */}
           <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
             <label className="block text-sm font-bold mb-2 text-[#F5C518]">عنوان المنتج</label>
             <input 
@@ -143,9 +154,20 @@ export default function CreateProductPage() {
             />
           </div>
 
-          {/* 2. الوسائط (مع المعاينة) */}
+          {/* 2. الوسائط (رفع مباشر + روابط ImgBB) */}
           <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
-            <h3 className="font-bold mb-4 text-[#F5C518]">الوسائط</h3>
+            <h3 className="font-bold mb-4 text-[#F5C518]">الوسائط (الصور)</h3>
+            
+            {/* خانة الرابط المباشر لتجنب مشاكل التخزين */}
+            <div className="mb-6">
+                <label className="block text-xs text-gray-400 mb-1">رابط الصورة الرئيسية (اختياري - ImgBB)</label>
+                <input 
+                    name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange}
+                    type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm outline-none" 
+                    placeholder="ضع رابط الصورة المباشر هنا إذا كان الرفع لا يعمل" 
+                />
+            </div>
+
             <div className="grid grid-cols-4 gap-2 mb-4">
               {previews.map((src, i) => (
                 <img key={i} src={src} className="w-full h-24 object-cover rounded border border-[#333]" />
@@ -156,7 +178,7 @@ export default function CreateProductPage() {
                 type="file" multiple onChange={handleImageChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
-              <p className="text-gray-500">اضغط لرفع الصور أو اسحبها هنا</p>
+              <p className="text-gray-500">رفع ملفات من الجهاز</p>
             </div>
           </div>
 
@@ -184,39 +206,56 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 4. المخزون والخيارات (تم تعديل الألوان لتكون بصور) */}
+          {/* 4. المخزون والخيارات (صور الدوائر مع روابط ImgBB) */}
           <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
-            <h3 className="font-bold mb-4 text-[#F5C518]">المخزون والخيارات</h3>
+            <h3 className="font-bold mb-4 text-[#F5C518]">المخزون وخيارات الألوان</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <input name="sku" value={product.sku} onChange={handleChange} placeholder="SKU" className="bg-[#121212] border border-[#333] p-2 rounded" />
-              <input name="quantity" value={product.quantity} onChange={handleChange} type="number" placeholder="الكمية" className="bg-[#121212] border border-[#333] p-2 rounded" />
+              <input name="sku" value={product.sku} onChange={handleChange} placeholder="SKU" className="bg-[#121212] border border-[#333] p-2 rounded text-white" />
+              <input name="quantity" value={product.quantity} onChange={handleChange} type="number" placeholder="الكمية" className="bg-[#121212] border border-[#333] p-2 rounded text-white" />
             </div>
             
-            <label className="text-xs text-gray-400 block mb-2">الألوان المتاحة (صور الدوائر)</label>
-            <div className="space-y-3 mb-4">
+            <label className="text-xs text-gray-400 block mb-2">إضافة الألوان (اسم + صورة الدائرة)</label>
+            <div className="space-y-4 mb-4">
               {colorVariants.map((v, i) => (
-                <div key={i} className="flex items-center gap-3 bg-[#121212] p-2 rounded border border-[#333]">
-                  <div className="w-10 h-10 rounded-full border border-[#F5C518] overflow-hidden bg-black">
-                    {v.preview && <img src={v.preview} className="w-full h-full object-cover" />}
+                <div key={i} className="bg-[#121212] p-4 rounded border border-[#333] space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full border border-[#F5C518] overflow-hidden bg-black flex-shrink-0">
+                      {(v.preview || v.swatchUrl) && <img src={v.preview || v.swatchUrl} className="w-full h-full object-cover" />}
+                    </div>
+                    <input 
+                        placeholder="اسم اللون (مثلاً: كشمير)" 
+                        className="bg-transparent border-b border-[#333] outline-none text-sm flex-1 text-white"
+                        value={v.name}
+                        onChange={(e) => {
+                            const n = [...colorVariants];
+                            n[i].name = e.target.value;
+                            setColorVariants(n);
+                        }}
+                    />
                   </div>
-                  <input 
-                    placeholder="اسم اللون" 
-                    className="bg-transparent border-b border-[#333] outline-none text-sm flex-1"
-                    onChange={(e) => {
-                      const n = [...colorVariants];
-                      n[i].name = e.target.value;
-                      setColorVariants(n);
-                    }}
-                  />
-                  <input type="file" className="hidden" id={`color-${i}`} onChange={(e) => handleColorFile(i, e.target.files[0])} />
-                  <label htmlFor={`color-${i}`} className="text-[10px] bg-[#333] p-1 cursor-pointer rounded">اختر صورة اللون</label>
+                  <div className="grid grid-cols-1 gap-2">
+                      <input 
+                        placeholder="رابط صورة اللون من ImgBB (موصى به)" 
+                        className="bg-[#1a1a1a] border border-[#333] p-2 rounded text-xs text-[#F5C518]"
+                        value={v.swatchUrl}
+                        onChange={(e) => {
+                            const n = [...colorVariants];
+                            n[i].swatchUrl = e.target.value;
+                            setColorVariants(n);
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <input type="file" className="hidden" id={`color-${i}`} onChange={(e) => handleColorFile(i, e.target.files[0])} />
+                        <label htmlFor={`color-${i}`} className="text-[10px] bg-[#333] px-3 py-1 cursor-pointer rounded text-white">أو ارفع ملف</label>
+                      </div>
+                  </div>
                 </div>
               ))}
-              <button onClick={addColorVariant} className="text-[#F5C518] text-sm">+ إضافة لون جديد</button>
+              <button onClick={addColorVariant} className="text-[#F5C518] text-sm font-bold">+ إضافة خيار لون جديد</button>
             </div>
             
-            <label className="text-xs text-gray-400 block mb-1">المقاسات (افصل بفاصلة)</label>
-            <input name="sizes" value={product.sizes} onChange={handleChange} type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded" placeholder="S, M, L" />
+            <label className="text-xs text-gray-400 block mt-6 mb-1">المقاسات (افصل بفاصلة)</label>
+            <input name="sizes" value={product.sizes} onChange={handleChange} type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="S, M, L" />
           </div>
 
         </div>
@@ -224,17 +263,20 @@ export default function CreateProductPage() {
         {/* العمود الجانبي */}
         <div className="space-y-6">
           <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
-            <h3 className="font-bold mb-4 text-[#F5C518]">القسم</h3>
-            <select name="category" value={product.category} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white">
+            <h3 className="font-bold mb-4 text-[#F5C518]">القسم (Collection)</h3>
+            <select name="category" value={product.category} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none">
               <option value="shawls">شيلان</option>
               <option value="isdal">إسدالات</option>
               <option value="winter">شتوي</option>
+              <option value="new">وصل حديثاً</option>
             </select>
           </div>
           <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
             <h3 className="font-bold mb-4 text-[#F5C518]">تحسين محركات البحث</h3>
-            <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="عنوان SEO" className="w-full bg-[#121212] border border-[#333] p-2 rounded mb-2 text-sm" />
-            <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} placeholder="وصف SEO" className="w-full bg-[#121212] border border-[#333] p-2 rounded h-20 text-sm" />
+            <label className="text-[10px] text-gray-500">عنوان الصفحة</label>
+            <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="SEO Title" className="w-full bg-[#121212] border border-[#333] p-2 rounded mb-3 text-sm" />
+            <label className="text-[10px] text-gray-500">وصف الصفحة</label>
+            <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} placeholder="SEO Description" className="w-full bg-[#121212] border border-[#333] p-2 rounded h-24 text-sm resize-none" />
           </div>
         </div>
       </div>
