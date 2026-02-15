@@ -2,16 +2,21 @@ import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import Link from "next/link";
 
-// 1. دعم الـ SEO الديناميكي وتحسين محركات البحث لـ WIND
+// تأمين جلب البيانات ديناميكياً من فيرسيل وضمان تحديثها
+export const dynamic = 'force-dynamic';
+
+// 1. دعم الـ SEO الديناميكي
 export async function generateMetadata({ params }) {
-    const slug = `/${params.slug.join('/')}`;
-    const q = query(collection(db, "collections"), where("slug", "==", slug));
+    const slugArray = await params.slug;
+    const slugPath = `/${slugArray.join('/')}`;
+    
+    const q = query(collection(db, "collections"), where("slug", "==", slugPath));
     const querySnapshot = await getDocs(q);
     const category = querySnapshot.docs[0]?.data();
 
     return {
         title: category?.name ? `${category.name} | WIND` : "تشكيلة WIND",
-        description: category?.description || "اكتشف الأناقة والراحة في تشكيلة WIND الفريدة والمصممة بعناية.",
+        description: category?.description || "اكتشف الأناقة والراحة في تشكيلة WIND الفريدة.",
         openGraph: {
             title: category?.name,
             description: category?.description,
@@ -21,25 +26,31 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function CategoryPage({ params }) {
-    const slugPath = `/${params.slug.join('/')}`;
-    
-    // جلب بيانات القسم (الاسم، الوصف، ونص الفوتر الـ SEO)
+    const slugArray = await params.slug;
+    const slugPath = `/${slugArray.join('/')}`;
+    // صيغة بديلة للمسار بدون السلاش الأولى لضمان مرونة البحث
+    const cleanSlug = slugArray.join('/'); 
+
+    // جلب بيانات القسم
     const categoryQuery = query(collection(db, "collections"), where("slug", "==", slugPath));
     const categorySnap = await getDocs(categoryQuery);
     const categoryData = categorySnap.docs[0]?.data() || { name: "القسم", description: "" };
 
-    // جلب المنتجات التي تنتمي لهذا القسم بناءً على الـ slug
+    /* تعديل مرن: جلب المنتجات التي تحتوي على المسار بـ / أو بدونه
+       Next.js سيعالج المصفوفة هنا ويجلب المنتجات التي تطابق أي من الصيغتين
+    */
     const productsQuery = query(
         collection(db, "products"), 
-        where("categories", "array-contains", slugPath),
-        limit(40) // زيادة الحد لعرض منتجات أكثر
+        where("categories", "array-contains-any", [slugPath, cleanSlug]),
+        limit(40) 
     );
+    
     const productsSnap = await getDocs(productsQuery);
     const products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     return (
         <div className="min-h-screen bg-white text-black font-sans" dir="rtl">
-            {/* 2. هيدر القسم - تصميم دافئ وأنيق (Warm & Stylish) */}
+            {/* 2. هيدر القسم - Warm & Stylish */}
             <header className="bg-[#fcfcfc] py-20 px-4 border-b border-gray-50">
                 <div className="max-w-6xl mx-auto text-center">
                     <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-[#1a1a1a]">
@@ -60,7 +71,7 @@ export default async function CategoryPage({ params }) {
                 </div>
             </header>
 
-            {/* 3. شبكة المنتجات - عرض عصري */}
+            {/* 3. شبكة المنتجات */}
             <main className="max-w-7xl mx-auto px-4 py-16">
                 {products.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
@@ -108,7 +119,7 @@ export default async function CategoryPage({ params }) {
                 )}
             </main>
 
-            {/* 4. فوتر القسم المخصص للـ SEO - يظهر فقط إذا وُجد نص */}
+            {/* 4. فوتر القسم المخصص للـ SEO */}
             {categoryData.footerText && (
                 <section className="bg-[#fafafa] border-t border-gray-100 py-20 mt-10">
                     <div className="max-w-4xl mx-auto px-6 text-center md:text-right">
