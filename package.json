@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NPM_CONFIG_LEGACY_PEER_DEPS=true next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -17,6 +17,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-onesignal": "^3.4.6",
+    "react-quill": "^2.0.0",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {

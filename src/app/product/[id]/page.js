@@ -19,7 +19,6 @@ export default function ProductPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
-      // 1. البحث في المنتجات الثابتة
       const staticProduct = staticProducts.find((p) => p.id.toString() === id.toString());
       
       if (staticProduct) {
@@ -28,7 +27,6 @@ export default function ProductPage() {
         if (staticProduct.sizes?.length > 0) setSelectedSize(staticProduct.sizes[0]);
         setLoading(false);
       } else {
-        // 2. البحث في Firebase
         try {
           const docRef = doc(db, "products", id);
           const docSnap = await getDoc(docRef);
@@ -41,7 +39,6 @@ export default function ProductPage() {
             const firstImg = fbProduct.images?.[0] || fbProduct.mainImageUrl || fbProduct.image;
             setActiveImage(firstImg);
 
-            // نظام حماية لقراءة المقاسات سواء كانت في options أو مباشرة
             const sizesArray = fbProduct.options?.sizes || fbProduct.sizes;
             if (Array.isArray(sizesArray) && sizesArray.length > 0) {
               setSelectedSize(sizesArray[0]);
@@ -68,7 +65,6 @@ export default function ProductPage() {
 
   const gallery = product.images || [product.mainImage, ...Array.from({ length: product.imagesCount || 0 }, (_, i) => `${i + 1}.webp`)];
   
-  // استخراج المصفوفات بأمان لضمان عدم حدوث تجميد للصفحة
   const safeSizes = Array.isArray(product.options?.sizes) ? product.options.sizes : (Array.isArray(product.sizes) ? product.sizes : []);
   const safeColors = Array.isArray(product.options?.colors) ? product.options.colors : [];
 
@@ -115,13 +111,20 @@ export default function ProductPage() {
       {/* 4. التفاصيل */}
       <div className="px-4 py-6 space-y-8" dir="rtl">
         
-        {/* الوصف */}
-        <div>
-          <h3 className="flex items-center gap-2 font-bold text-lg mb-2 text-[#F5C518]">الوصف</h3>
-          <p className="text-gray-300 text-sm leading-relaxed">{product.description}</p>
+        {/* الوصف المطور */}
+        <div className="mt-8">
+          <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-[#F5C518]">
+            <div className="w-1 h-5 bg-[#F5C518] rounded-full"></div>
+            الوصف
+          </h3>
+          
+          <div 
+            className="text-gray-300 text-sm leading-relaxed ql-editor-display"
+            dangerouslySetInnerHTML={{ __html: product.description }} 
+          />
         </div>
 
-        {/* اختيار اللون (الدوائر الاحترافية) */}
+        {/* اختيار اللون */}
         {safeColors.length > 0 && (
           <div>
             <h3 className="font-bold text-sm mb-3">الألوان المتوفرة:</h3>
@@ -176,8 +179,30 @@ export default function ProductPage() {
             </button>
           </div>
         </div>
-
       </div>
+
+      {/* تـم وضـع الـسـتـايـل هـنـا داخـل الـ Component ليعمل بشكل صحيح */}
+      <style jsx global>{`
+        .ql-editor-display ul {
+          list-style-type: disc !important;
+          padding-right: 25px !important;
+          margin-bottom: 10px;
+        }
+        .ql-editor-display ol {
+          list-style-type: decimal !important;
+          padding-right: 25px !important;
+          margin-bottom: 10px;
+        }
+        .ql-editor-display strong {
+          font-weight: bold;
+          color: #fff;
+        }
+        .ql-editor-display h1, .ql-editor-display h2 {
+          color: #F5C518;
+          margin-top: 15px;
+          margin-bottom: 10px;
+        }
+      `}</style>
     </div>
   );
 }

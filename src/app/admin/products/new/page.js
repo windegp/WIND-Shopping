@@ -1,8 +1,13 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'; // أضفنا useMemo
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+// استيراد المحرر بشكل ديناميكي ليتوافق مع Next.js
+import dynamic from 'next/dynamic';
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import 'react-quill/dist/quill.snow.css'; // تنسيق المحرر
 
 export default function CreateProductPage() {
   const [loading, setLoading] = useState(false);
@@ -20,13 +25,30 @@ export default function CreateProductPage() {
   const [previews, setPreviews] = useState([]); // للمعاينة
   const [colorVariants, setColorVariants] = useState([]); // للألوان بالصور
 
-  // دالة التعامل مع التغييرات
+  // إعدادات شريط أدوات المحرر (يدعم الخطوط، الألوان، والقوائم)
+  const quillModules = useMemo(() => ({
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['clean'],
+      ['code-block'] // لإضافة كود HTML مخصص
+    ],
+  }), []);
+
+  // دالة التعامل مع التغييرات العامة
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduct(prev => ({ ...prev, [name]: value }));
     if (name === 'title' && !product.handle) {
       setProduct(prev => ({ ...prev, handle: value.toLowerCase().replace(/\s+/g, '-') }));
     }
+  };
+
+  // دالة خاصة بتحديث الوصف من المحرر
+  const handleDescriptionChange = (content) => {
+    setProduct(prev => ({ ...prev, description: content }));
   };
 
   // معالجة الصور الرئيسية
@@ -98,7 +120,7 @@ export default function CreateProductPage() {
         },
         seo: {
           title: product.seoTitle || product.title,
-          description: product.seoDesc || product.description.substring(0, 160),
+          description: product.seoDesc || product.description.substring(0, 160).replace(/<[^>]*>?/gm, ''), // إزالة الـ HTML للوصف المصغر
           slug: product.handle
         },
         images: imageUrls,
@@ -142,23 +164,28 @@ export default function CreateProductPage() {
             <label className="block text-sm font-bold mb-2 text-[#F5C518]">عنوان المنتج</label>
             <input 
               name="title" value={product.title} onChange={handleChange}
-              type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none focus:border-[#F5C518]" 
+              type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none focus:border-[#F5C518] mb-4" 
               placeholder="مثال: شال كشمير شتوي" 
             />
             
-            <label className="block text-sm font-bold mt-4 mb-2 text-[#F5C518]">الوصف</label>
-            <textarea 
-              name="description" value={product.description} onChange={handleChange}
-              className="w-full bg-[#121212] border border-[#333] p-2 rounded h-40 text-white outline-none focus:border-[#F5C518]" 
-              placeholder="اكتب تفاصيل المنتج..." 
-            />
+            <label className="block text-sm font-bold mb-2 text-[#F5C518]">الوصف المتقدم (يدعم HTML والخطوط)</label>
+            <div className="bg-white text-black rounded mb-2 overflow-hidden custom-quill">
+              <ReactQuill 
+                theme="snow"
+                value={product.description}
+                onChange={handleDescriptionChange}
+                modules={quillModules}
+                placeholder="اكتب تفاصيل المنتج بتنسيق جذاب..."
+                className="min-h-[200px]"
+              />
+            </div>
+            <p className="text-[10px] text-gray-500 italic">ملاحظة: يمكنك نسخ أكواد HTML مباشرة ولصقها في "Code Block".</p>
           </div>
 
           {/* 2. الوسائط (رفع مباشر + روابط ImgBB) */}
           <div className="bg-[#1a1a1a] p-6 rounded shadow-sm border border-[#333]">
             <h3 className="font-bold mb-4 text-[#F5C518]">الوسائط (الصور)</h3>
             
-            {/* خانة الرابط المباشر لتجنب مشاكل التخزين */}
             <div className="mb-6">
                 <label className="block text-xs text-gray-400 mb-1">رابط الصورة الرئيسية (اختياري - ImgBB)</label>
                 <input 
@@ -280,6 +307,19 @@ export default function CreateProductPage() {
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        .custom-quill .ql-editor {
+          min-height: 250px;
+          direction: rtl;
+          text-align: right;
+          font-size: 16px;
+        }
+        .custom-quill .ql-toolbar {
+          background: #f3f4f6;
+          border-top-left-radius: 4px;
+          border-top-right-radius: 4px;
+        }
+      `}</style>
     </div>
   );
 }
