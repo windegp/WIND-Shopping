@@ -1,30 +1,26 @@
 "use client";
-import { useState, useEffect, Suspense } from 'react'; // أضفنا Suspense
+import { useState, useEffect, Suspense } from 'react';
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc } from "firebase/firestore"; // أضفنا getDocs و deleteDoc للجدول
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useParams, useSearchParams } from "next/navigation"; // أضفنا useSearchParams كخيار احتياطي
-import Link from "next/link"; // أضفنا Link لزر التعديل في الجدول
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
-// المكون الرئيسي المغلف لضمان عمل "زر التعديل" وقراءة الـ ID
 export default function CreateProductPage() {
   return (
-    <Suspense fallback={<div className="text-white text-center p-10">جاري تحميل البيانات...</div>}>
+    <Suspense fallback={<div className="text-white text-center p-10">جاري تحميل بيانات WIND...</div>}>
       <ProductFormContent />
     </Suspense>
   );
 }
 
-// محتوى الصفحة الأصلي بدون حذف أي سطر
 function ProductFormContent() {
   const params = useParams();
   const searchParams = useSearchParams();
-  
-  // هذه السطور تضمن رؤية الـ ID بأي شكل كان (سواء في المسار أو في الرابط)
   const id = params.id || searchParams.get('id'); 
   
   const [loading, setLoading] = useState(false);
-  const [productsList, setProductsList] = useState([]); // حالة لتخزين قائمة المنتجات للجدول
+  const [productsList, setProductsList] = useState([]);
   
   const [product, setProduct] = useState({
     title: '', description: '', price: '', compareAtPrice: '',
@@ -46,23 +42,21 @@ function ProductFormContent() {
     { size: 'S', length: '', chest: '', waist: '', weight: '' }
   ]);
 
-  // تعديل useEffect لجلب قائمة المنتجات بجانب جلب منتج التعديل
   useEffect(() => {
     const fetchData = async () => {
-      // جلب بيانات المنتج المراد تعديله
       if (id) {
         const docRef = doc(db, "products", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
           setProduct({ ...data, id: docSnap.id });
-          if (data.options?.sizeChart) setSizeChart(data.options.sizeChart);
-          if (data.options?.chartHeaders) setChartHeaders(data.options.chartHeaders);
-          if (data.options?.colors) setColorVariants(data.options.colors);
-          if (data.images) setPreviews(data.images);
+          // تحسين 1: التأكد من تحميل دليل القياسات والهيدرز
+          if (data.options?.sizeChart) setSizeChart([...data.options.sizeChart]);
+          if (data.options?.chartHeaders) setChartHeaders({...data.options.chartHeaders});
+          if (data.options?.colors) setColorVariants([...data.options.colors]);
+          if (data.images) setPreviews([...data.images]);
         }
       }
-      // جلب جميع المنتجات لعرضها في الجدول تحت
       const querySnapshot = await getDocs(collection(db, "products"));
       setProductsList(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
@@ -78,9 +72,9 @@ function ProductFormContent() {
   };
 
   const handleCategoryChange = (cat) => {
-    const updatedCats = product.categories.includes(cat)
+    const updatedCats = product.categories?.includes(cat)
       ? product.categories.filter(c => c !== cat)
-      : [...product.categories, cat];
+      : [...(product.categories || []), cat];
     setProduct(prev => ({ ...prev, categories: updatedCats }));
   };
 
@@ -91,13 +85,20 @@ function ProductFormContent() {
     setPreviews(prev => [...prev, ...newPreviews]);
   };
 
+  // تحسين 2: إضافة لون جديد بدون تصفير الروابط الحالية
   const addColorVariant = () => {
-    setColorVariants([...colorVariants, { name: '', file: null, preview: '', swatchUrl: '' }]);
+    setColorVariants([...colorVariants, { name: '', swatch: '', preview: '', swatchUrl: '' }]);
+  };
+
+  // تحسين 3: حذف لون بأمان بدون التسبب في خطأ الـ Map
+  const removeColorVariant = (index) => {
+    const updated = colorVariants.filter((_, i) => i !== index);
+    setColorVariants(updated);
   };
 
   const handleSizeChartChange = (index, field, value) => {
     const newChart = [...sizeChart];
-    newChart[index][field] = value;
+    newChart[index] = { ...newChart[index], [field]: value };
     setSizeChart(newChart);
   };
 
@@ -110,7 +111,6 @@ function ProductFormContent() {
     setSizeChart(newChart);
   };
 
-  // وظيفة الحذف للجدول
   const handleDelete = async (productId) => {
     if (confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
       try {
@@ -126,8 +126,13 @@ function ProductFormContent() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      let imageUrls = [...(product.images || [])];
+      // تحسين 4: دمج الصور المرفوعة يدوياً مع الروابط (ImgBB) والصور القديمة
+      let imageUrls = [...previews.filter(p => p.startsWith('http'))]; 
       
+      if (product.mainImageUrl && !imageUrls.includes(product.mainImageUrl)) {
+        imageUrls.unshift(product.mainImageUrl);
+      }
+
       if (images.length > 0) {
         for (let img of images) {
           try {
@@ -139,38 +144,42 @@ function ProductFormContent() {
         }
       }
 
-      let finalColors = colorVariants.map(v => ({ name: v.name, swatch: v.swatchUrl || v.preview }));
+      // تحسين 5: معالجة ألوان المنتجات (دعم الرابط المباشر swatchUrl)
+      let finalColors = colorVariants.map(v => ({
+        name: v.name || "",
+        swatch: v.swatchUrl || v.swatch || v.preview || ""
+      }));
 
       const productData = {
         ...product,
-        price: Number(product.price),
-        compareAtPrice: Number(product.compareAtPrice),
-        costPerItem: Number(product.costPerItem),
-        quantity: Number(product.quantity),
+        price: Number(product.price) || 0,
+        compareAtPrice: Number(product.compareAtPrice) || 0,
+        costPerItem: Number(product.costPerItem) || 0,
+        quantity: Number(product.quantity) || 0,
         tags: product.tags ? (Array.isArray(product.tags) ? product.tags : product.tags.split(',').map(t => t.trim())) : [],
         options: {
           colors: finalColors,
           sizes: product.sizes ? (Array.isArray(product.sizes) ? product.sizes : product.sizes.split(',').map(s => s.trim())) : [],
-          sizeChart: sizeChart,
-          chartHeaders: chartHeaders,
+          sizeChart: [...sizeChart], // التأكد من إرسال مصفوفة جديدة
+          chartHeaders: {...chartHeaders}, // التأكد من إرسال كائن جديد
         },
         seo: {
-          title: product.seoTitle || product.title,
-          description: product.seoDesc || product.description,
-          handle: product.handle,
-          seoCategory: product.seoCategory
+          title: product.seoTitle || product.title || "",
+          description: product.seoDesc || product.description || "",
+          handle: product.handle || "",
+          seoCategory: product.seoCategory || ""
         },
-        images: imageUrls,
+        images: [...new Set(imageUrls)], // حذف التكرار
         updatedAt: serverTimestamp(),
       };
 
       if (id) {
         await updateDoc(doc(db, "products", id), productData);
-        alert("✅ تم تحديث المنتج بنجاح!");
+        alert("✅ تم تحديث منتج WIND بنجاح!");
       } else {
         productData.createdAt = serverTimestamp();
         await addDoc(collection(db, "products"), productData);
-        alert("✅ تم إضافة المنتج بنجاح!");
+        alert("✅ تم إضافة منتج جديد لـ WIND!");
       }
       window.location.reload();
       
@@ -183,9 +192,8 @@ function ProductFormContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20" dir="rtl">
-      {/* ----------------- الجزء الأول: فورم الإضافة والتعديل (بدون تغيير) ----------------- */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">{id ? 'تعديل منتج' : 'إضافة منتج جديد'}</h2>
+        <h2 className="text-2xl font-bold text-white">{id ? 'تعديل منتج في WIND' : 'إضافة منتج جديد لـ WIND'}</h2>
         <button 
           onClick={handleSave}
           disabled={loading}
@@ -197,6 +205,7 @@ function ProductFormContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
+          {/* اسم ووصف المنتج */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <label className="block text-sm font-bold mb-2 text-[#F5C518]">اسم المنتج</label>
              <input name="title" value={product.title} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-3 rounded text-white focus:border-[#F5C518] outline-none" placeholder="مثال: عباية كتان أسود" />
@@ -211,47 +220,47 @@ function ProductFormContent() {
              ></textarea>
           </div>
 
+          {/* الصور */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <h3 className="font-bold mb-4 text-[#F5C518]">الصور</h3>
-             <input name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="رابط مباشر (ImgBB) - اختياري" />
+             <input name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="أضف رابط صورة مباشر هنا (مثلاً من ImgBB)" />
              <div className="grid grid-cols-4 gap-2 mb-4">
                  {previews.map((src, i) => <img key={i} src={src} className="h-20 w-full object-cover rounded border border-[#333]" />)}
              </div>
              <div className="border-2 border-dashed border-[#333] p-6 text-center rounded relative hover:bg-[#222]">
                  <input type="file" multiple onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                 <span className="text-gray-400 text-sm">اضغط لرفع الصور</span>
+                 <span className="text-gray-400 text-sm">اضغط لرفع صور إضافية من جهازك</span>
              </div>
           </div>
           
+          {/* الخيارات والألوان */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
             <h3 className="font-bold mb-4 text-[#F5C518]">الخيارات والألوان</h3>
             <div className="space-y-3">
                 {colorVariants.map((v, i) => (
                     <div key={i} className="flex gap-2 items-center bg-[#121212] p-2 rounded border border-[#333]">
-                        <div className="w-8 h-8 rounded-full bg-black overflow-hidden border border-[#F5C518]">
-                             {(v.preview || v.swatchUrl) && <img src={v.preview || v.swatchUrl} className="w-full h-full object-cover" />}
+                        <div className="w-8 h-8 rounded-full bg-black overflow-hidden border border-[#F5C518] shrink-0">
+                             {(v.preview || v.swatchUrl || v.swatch) && <img src={v.preview || v.swatchUrl || v.swatch} className="w-full h-full object-cover" />}
                         </div>
                         <input placeholder="اسم اللون" value={v.name} className="bg-transparent text-white text-sm outline-none flex-1" 
                             onChange={(e) => { const n = [...colorVariants]; n[i].name = e.target.value; setColorVariants(n); }} 
                         />
-                        <input placeholder="رابط صورة اللون" value={v.swatchUrl} className="bg-[#222] text-[#F5C518] text-xs p-1 rounded w-1/3"
+                        <input placeholder="رابط صورة اللون" value={v.swatchUrl || v.swatch || ""} className="bg-[#222] text-[#F5C518] text-xs p-1 rounded w-1/2"
                             onChange={(e) => { const n = [...colorVariants]; n[i].swatchUrl = e.target.value; setColorVariants(n); }}
                         />
+                        <button onClick={() => removeColorVariant(i)} className="text-red-500 px-2">×</button>
                     </div>
                 ))}
-                <button onClick={addColorVariant} className="text-[#F5C518] text-xs font-bold">+ إضافة لون</button>
-            </div>
-            <div className="mt-4 border-t border-[#333] pt-4">
-                 <label className="text-xs text-gray-400 block mb-1">المقاسات (مفصولة بفاصلة)</label>
-                 <input name="sizes" value={product.sizes} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="S, M, L, XL" />
+                <button onClick={addColorVariant} className="text-[#F5C518] text-xs font-bold">+ إضافة لون جديد</button>
             </div>
           </div>
 
+          {/* دليل القياسات */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333] mt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-[#F5C518]">دليل القياسات (بالسنتيمتر)</h3>
               <button onClick={addSizeRow} className="text-xs bg-[#333] hover:bg-[#444] text-white px-3 py-1 rounded transition">
-                + إضافة صف
+                + إضافة مقاس جديد
               </button>
             </div>
             
@@ -259,17 +268,17 @@ function ProductFormContent() {
               <table className="w-full text-center text-sm text-white">
                 <thead>
                   <tr className="text-gray-500 border-b border-[#333]">
-                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col1} onChange={(e)=>setChartHeaders({...chartHeaders, col1: e.target.value})} /></th>
-                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col2} onChange={(e)=>setChartHeaders({...chartHeaders, col2: e.target.value})} /></th>
-                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col3} onChange={(e)=>setChartHeaders({...chartHeaders, col3: e.target.value})} /></th>
-                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col4} onChange={(e)=>setChartHeaders({...chartHeaders, col4: e.target.value})} /></th>
-                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col5} onChange={(e)=>setChartHeaders({...chartHeaders, col5: e.target.value})} /></th>
+                    <th className="pb-2 px-1"><input className="bg-transparent text-center w-full focus:text-[#F5C518] outline-none" value={chartHeaders.col1} onChange={(e)=>setChartHeaders({...chartHeaders, col1: e.target.value})} /></th>
+                    <th className="pb-2 px-1"><input className="bg-transparent text-center w-full focus:text-[#F5C518] outline-none" value={chartHeaders.col2} onChange={(e)=>setChartHeaders({...chartHeaders, col2: e.target.value})} /></th>
+                    <th className="pb-2 px-1"><input className="bg-transparent text-center w-full focus:text-[#F5C518] outline-none" value={chartHeaders.col3} onChange={(e)=>setChartHeaders({...chartHeaders, col3: e.target.value})} /></th>
+                    <th className="pb-2 px-1"><input className="bg-transparent text-center w-full focus:text-[#F5C518] outline-none" value={chartHeaders.col4} onChange={(e)=>setChartHeaders({...chartHeaders, col4: e.target.value})} /></th>
+                    <th className="pb-2 px-1"><input className="bg-transparent text-center w-full focus:text-[#F5C518] outline-none" value={chartHeaders.col5} onChange={(e)=>setChartHeaders({...chartHeaders, col5: e.target.value})} /></th>
                     <th className="pb-2">حذف</th>
                   </tr>
                 </thead>
-                <tbody className="space-y-2">
+                <tbody className="divide-y divide-[#222]">
                   {sizeChart.map((row, index) => (
-                    <tr key={index} className="group">
+                    <tr key={index}>
                       <td className="p-1"><input value={row.size} onChange={(e) => handleSizeChartChange(index, 'size', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-[#F5C518] font-bold" /></td>
                       <td className="p-1"><input value={row.length} onChange={(e) => handleSizeChartChange(index, 'length', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
                       <td className="p-1"><input value={row.chest} onChange={(e) => handleSizeChartChange(index, 'chest', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
@@ -286,14 +295,14 @@ function ProductFormContent() {
           </div>
         </div>
 
+        {/* الجانب الأيسر: السعر والأقسام و SEO */}
         <div className="space-y-6">
             <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
-                <h3 className="font-bold mb-4 text-[#F5C518]">السعر، التكلفة والمخزن</h3>
+                <h3 className="font-bold mb-4 text-[#F5C518]">السعر والمخزن</h3>
                 <div className="space-y-3">
-                    <div><label className="text-xs text-gray-500">السعر</label><input type="number" name="price" value={product.price} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
+                    <div><label className="text-xs text-gray-500">السعر الحالي</label><input type="number" name="price" value={product.price} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
                     <div><label className="text-xs text-gray-500">قبل الخصم</label><input type="number" name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
-                    <div><label className="text-xs text-gray-500">تكلفة القطعة</label><input type="number" name="costPerItem" value={product.costPerItem} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0.00"/></div>
-                    <div><label className="text-xs text-gray-500">المخزن (الكمية)</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
+                    <div><label className="text-xs text-gray-500">الكمية</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
                     
                     <div className="pt-2">
                         <label className="text-xs text-gray-500 block mb-2">الأقسام</label>
@@ -315,23 +324,19 @@ function ProductFormContent() {
             </div>
 
              <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
-                <h3 className="font-bold mb-4 text-[#F5C518]">Search engine listing</h3>
+                <h3 className="font-bold mb-4 text-[#F5C518]">محركات البحث (SEO)</h3>
                 <div className="space-y-4 text-white">
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">Page title</label>
-                    <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="عنوان الصفحة" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-1">Meta description</label>
-                    <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} placeholder="الوصف" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm h-20 resize-none text-white"></textarea>
+                    <input name="seoTitle" value={product.seoTitle} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">URL handle</label>
-                    <input name="handle" value={product.handle} onChange={handleChange} placeholder="url-handle" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
+                    <input name="handle" value={product.handle} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">Category (جوجل SEO)</label>
-                    <input name="seoCategory" value={product.seoCategory} onChange={handleChange} placeholder="مثال: الملابس > أردية" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-[#F5C518]" />
+                    <label className="text-xs text-gray-500 block mb-1">SEO Category</label>
+                    <input name="seoCategory" value={product.seoCategory} onChange={handleChange} placeholder="الملابس > أردية" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-[#F5C518]" />
                   </div>
                 </div>
             </div>
@@ -340,9 +345,9 @@ function ProductFormContent() {
 
       <hr className="border-[#333] my-10" />
 
-      {/* ----------------- الجزء الثاني: جدول عرض المنتجات (إضافتك المطلوبة) ----------------- */}
+      {/* جدول عرض المنتجات */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-[#F5C518]">جميع المنتجات الحالية</h3>
+        <h3 className="text-xl font-bold text-[#F5C518]">إدارة منتجات WIND الحالية</h3>
         <div className="bg-[#1a1a1a] rounded border border-[#333] overflow-hidden">
           <table className="w-full text-right text-sm text-white">
             <thead className="bg-[#222] text-[#F5C518]">
@@ -350,33 +355,21 @@ function ProductFormContent() {
                 <th className="p-4">الصورة</th>
                 <th className="p-4">المنتج</th>
                 <th className="p-4">السعر</th>
-                <th className="p-4">القسم</th>
                 <th className="p-4">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#333]">
               {productsList.map((p) => (
-                <tr key={p.id} className="hover:bg-[#222] transition">
+                <tr key={p.id} className="hover:bg-[#222]">
                   <td className="p-4">
                     <img src={p.images?.[0] || p.mainImageUrl} className="w-12 h-12 object-cover rounded border border-[#333]" alt="" />
                   </td>
                   <td className="p-4 font-bold">{p.title}</td>
                   <td className="p-4">{p.price} ج.م</td>
-                  <td className="p-4 text-xs text-gray-400">{p.categories?.join(', ')}</td>
                   <td className="p-4">
                     <div className="flex gap-4">
-                      <Link 
-                        href={`/admin/products/create?id=${p.id}`} 
-                        className="text-blue-400 hover:text-blue-300 font-bold"
-                      >
-                        تعديل
-                      </Link>
-                      <button 
-                        onClick={() => handleDelete(p.id)}
-                        className="text-red-500 hover:text-red-400 font-bold"
-                      >
-                        حذف
-                      </button>
+                      <Link href={`/admin/products/create?id=${p.id}`} className="text-blue-400 font-bold hover:underline">تعديل</Link>
+                      <button onClick={() => handleDelete(p.id)} className="text-red-500 font-bold hover:underline">حذف</button>
                     </div>
                   </td>
                 </tr>
