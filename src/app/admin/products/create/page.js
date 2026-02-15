@@ -75,10 +75,9 @@ function ProductFormContent() {
     }
   };
 
-  // وظيفة إضافة رابط الصورة للمعاينة عند الضغط على Enter
   const handleImageUrlKeyDown = (e) => {
     if (e.key === 'Enter' && product.mainImageUrl.trim() !== '') {
-      e.preventDefault(); // منع إرسال الفورم
+      e.preventDefault(); 
       if (!previews.includes(product.mainImageUrl)) {
         setPreviews(prev => [product.mainImageUrl, ...prev]);
       }
@@ -99,6 +98,7 @@ function ProductFormContent() {
     setPreviews(prev => [...prev, ...newPreviews]);
   };
 
+  // تعديل: إضافة اللون الجديد في آخر القائمة
   const addColorVariant = () => {
     setColorVariants([...colorVariants, { name: '', swatch: '', preview: '', swatchUrl: '' }]);
   };
@@ -315,7 +315,6 @@ function ProductFormContent() {
                 <div className="space-y-3">
                     <div><label className="text-xs text-gray-500">السعر الحالي</label><input type="number" name="price" value={product.price} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
                     <div><label className="text-xs text-gray-500">قبل الخصم</label><input type="number" name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
-                    {/* الحقل المعاد إضافته */}
                     <div><label className="text-xs text-gray-500">تكلفة المنتج (لصاحب الموقع)</label><input type="number" name="costPerItem" value={product.costPerItem} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
                     <div><label className="text-xs text-gray-500">الكمية بالمخزن</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
                     
@@ -334,6 +333,12 @@ function ProductFormContent() {
                             </label>
                           ))}
                         </div>
+                    </div>
+
+                    {/* إرجاع حقل المقاسات الذي تم فقده */}
+                    <div className="pt-2">
+                        <label className="text-xs text-gray-500 block mb-1">المقاسات المتاحة (افصل بفاصلة)</label>
+                        <input name="sizes" value={product.sizes} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" placeholder="S, M, L, XL" />
                     </div>
                 </div>
             </div>
