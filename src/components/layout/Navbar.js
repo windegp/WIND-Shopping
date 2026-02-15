@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from "../../context/CartContext";
 import { db } from "../../lib/firebase"; 
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection } from "firebase/firestore";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -26,19 +26,41 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "navigation"), (doc) => {
-      if (doc.exists() && doc.data().menuItems) {
-        // تحديث الماب ليشمل الـ children
-        const formattedMenu = doc.data().menuItems.map(item => ({
+    // 1. مراقبة المنيو الثابت
+    const unsubSettings = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
+      let menuItemsFromSettings = [];
+      if (docSnap.exists() && docSnap.data().menuItems) {
+        menuItemsFromSettings = docSnap.data().menuItems.map(item => ({
           name: item.title,
-          link: item.link,
+          link: item.link.startsWith('/') ? item.link : `/${item.link}`,
           highlight: item.title === "تخفيضات" || item.highlight,
-          children: item.children || [] // جلب القوائم الفرعية
+          children: item.children || []
         }));
-        setCategories(formattedMenu);
       }
+
+      // 2. مراقبة كولكشن الأقسام (عشان تسمع أي كولكشن جديد فوراً)
+      const unsubCols = onSnapshot(collection(db, "collections"), (colSnap) => {
+        const dynamicCols = colSnap.docs.map(d => ({
+          name: d.data().name,
+          link: `/category/${d.data().slug || d.id}`,
+          children: d.data().subCategories || [] 
+        }));
+
+        // دمج القوائم ومنع التكرار
+        const combinedMenu = [...menuItemsFromSettings];
+        dynamicCols.forEach(col => {
+          if (!combinedMenu.find(m => m.link === col.link)) {
+            combinedMenu.push(col);
+          }
+        });
+
+        setCategories(combinedMenu.length > 0 ? combinedMenu : categories);
+      });
+
+      return () => unsubCols();
     });
-    return () => unsub();
+
+    return () => unsubSettings();
   }, []);
 
   return (
@@ -136,7 +158,6 @@ export default function Navbar() {
                   {categories.map((cat, i) => (
                     <li key={i} className="flex flex-col">
                       <div className="flex items-center w-full">
-                        {/* الرابط الرئيسي */}
                         <Link 
                           href={cat.link || "/"} 
                           onClick={() => !cat.children?.length && setIsMenuOpen(false)}
@@ -149,7 +170,6 @@ export default function Navbar() {
                           <span className="text-base">{cat.name}</span>
                         </Link>
 
-                        {/* زر السهم لفتح القائمة الفرعية إذا وجدت */}
                         {cat.children && cat.children.length > 0 && (
                           <button 
                             onClick={() => toggleSubMenu(i)}
@@ -173,10 +193,9 @@ export default function Navbar() {
                                         onClick={() => !sub.children?.length && setIsMenuOpen(false)}
                                         className="flex-1 p-3 text-sm text-gray-400 hover:text-white transition-colors border-b border-[#333]/10"
                                     >
-                                        {sub.title}
+                                        {sub.title || sub.name}
                                     </Link>
                                     
-                                    {/* دعم مستوى ثالث إذا وجد */}
                                     {sub.children && sub.children.length > 0 && (
                                         <button 
                                             onClick={() => toggleSubMenu(`${i}-${j}`)}
@@ -189,7 +208,7 @@ export default function Navbar() {
                                     )}
                                 </div>
 
-                                {/* عرض المستوى الثالث (مثل جينز/ميلتون داخل بنطلونات) */}
+                                {/* عرض المستوى الثالث */}
                                 {sub.children && sub.children.length > 0 && openSubMenus[`${i}-${j}`] && (
                                     <ul className="bg-[#0a0a0a] pr-4 border-r border-gray-700">
                                         {sub.children.map((grandChild, k) => (
@@ -199,7 +218,7 @@ export default function Navbar() {
                                                     onClick={() => setIsMenuOpen(false)}
                                                     className="block p-2 text-xs text-gray-500 hover:text-[#F5C518]"
                                                 >
-                                                    - {grandChild.title}
+                                                    - {grandChild.title || grandChild.name}
                                                 </Link>
                                             </li>
                                         ))}
