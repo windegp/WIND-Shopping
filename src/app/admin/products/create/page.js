@@ -1,26 +1,53 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useParams } from "next/navigation"; // للإمساك بمعرف المنتج عند التعديل
 
 export default function CreateProductPage() {
+  const { id } = useParams(); // إذا كان هناك ID في الرابط، نحن في وضع التعديل
   const [loading, setLoading] = useState(false);
+  
   const [product, setProduct] = useState({
     title: '', description: '', price: '', compareAtPrice: '',
-    costPerItem: '', sku: '', quantity: 0, category: 'shawls',
+    costPerItem: '', sku: '', quantity: 0, 
+    categories: ['shawls'], // غيرنا category إلى categories كمصفوفة
     tags: '', sizes: '', seoTitle: '', seoDesc: '', handle: '',
     mainImageUrl: '',
+    seoCategory: '', // خانة الـ SEO Category الجديدة
   });
 
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [colorVariants, setColorVariants] = useState([]);
 
-  // 1. تعريف حالة جدول القياسات (Snippet 1)
+  // 1. تعريف حالة جدول القياسات مع العناوين القابلة للتعديل
+  const [chartHeaders, setChartHeaders] = useState({
+    col1: 'المقاس', col2: 'الطول', col3: 'الصدر', col4: 'الوسط', col5: 'الوزن (كجم)'
+  });
   const [sizeChart, setSizeChart] = useState([
     { size: 'S', length: '', chest: '', waist: '', weight: '' }
   ]);
+
+  // --- ميزة التعديل: جلب بيانات المنتج إذا كان موجوداً ---
+  useEffect(() => {
+    if (id) {
+      const fetchProduct = async () => {
+        const docRef = doc(db, "products", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setProduct({ ...data, id: docSnap.id });
+          if (data.options?.sizeChart) setSizeChart(data.options.sizeChart);
+          if (data.options?.chartHeaders) setChartHeaders(data.options.chartHeaders);
+          if (data.options?.colors) setColorVariants(data.options.colors);
+          if (data.images) setPreviews(data.images);
+        }
+      };
+      fetchProduct();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,6 +55,14 @@ export default function CreateProductPage() {
     if (name === 'title' && !product.handle) {
       setProduct(prev => ({ ...prev, handle: value.toLowerCase().replace(/\s+/g, '-') }));
     }
+  };
+
+  // دالة التعامل مع الأقسام المتعددة
+  const handleCategoryChange = (cat) => {
+    const updatedCats = product.categories.includes(cat)
+      ? product.categories.filter(c => c !== cat)
+      : [...product.categories, cat];
+    setProduct(prev => ({ ...prev, categories: updatedCats }));
   };
 
   const handleImageChange = (e) => {
@@ -41,7 +76,6 @@ export default function CreateProductPage() {
     setColorVariants([...colorVariants, { name: '', file: null, preview: '', swatchUrl: '' }]);
   };
 
-  // 2. دوال التحكم في جدول القياسات (Snippet 2)
   const handleSizeChartChange = (index, field, value) => {
     const newChart = [...sizeChart];
     newChart[index][field] = value;
@@ -60,7 +94,7 @@ export default function CreateProductPage() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      let imageUrls = product.mainImageUrl ? [product.mainImageUrl] : [];
+      let imageUrls = [...(product.images || [])];
       
       if (images.length > 0) {
         for (let img of images) {
@@ -73,43 +107,39 @@ export default function CreateProductPage() {
         }
       }
 
-      let finalColors = [];
-      for (let variant of colorVariants) {
-        let finalSwatch = variant.swatchUrl;
-        if (variant.file && !finalSwatch) {
-          try {
-            const vRef = ref(storage, `variants/${Date.now()}-${variant.file.name}`);
-            const vSnap = await uploadBytes(vRef, variant.file);
-            finalSwatch = await getDownloadURL(vSnap.ref);
-          } catch(e) {}
-        }
-        finalColors.push({ name: variant.name, swatch: finalSwatch });
-      }
+      let finalColors = colorVariants.map(v => ({ name: v.name, swatch: v.swatchUrl || v.preview }));
 
-      // 3. دمج بيانات جدول القياسات داخل كائن المنتج (Snippet 3)
       const productData = {
         ...product,
         price: Number(product.price),
         compareAtPrice: Number(product.compareAtPrice),
         costPerItem: Number(product.costPerItem),
         quantity: Number(product.quantity),
-        tags: product.tags ? product.tags.split(',').map(t => t.trim()) : [],
+        tags: product.tags ? (Array.isArray(product.tags) ? product.tags : product.tags.split(',').map(t => t.trim())) : [],
         options: {
           colors: finalColors,
-          sizes: product.sizes ? product.sizes.split(',').map(s => s.trim()) : [],
-          sizeChart: sizeChart, // تم إضافة السطر هنا
+          sizes: product.sizes ? (Array.isArray(product.sizes) ? product.sizes : product.sizes.split(',').map(s => s.trim())) : [],
+          sizeChart: sizeChart,
+          chartHeaders: chartHeaders, // حفظ العناوين المعدلة
         },
         seo: {
           title: product.seoTitle || product.title,
           description: product.seoDesc || product.description,
-          slug: product.handle
+          handle: product.handle,
+          seoCategory: product.seoCategory
         },
         images: imageUrls,
-        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, "products"), productData);
-      alert("✅ تم إضافة المنتج بنجاح!");
+      if (id) {
+        await updateDoc(doc(db, "products", id), productData);
+        alert("✅ تم تحديث المنتج بنجاح!");
+      } else {
+        productData.createdAt = serverTimestamp();
+        await addDoc(collection(db, "products"), productData);
+        alert("✅ تم إضافة المنتج بنجاح!");
+      }
       window.location.reload();
       
     } catch (error) {
@@ -122,13 +152,13 @@ export default function CreateProductPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20" dir="rtl">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">إضافة منتج جديد</h2>
+        <h2 className="text-2xl font-bold">{id ? 'تعديل منتج' : 'إضافة منتج جديد'}</h2>
         <button 
           onClick={handleSave}
           disabled={loading}
           className={`px-8 py-3 rounded font-bold text-black ${loading ? 'bg-gray-500' : 'bg-[#F5C518] hover:bg-[#ffdb4d]'}`}
         >
-          {loading ? 'جاري الحفظ...' : 'حفظ ونشر'}
+          {loading ? 'جاري الحفظ...' : (id ? 'تحديث المنتج' : 'حفظ ونشر')}
         </button>
       </div>
 
@@ -137,11 +167,12 @@ export default function CreateProductPage() {
           {/* تفاصيل المنتج */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <label className="block text-sm font-bold mb-2 text-[#F5C518]">اسم المنتج</label>
-             <input name="title" onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-3 rounded text-white focus:border-[#F5C518] outline-none" placeholder="مثال: عباية كتان أسود" />
+             <input name="title" value={product.title} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-3 rounded text-white focus:border-[#F5C518] outline-none" placeholder="مثال: عباية كتان أسود" />
              
              <label className="block text-sm font-bold mt-4 mb-2 text-[#F5C518]">وصف المنتج</label>
              <textarea 
                 name="description" 
+                value={product.description}
                 onChange={handleChange} 
                 className="w-full h-64 bg-[#121212] border border-[#333] p-4 rounded text-white focus:border-[#F5C518] outline-none resize-none font-light leading-relaxed"
                 placeholder="اكتب وصف المنتج هنا..."
@@ -151,7 +182,7 @@ export default function CreateProductPage() {
           {/* الصور */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
              <h3 className="font-bold mb-4 text-[#F5C518]">الصور</h3>
-             <input name="mainImageUrl" onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="رابط مباشر (ImgBB) - اختياري" />
+             <input name="mainImageUrl" value={product.mainImageUrl} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-[#F5C518] text-sm mb-4" placeholder="رابط مباشر (ImgBB) - اختياري" />
              <div className="grid grid-cols-4 gap-2 mb-4">
                  {previews.map((src, i) => <img key={i} src={src} className="h-20 w-full object-cover rounded border border-[#333]" />)}
              </div>
@@ -170,10 +201,10 @@ export default function CreateProductPage() {
                         <div className="w-8 h-8 rounded-full bg-black overflow-hidden border border-[#F5C518]">
                              {(v.preview || v.swatchUrl) && <img src={v.preview || v.swatchUrl} className="w-full h-full object-cover" />}
                         </div>
-                        <input placeholder="اسم اللون" className="bg-transparent text-white text-sm outline-none flex-1" 
+                        <input placeholder="اسم اللون" value={v.name} className="bg-transparent text-white text-sm outline-none flex-1" 
                             onChange={(e) => { const n = [...colorVariants]; n[i].name = e.target.value; setColorVariants(n); }} 
                         />
-                        <input placeholder="رابط صورة اللون" className="bg-[#222] text-[#F5C518] text-xs p-1 rounded w-1/3"
+                        <input placeholder="رابط صورة اللون" value={v.swatchUrl} className="bg-[#222] text-[#F5C518] text-xs p-1 rounded w-1/3"
                             onChange={(e) => { const n = [...colorVariants]; n[i].swatchUrl = e.target.value; setColorVariants(n); }}
                         />
                     </div>
@@ -182,11 +213,11 @@ export default function CreateProductPage() {
             </div>
             <div className="mt-4 border-t border-[#333] pt-4">
                  <label className="text-xs text-gray-400 block mb-1">المقاسات (مفصولة بفاصلة)</label>
-                 <input name="sizes" onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="S, M, L, XL" />
+                 <input name="sizes" value={product.sizes} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="S, M, L, XL" />
             </div>
           </div>
 
-          {/* 4. واجهة جدول دليل القياسات (Snippet 4) */}
+          {/* 4. واجهة جدول دليل القياسات مع إمكانية تعديل المسميات */}
           <div className="bg-[#1a1a1a] p-6 rounded border border-[#333] mt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-[#F5C518]">دليل القياسات (بالسنتيمتر)</h3>
@@ -199,18 +230,18 @@ export default function CreateProductPage() {
               <table className="w-full text-center text-sm">
                 <thead>
                   <tr className="text-gray-500 border-b border-[#333]">
-                    <th className="pb-2">المقاس</th>
-                    <th className="pb-2">الطول</th>
-                    <th className="pb-2">الصدر</th>
-                    <th className="pb-2">الوسط</th>
-                    <th className="pb-2">الوزن (كجم)</th>
+                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col1} onChange={(e)=>setChartHeaders({...chartHeaders, col1: e.target.value})} /></th>
+                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col2} onChange={(e)=>setChartHeaders({...chartHeaders, col2: e.target.value})} /></th>
+                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col3} onChange={(e)=>setChartHeaders({...chartHeaders, col3: e.target.value})} /></th>
+                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col4} onChange={(e)=>setChartHeaders({...chartHeaders, col4: e.target.value})} /></th>
+                    <th className="pb-2"><input className="bg-transparent text-center w-full focus:text-[#F5C518]" value={chartHeaders.col5} onChange={(e)=>setChartHeaders({...chartHeaders, col5: e.target.value})} /></th>
                     <th className="pb-2">حذف</th>
                   </tr>
                 </thead>
                 <tbody className="space-y-2">
                   {sizeChart.map((row, index) => (
                     <tr key={index} className="group">
-                      <td className="p-1"><input value={row.size} onChange={(e) => handleSizeChartChange(index, 'size', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-[#F5C518] font-bold" placeholder="S" /></td>
+                      <td className="p-1"><input value={row.size} onChange={(e) => handleSizeChartChange(index, 'size', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-[#F5C518] font-bold" /></td>
                       <td className="p-1"><input value={row.length} onChange={(e) => handleSizeChartChange(index, 'length', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
                       <td className="p-1"><input value={row.chest} onChange={(e) => handleSizeChartChange(index, 'chest', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
                       <td className="p-1"><input value={row.waist} onChange={(e) => handleSizeChartChange(index, 'waist', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-center text-white" /></td>
@@ -229,24 +260,60 @@ export default function CreateProductPage() {
         {/* القسم الأيسر */}
         <div className="space-y-6">
             <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
-                <h3 className="font-bold mb-4 text-[#F5C518]">السعر والتنظيم</h3>
+                <h3 className="font-bold mb-4 text-[#F5C518]">السعر، التكلفة والمخزن</h3>
                 <div className="space-y-3">
-                    <div><label className="text-xs text-gray-500">السعر</label><input type="number" name="price" onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
-                    <div><label className="text-xs text-gray-500">قبل الخصم</label><input type="number" name="compareAtPrice" onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
-                    <div>
-                        <label className="text-xs text-gray-500">القسم</label>
-                        <select name="category" onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white">
-                            <option value="shawls">شيلان</option>
-                            <option value="winter">شتوي</option>
-                            <option value="new">وصل حديثاً</option>
-                        </select>
+                    <div><label className="text-xs text-gray-500">السعر</label><input type="number" name="price" value={product.price} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
+                    <div><label className="text-xs text-gray-500">قبل الخصم</label><input type="number" name="compareAtPrice" value={product.compareAtPrice} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white"/></div>
+                    {/* 1. إضافة خانة التكلفة والمخزن */}
+                    <div><label className="text-xs text-gray-500">تكلفة القطعة</label><input type="number" name="costPerItem" value={product.costPerItem} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0.00"/></div>
+                    <div><label className="text-xs text-gray-500">المخزن (الكمية)</label><input type="number" name="quantity" value={product.quantity} onChange={handleChange} className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" placeholder="0"/></div>
+                    
+                    {/* 2. اختيار أكثر من قسم */}
+                    <div className="pt-2">
+                        <label className="text-xs text-gray-500 block mb-2">الأقسام</label>
+                        <div className="space-y-2 bg-[#121212] p-3 rounded border border-[#333]">
+                          {['shawls', 'winter', 'new', 'accessories'].map(cat => (
+                            <label key={cat} className="flex items-center gap-2 text-sm text-white cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={product.categories?.includes(cat)} 
+                                onChange={() => handleCategoryChange(cat)}
+                                className="accent-[#F5C518]"
+                              />
+                              {cat === 'shawls' ? 'شيلان' : cat === 'winter' ? 'شتوي' : cat === 'new' ? 'وصل حديثاً' : 'إكسسوارات'}
+                            </label>
+                          ))}
+                        </div>
                     </div>
                 </div>
             </div>
+
+             {/* قسم SEO المطور بالمسميات المطلوبة */}
              <div className="bg-[#1a1a1a] p-6 rounded border border-[#333]">
-                <h3 className="font-bold mb-4 text-[#F5C518]">SEO (محركات البحث)</h3>
-                <input name="seoTitle" onChange={handleChange} placeholder="عنوان الصفحة" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm mb-2 text-white" />
-                <textarea name="seoDesc" onChange={handleChange} placeholder="الوصف" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm h-20 resize-none text-white"></textarea>
+                <h3 className="font-bold mb-4 text-[#F5C518]">Search engine listing</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Page title</label>
+                    <input name="seoTitle" value={product.seoTitle} onChange={handleChange} placeholder="عنوان الصفحة" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Meta description</label>
+                    <textarea name="seoDesc" value={product.seoDesc} onChange={handleChange} placeholder="الوصف" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm h-20 resize-none text-white"></textarea>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">URL handle</label>
+                    <input name="handle" value={product.handle} onChange={handleChange} placeholder="url-handle" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-white" />
+                  </div>
+
+                  {/* 5. خانة Category للـ SEO */}
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Category (جوجل SEO)</label>
+                    <input name="seoCategory" value={product.seoCategory} onChange={handleChange} placeholder="مثال: الملابس > أردية" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-sm text-[#F5C518]" />
+                  </div>
+                </div>
             </div>
         </div>
       </div>
