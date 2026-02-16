@@ -2,7 +2,6 @@
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc, query, where, increment } from "firebase/firestore";
 import { useState, useEffect, Suspense } from 'react';
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc, getDocs, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
