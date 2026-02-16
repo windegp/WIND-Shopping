@@ -7,6 +7,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function AdminHomeManager() {
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [products, setProducts] = useState([]); // كل المنتجات
   const [categories, setCategories] = useState([]); // قائمة الأقسام المستخرجة
   const [sections, setSections] = useState([]); // حالة الأقسام
@@ -40,30 +41,34 @@ export default function AdminHomeManager() {
     { id: 'category_split', name: 'انقسام الفئات (Split Footer)', icon: '✂️' }
   ];
 
-  // 1. جلب البيانات
+  // 1. جلب البيانات عند التحميل
   useEffect(() => {
     const fetchData = async () => {
+      setInitialLoading(true);
       try {
         // جلب المنتجات
         const prodsSnap = await getDocs(collection(db, "products"));
         const prodsData = prodsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProducts(prodsData);
 
-        // استخراج الأقسام الفريدة (Deduplication)
+        // استخراج الأقسام الفريدة
         const uniqueCats = [...new Set(prodsData.flatMap(p => p.categories || []))].filter(Boolean);
-        // إضافة أقسام افتراضية قد لا تكون في المنتجات لضمان وجودها
         const allCats = [...new Set([...uniqueCats, 'new-arrivals', 'dress', 'blouse', 'summer', 'winter'])]; 
         setCategories(allCats.sort());
 
-        // جلب الإعدادات
+        // جلب الإعدادات المحفوظة
         const settingsRef = doc(db, "settings", "homePage");
         const settingsSnap = await getDoc(settingsRef);
         
         if (settingsSnap.exists() && settingsSnap.data().sections) {
-          const loadedSections = settingsSnap.data().sections.map(s => ({...s, id: s.id.toString()}));
+          const loadedSections = settingsSnap.data().sections.map(s => ({
+            ...s, 
+            id: s.id.toString(),
+            excludedIds: s.excludedIds || [] // ضمان وجود المصفوفة
+          }));
           setSections(loadedSections);
         } else {
-          // --- هنا السحر: تعبئة الأدمن بنفس تصميم صفحتك الحالية تلقائياً ---
+          // البنية الافتراضية إذا لم تكن هناك إعدادات سابقة
           setSections([
             { id: '1', title: "الرئيسية", subTitle: "", type: "component", slug: "", designType: "hero_section", excludedIds: [] },
             { id: '2', title: "أحدث صيحات WIND", subTitle: "تصاميم شتوية تلامس الروح", type: "collection", slug: "new-arrivals", designType: "carousel", excludedIds: [] },
@@ -81,12 +86,14 @@ export default function AdminHomeManager() {
         }
       } catch (error) {
         console.error("Error loading data:", error);
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchData();
   }, []);
 
-  // دالة معالجة الترتيب
+  // دالة معالجة ترتيب السحب والإفلات
   const onDragEnd = (result) => {
     if (!result.destination) return;
     const items = Array.from(sections);
@@ -108,19 +115,23 @@ export default function AdminHomeManager() {
   };
 
   const removeSection = (id) => {
-    if (confirm("هل أنت متأكد من حذف هذا القسم؟")) {
+    if (confirm("هل أنت متأكد من حذف هذا القسم نهائياً من الواجهة؟")) {
       setSections(sections.filter(sec => sec.id !== id));
     }
   };
 
   const updateSection = (id, field, value) => {
     setSections(sections.map(sec => {
-        if (sec.id === id) {
-            const updated = { ...sec, [field]: value };
-            if (field === 'slug') updated.excludedIds = [];
-            return updated;
-        }
-        return sec;
+      if (sec.id === id) {
+        const updated = { ...sec, [field]: value };
+        // تصفير الاستثناءات عند تغيير القسم لضمان عدم حدوث تداخل
+        if (field === 'slug' || field === 'type') updated.excludedIds = [];
+        // تعيين تصميم افتراضي عند تغيير النوع
+        if (field === 'type' && value === 'component') updated.designType = 'hero_section';
+        if (field === 'type' && value === 'collection') updated.designType = 'carousel';
+        return updated;
+      }
+      return sec;
     }));
   };
 
@@ -140,50 +151,63 @@ export default function AdminHomeManager() {
   };
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setLoading(true);
     try {
       const docRef = doc(db, "settings", "homePage");
-      // نستخدم استبدال كامل للأقسام للحفاظ على الترتيب والحذف
-      await setDoc(docRef, { sections }, { merge: true });
-      alert("✅ تم حفظ تصميم الصفحة الرئيسية وترتيب الأقسام بنجاح!");
+      await setDoc(docRef, { 
+        sections,
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+      alert("✅ تم حفظ ترتيب وتصميم الواجهة بنجاح!");
     } catch (error) {
       console.error(error);
-      alert("❌ حدث خطأ أثناء الحفظ");
+      alert("❌ خطأ أثناء الحفظ، يرجى التحقق من الاتصال.");
     }
     setLoading(false);
   };
 
+  if (initialLoading) return (
+    <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+      <div className="text-[#F5C518] animate-pulse font-bold text-xl">جاري تحميل إعدادات الواجهة...</div>
+    </div>
+  );
+
   return (
-    <div className="p-4 md:p-10 bg-[#121212] min-h-screen text-white text-right" dir="rtl">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 border-b border-[#333] pb-4 sticky top-0 bg-[#121212] z-50 shadow-md">
+    <div className="p-4 md:p-10 bg-[#121212] min-h-screen text-white text-right font-sans" dir="rtl">
+      
+      {/* Header الثابت */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-[#333] pb-4 sticky top-0 bg-[#121212]/95 backdrop-blur-md z-50 shadow-md gap-4">
         <div>
-           <h1 className="text-2xl font-black text-[#F5C518]">إدارة واجهة WIND</h1>
-           <p className="text-xs text-gray-500 mt-1">نظام إدارة المحتوى الكامل (CMS) - اسحب، رتب، واختر التصميم</p>
+           <h1 className="text-2xl font-black text-[#F5C518] flex items-center gap-2">
+             <span className="text-3xl">🏠</span> إدارة واجهة WIND
+           </h1>
+           <p className="text-xs text-gray-500 mt-1 italic font-light">
+             نظام تحكم كامل (Drag & Drop CMS) - صمم متجرك كما تراه
+           </p>
         </div>
-        <div className="flex gap-2">
-            <button 
-            onClick={addSection}
-            className="border border-[#F5C518] text-[#F5C518] font-bold px-4 py-2 rounded-sm hover:bg-[#F5C518] hover:text-black transition-all text-sm"
-            >
-            + قسم جديد
-            </button>
-            <button 
-            onClick={handleSave}
-            disabled={loading}
-            className="bg-[#F5C518] text-black font-bold px-6 py-2 rounded-sm hover:bg-yellow-500 shadow-[0_0_15px_rgba(245,197,24,0.3)] transition-all"
-            >
-            {loading ? "جاري الحفظ..." : "حفظ التغييرات"}
-            </button>
+        <div className="flex gap-3">
+           <button 
+             onClick={addSection}
+             className="border border-[#F5C518] text-[#F5C518] font-bold px-4 py-2 rounded hover:bg-[#F5C518] hover:text-black transition-all text-sm"
+           >
+             + إضافة قسم جديد
+           </button>
+           <button 
+             onClick={handleSave}
+             disabled={loading}
+             className="bg-[#F5C518] text-black font-bold px-8 py-2 rounded hover:bg-yellow-500 shadow-[0_0_20px_rgba(245,197,24,0.4)] disabled:opacity-50 transition-all"
+           >
+             {loading ? "جاري الحفظ..." : "حفظ التغييرات"}
+           </button>
         </div>
       </div>
 
-      {/* Drag and Drop Area */}
+      {/* منطقة السحب والإفلات */}
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="main-sections">
           {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef} className="max-w-5xl mx-auto space-y-6 pb-20">
+            <div {...provided.droppableProps} ref={provided.innerRef} className="max-w-5xl mx-auto space-y-6 pb-24">
               
               {sections.map((section, index) => (
                 <Draggable key={section.id} draggableId={section.id} index={index}>
@@ -191,48 +215,55 @@ export default function AdminHomeManager() {
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`bg-[#1A1A1A] p-6 rounded-lg border ${snapshot.isDragging ? 'border-[#F5C518] scale-[1.01] shadow-2xl z-50' : 'border-[#333]'} relative group transition-all`}
+                      className={`bg-[#1A1A1A] p-6 rounded-xl border-2 ${snapshot.isDragging ? 'border-[#F5C518] scale-[1.02] shadow-2xl z-50 ring-4 ring-[#F5C518]/20' : 'border-[#333] hover:border-[#444]'} relative group transition-all duration-200`}
                     >
                       {/* مقبض السحب */}
-                      <div {...provided.dragHandleProps} className="absolute top-4 right-4 text-gray-600 cursor-grab active:cursor-grabbing hover:text-[#F5C518] p-2 bg-[#121212] rounded">
+                      <div {...provided.dragHandleProps} className="absolute top-4 right-4 text-gray-500 cursor-grab active:cursor-grabbing hover:text-[#F5C518] p-2 bg-[#121212] rounded-lg transition-colors border border-[#333]">
                          <span className="text-2xl">⠿</span>
                       </div>
 
                       {/* زر الحذف */}
                       <button 
                         onClick={() => removeSection(section.id)}
-                        className="absolute top-4 left-4 text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-[#121212] p-2 rounded text-xs border border-red-900/30"
+                        className="absolute top-4 left-4 text-red-500 hover:text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-all bg-[#121212] p-2 rounded-lg text-xs border border-red-900/30"
                       >
-                        حذف 🗑️
+                        حذف القسم 🗑️
                       </button>
 
-                      <div className="flex items-center gap-3 mb-6">
-                        <span className="bg-[#222] text-[#F5C518] w-8 h-8 flex items-center justify-center rounded font-bold border border-[#333]">{index + 1}</span>
-                        <h3 className="font-bold text-lg flex items-center gap-2">
-                            {section.title || "قسم بدون عنوان"}
-                            <span className="text-[10px] bg-[#333] px-2 py-0.5 rounded text-gray-400 font-normal">
-                                {designStyles.find(s => s.id === section.designType)?.name}
-                            </span>
-                        </h3>
+                      {/* ترقيم القسم */}
+                      <div className="flex items-center gap-3 mb-8">
+                        <span className="bg-[#222] text-[#F5C518] w-10 h-10 flex items-center justify-center rounded-full font-black border-2 border-[#F5C518]/20 text-lg">
+                          {index + 1}
+                        </span>
+                        <div className="flex flex-col">
+                          <h3 className="font-bold text-xl flex items-center gap-2 text-gray-100">
+                              {section.title || "عنوان القسم"}
+                              <span className="text-[10px] bg-[#333] px-2 py-1 rounded-full text-gray-400 font-medium uppercase tracking-wider">
+                                  {designStyles.find(s => s.id === section.designType)?.name || "تصميم غير محدد"}
+                              </span>
+                          </h3>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        {/* العناوين (تظهر فقط للأقسام القابلة للتعديل) */}
-                        <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-2">العنوان الرئيسي</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        {/* مدخلات النصوص */}
+                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 mr-1 italic">العنوان الرئيسي للقسم</label>
                             <input 
                                 type="text"
-                                className="w-full bg-[#121212] border border-[#444] p-3 rounded focus:border-[#F5C518] outline-none"
+                                placeholder="مثال: الأكثر مبيعاً..."
+                                className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-white transition-all shadow-inner"
                                 value={section.title}
                                 onChange={(e) => updateSection(section.id, 'title', e.target.value)}
                             />
                           </div>
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-2">الوصف الفرعي</label>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 mr-1 italic">الوصف أو العنوان الفرعي</label>
                             <input 
                                 type="text"
-                                className="w-full bg-[#121212] border border-[#444] p-3 rounded focus:border-[#F5C518] outline-none"
+                                placeholder="وصف قصير يظهر تحت العنوان..."
+                                className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-gray-300 transition-all"
                                 value={section.subTitle}
                                 onChange={(e) => updateSection(section.id, 'subTitle', e.target.value)}
                             />
@@ -240,101 +271,110 @@ export default function AdminHomeManager() {
                         </div>
 
                         {/* نوع المحتوى */}
-                        <div>
-                          <label className="block text-xs text-gray-400 mb-2">نوع المحتوى</label>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-400 mr-1">ماذا يعرض هذا القسم؟</label>
                           <select 
-                            className="w-full bg-[#121212] border border-[#444] p-3 rounded focus:border-[#F5C518] outline-none text-gray-300"
+                            className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-[#F5C518] font-bold appearance-none cursor-pointer"
                             value={section.type}
                             onChange={(e) => updateSection(section.id, 'type', e.target.value)}
                           >
                             <option value="collection">عرض منتجات (Collection)</option>
-                            <option value="component">مكون ثابت (Static Component)</option>
-                            <option value="page">رابط صفحة (Link)</option>
+                            <option value="component">مكون جاهز (UI Component)</option>
+                            <option value="page">رابط صفحة (Redirect Link)</option>
                           </select>
                         </div>
 
-                        {/* اختيار القسم */}
-                        <div>
-                           {section.type === 'collection' && (
+                        {/* اختيار المصدر بناءً على النوع */}
+                        <div className="space-y-2">
+                            {section.type === 'collection' && (
                                 <>
-                                <label className="block text-xs text-gray-400 mb-2">اختر القسم (Collection)</label>
+                                <label className="text-xs font-bold text-gray-400 mr-1">اختر مجموعة المنتجات</label>
                                 <select 
-                                    className="w-full bg-[#121212] border border-[#444] p-3 rounded focus:border-[#F5C518] outline-none text-[#F5C518] font-bold"
+                                    className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-white font-bold appearance-none cursor-pointer"
                                     value={section.slug}
                                     onChange={(e) => updateSection(section.id, 'slug', e.target.value)}
                                 >
-                                    <option value="">-- كل المنتجات --</option>
-                                    <option value="all">الكل (All Products)</option>
+                                    <option value="">-- اختر الفئة --</option>
+                                    <option value="all">كل المنتجات (All)</option>
                                     {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                 </select>
                                 </>
-                           )}
-                           {section.type === 'page' && (
+                            )}
+                            {section.type === 'page' && (
                                <>
-                                <label className="block text-xs text-gray-400 mb-2">اختر الصفحة</label>
+                                <label className="text-xs font-bold text-gray-400 mr-1">اختر الصفحة المستهدفة</label>
                                 <select 
-                                    className="w-full bg-[#121212] border border-[#444] p-3 rounded focus:border-[#F5C518] outline-none text-white"
+                                    className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-white font-bold appearance-none cursor-pointer"
                                     value={section.slug}
                                     onChange={(e) => updateSection(section.id, 'slug', e.target.value)}
                                 >
                                     {staticPages.map(page => <option key={page.slug} value={page.slug}>{page.name}</option>)}
                                 </select>
                                </>
-                           )}
-                           {section.type === 'component' && (
-                               <div className="p-3 bg-[#222] border border-[#333] rounded text-gray-500 text-xs flex items-center justify-center">
-                                   هذا القسم يعرض مكوناً جاهزاً، اختر شكله من الأسفل
-                               </div>
-                           )}
+                            )}
+                            {section.type === 'component' && (
+                                <div className="h-full flex items-center">
+                                  <div className="p-4 bg-[#222]/50 border border-dashed border-[#444] rounded-lg text-gray-500 text-xs w-full text-center">
+                                      ✨ هذا القسم يعرض مكوناً برمجياً جاهزاً، تحكم بمكانه وترتيبه فقط.
+                                  </div>
+                                </div>
+                            )}
                         </div>
 
-                        {/* اختيار التصميم */}
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-gray-400 mb-2">اختر التصميم (Design Style)</label>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {/* اختيار شكل التصميم */}
+                        <div className="md:col-span-2 mt-2">
+                          <label className="text-xs font-bold text-gray-400 mb-3 block mr-1">اختر نمط العرض (Layout)</label>
+                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                              {designStyles.filter(ds => {
-                                 // فلترة الخيارات المنطقية حسب النوع
-                                 if (section.type === 'component') return ['hero_section', 'trust_bar', 'reviews_parallax', 'story_section', 'magazine_grid', 'collections_slider', 'category_split'].includes(ds.id);
-                                 return !['hero_section', 'trust_bar', 'reviews_parallax', 'story_section', 'magazine_grid', 'collections_slider', 'category_split'].includes(ds.id);
+                                 const componentList = ['hero_section', 'trust_bar', 'reviews_parallax', 'story_section', 'magazine_grid', 'collections_slider', 'category_split'];
+                                 if (section.type === 'component') return componentList.includes(ds.id);
+                                 return !componentList.includes(ds.id);
                              }).map((style) => (
                                <div 
                                  key={style.id}
                                  onClick={() => updateSection(section.id, 'designType', style.id)}
-                                 className={`cursor-pointer p-2 rounded border text-center transition-all flex flex-col items-center justify-center gap-1 ${section.designType === style.id ? 'border-[#F5C518] bg-[#F5C518]/10 text-[#F5C518]' : 'border-[#333] bg-[#121212] text-gray-500 hover:border-[#555]'}`}
+                                 className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all flex flex-col items-center justify-center gap-2 ${section.designType === style.id ? 'border-[#F5C518] bg-[#F5C518]/10 text-[#F5C518] shadow-lg' : 'border-[#222] bg-[#121212] text-gray-500 hover:border-[#444]'}`}
                                >
-                                 <span className="text-lg">{style.icon}</span>
-                                 <span className="text-[9px] font-bold">{style.name}</span>
-                                </div>
+                                 <span className="text-2xl">{style.icon}</span>
+                                 <span className="text-[10px] font-bold leading-tight">{style.name}</span>
+                               </div>
                              ))}
                           </div>
                         </div>
                       </div>
 
-                      {/* استثناء المنتجات */}
+                      {/* قسم استثناء المنتجات */}
                       {section.type === 'collection' && (
-                        <div className="bg-[#121212] p-4 rounded border border-[#333]">
-                          <h4 className="text-xs font-bold text-gray-400 mb-3">إخفاء منتجات محددة من هذا القسم 👁️‍🗨️</h4>
-                          <div className="max-h-32 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2 pr-2 custom-scrollbar">
+                        <div className="bg-[#121212] p-5 rounded-xl border border-[#333] shadow-inner">
+                          <h4 className="text-xs font-black text-[#F5C518] mb-4 flex items-center gap-2 uppercase tracking-widest">
+                            <span className="text-lg">🚫</span> استثناء منتجات محددة من الظهور في هذا القسم
+                          </h4>
+                          <div className="max-h-48 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-3 pr-2 scrollbar-thin scrollbar-thumb-[#333]">
                             {products
                               .filter(p => section.slug === 'all' || p.categories?.includes(section.slug))
-                              .slice(0, 50) // Limit list for performance
-                              .map(product => (
-                                <label key={product.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer border transition-all ${section.excludedIds?.includes(product.id) ? 'border-red-500 bg-red-900/10' : 'border-[#333] hover:border-[#555]'}`}>
-                                  <input 
-                                    type="checkbox" 
-                                    className="w-4 h-4 accent-red-500"
-                                    checked={section.excludedIds?.includes(product.id) || false}
-                                    onChange={() => toggleProductExclusion(section.id, product.id)}
-                                  />
-                                  <div className="flex items-center gap-2 truncate">
-                                    {product.images?.[0] && <img src={product.images[0]} className="w-6 h-6 object-cover rounded-sm" />}
-                                    <span className={`text-xs truncate ${section.excludedIds?.includes(product.id) ? 'text-gray-500 line-through' : 'text-gray-300'}`}>
-                                      {product.title}
-                                    </span>
-                                  </div>
-                                </label>
-                              ))
+                              .map(product => {
+                                const isExcluded = section.excludedIds?.includes(product.id);
+                                return (
+                                  <label key={product.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-all ${isExcluded ? 'border-red-900/50 bg-red-900/10' : 'border-[#222] hover:border-[#444] bg-[#1A1A1A]'}`}>
+                                    <input 
+                                      type="checkbox" 
+                                      className="w-5 h-5 accent-red-600 rounded"
+                                      checked={isExcluded || false}
+                                      onChange={() => toggleProductExclusion(section.id, product.id)}
+                                    />
+                                    <div className="flex items-center gap-2 truncate">
+                                      {product.images?.[0] && <img src={product.images[0]} className="w-8 h-8 object-cover rounded shadow-sm" alt="" />}
+                                      <span className={`text-[11px] font-medium truncate ${isExcluded ? 'text-red-400 line-through' : 'text-gray-300'}`}>
+                                        {product.title}
+                                      </span>
+                                    </div>
+                                  </label>
+                                );
+                              })
                             }
+                            {products.filter(p => section.slug === 'all' || p.categories?.includes(section.slug)).length === 0 && (
+                              <div className="col-span-full text-center py-4 text-gray-600 text-sm">لا توجد منتجات في هذا القسم حالياً.</div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -343,10 +383,29 @@ export default function AdminHomeManager() {
                 </Draggable>
               ))}
               {provided.placeholder}
+              
+              {/* رسالة توضيحية عند عدم وجود أقسام */}
+              {sections.length === 0 && (
+                <div className="text-center py-20 border-2 border-dashed border-[#333] rounded-2xl">
+                  <p className="text-gray-500 italic text-lg">لا توجد أقسام مضافة حالياً. ابدأ بإضافة قسم جديد!</p>
+                </div>
+              )}
             </div>
           )}
         </Droppable>
       </DragDropContext>
+
+      {/* زر الحفظ العائم للموبايل */}
+      <div className="fixed bottom-6 left-6 md:hidden">
+         <button 
+           onClick={handleSave}
+           disabled={loading}
+           className="bg-[#F5C518] text-black w-14 h-14 rounded-full flex items-center justify-center shadow-2xl font-bold"
+         >
+           {loading ? "..." : "✓"}
+         </button>
+      </div>
+
     </div>
   );
 }
