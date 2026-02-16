@@ -47,13 +47,16 @@ export default function Home() {
   // الحالة الجديدة لحفظ المنتجات القادمة من Firebase
   const [allProducts, setAllProducts] = useState(staticProducts);
 
-  // تصنيف المنتجات (تم ربطها بـ allProducts بدلاً من products الثابتة)
-  const bestSellers = allProducts.slice(0, 4);
-  const newArrivals = allProducts.slice(0, 5);
-  const topRated = allProducts.filter(p => parseFloat(p.rating) >= 4.8);
-  const isdalat = allProducts.filter(p => p.category === 'isdal');
-  const shawls = allProducts.filter(p => p.category === 'shawl' || p.category === 'shawls');
-  const discounts = allProducts.filter(p => p.oldPrice || p.compareAtPrice);
+  // --- تصنيف المنتجات بناءً على البيانات الجديدة من WIND ---
+  const bestSellers = allProducts.slice(0, 8); // الأكثر مبيعاً (أول 8 منتجات)
+  const newArrivals = allProducts.filter(p => p.categories?.includes('new-arrivals')).slice(0, 10);
+  const topRated = allProducts.filter(p => parseFloat(p.rating) >= 4.5 || p.featured === true);
+  
+  // الأقسام الجديدة (فساتين وبلوزات) بدلاً من القديمة
+  const dresses = allProducts.filter(p => p.categories?.includes('dress'));
+  const blouses = allProducts.filter(p => p.categories?.includes('blouse'));
+  
+  const discounts = allProducts.filter(p => p.compareAtPrice > p.price);
 
   useEffect(() => {
     // 1. إضافة الـ CSS Styles
@@ -99,7 +102,7 @@ export default function Home() {
       setReviews(data);
     });
 
-    // 3. جلب المنتجات من Firebase (التعديل المطلوب)
+    // 3. جلب المنتجات من Firebase
     const qProducts = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const unsubProducts = onSnapshot(qProducts, (snap) => {
       if (!snap.empty) {
@@ -108,7 +111,6 @@ export default function Home() {
           return {
             id: doc.id,
             ...data,
-            // التأكد من أن الصورة هي أول صورة من المصفوفة لتناسب المكون القديم
             image: data.images ? data.images[0] : data.image 
           };
         });
@@ -204,11 +206,11 @@ export default function Home() {
 
       <HeroSection />
 
-      {/* 1. أهم الاختيارات لك */}
+      {/* 1. أحدث صيحات WIND */}
       <section>
-        <SectionHeader title="أهم الاختيارات لك" subTitle="بناءً على ذوقك الرفيع" />
+        <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
         <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-          {bestSellers.map((product) => (
+          {newArrivals.map((product) => (
             <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
               <ProductCard {...product} />
             </div>
@@ -216,12 +218,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. قسم تسوق التشكيلة */}
+      {/* 2. قسم تسوق التشكيلة الجديدة */}
       <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
-        <SectionHeader title="تسوق التشكيلة" subTitle="دفء الشتاء في كل قطعة" />
+        <SectionHeader title="تسوق التشكيلة الجديدة" subTitle="أناقة WIND في كل خطوة" />
         <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
           <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
-            {[...allProducts, ...allProducts].map((product, index) => (
+            {[...allProducts.slice(0,10), ...allProducts.slice(0,10)].map((product, index) => (
               <div key={`${product.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
                 <ProductCard {...product} />
               </div>
@@ -230,15 +232,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. الأكثر مبيعاً */}
+      {/* 3. الأكثر مبيعاً في WIND */}
       <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
         <div className="px-4 mb-4" dir="rtl">
-           <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">الأكثر مبيعاً</h2>
+            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">الأكثر مبيعاً</h2>
         </div>
         <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto">
           {bestSellers[0] && (
             <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
-              <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأول مبيعاً #1</div>
+              <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأكثر طلباً #1</div>
               <ProductCard {...bestSellers[0]} />
             </div>
           )}
@@ -276,7 +278,7 @@ export default function Home() {
         <CollectionsSection />
       </div>
 
-      {/* 6. آراء وتجارب عائلة WIND */}
+      {/* 6. آراء وتجارب عائلة WIND - كما هو تماماً */}
       <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
@@ -320,11 +322,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. وصل حديثاً */}
+      {/* 7. وصل حديثاً (مكرر بتصنيف دقيق) */}
       <section className="my-12">
-        <SectionHeader title="وصل حديثاً" subTitle="أحدث صيحات الشتاء" />
+        <SectionHeader title="وصل حديثاً" subTitle="أحدث ما أضافته WIND لخزانتك" />
         <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-          {newArrivals.map((product) => (
+          {newArrivals.slice(0, 10).map((product) => (
             <div key={product.id} className="min-w-[170px] snap-start">
               <ProductCard {...product} />
             </div>
@@ -336,7 +338,7 @@ export default function Home() {
       <section className="px-4 max-w-[1280px] mx-auto my-16">
         <SectionHeader title="WIND Magazine" subTitle="مقالات في الأناقة" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-          {[{ id: 1, title: "فن اختيار الشال المناسب لبشرتك", tag: "نصائح" }, { id: 2, title: "رحلة الخيط: من المصنع إليك", tag: "قصتنا" }].map((art) => (
+          {[{ id: 1, title: "كيفية تنسيق الفستان في الشتاء", tag: "نصائح" }, { id: 2, title: "رحلة WIND: من الفكرة إلى التصميم", tag: "قصتنا" }].map((art) => (
             <div key={art.id} className="relative h-64 group cursor-pointer overflow-hidden bg-[#222]">
               <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all z-10"></div>
               <div className="absolute inset-0 bg-[#333] group-hover:scale-110 transition-transform duration-[2s]"></div> 
@@ -351,9 +353,9 @@ export default function Home() {
 
       {/* 9. الأعلى تقييماً */}
       <section className="px-4 mb-12">
-        <SectionHeader title="الأعلى تقييماً" />
+        <SectionHeader title="الأعلى تقييماً" subTitle="القطع التي نالت إعجاب الجميع" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {topRated.map((product) => <ProductCard key={product.id} {...product} />)}
+          {topRated.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
         </div>
       </section>
 
@@ -377,32 +379,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 11 & 12. تسوق حسب الفئة */}
+      {/* 11 & 12. تسوق حسب الفئة (التعديل للفساتين والبلوزات) */}
       <div className="bg-[#151515] py-12 border-t border-[#222]">
         <SectionHeader title="تسوق حسب الفئة" />
         <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
            <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
-              <h3 className="text-2xl font-black text-white mb-4 z-10 relative">الإسدالات</h3>
+              <h3 className="text-2xl font-black text-white mb-4 z-10 relative">فساتين WIND</h3>
               <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
-                 {isdalat.slice(0,3).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
+                 {dresses.slice(0,5).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
               </div>
            </div>
            <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
-              <h3 className="text-2xl font-black text-white mb-4 z-10 relative">الشيلان</h3>
+              <h3 className="text-2xl font-black text-white mb-4 z-10 relative">البلوزات العصرية</h3>
               <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
-                 {shawls.slice(0,3).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
+                 {blouses.slice(0,5).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
               </div>
            </div>
         </div>
       </div>
 
-      {/* 13. تخفيضات */}
+      {/* 13. تخفيضات شتوية */}
       <section className="py-12 px-4">
         <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest">
-          تخفيضات حصرية - لفترة محدودة
+          تخفيضات WIND الحصرية - لفترة محدودة
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {discounts.map((product) => <ProductCard key={product.id} {...product} />)}
+          {discounts.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
         </div>
       </section>
     </main>
