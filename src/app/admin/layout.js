@@ -11,10 +11,11 @@ const menuItems = [
     { name: 'الرئيسية', path: '/admin', icon: '🏠' },
     { name: 'المنتجات', path: '/admin/products', icon: '👕' },
     { name: 'إضافة منتج', path: '/admin/products/create', icon: '➕' },
+    { name: 'إدارة الواجهة', path: '/admin/home-manager', icon: '🎨' }, // أضفنا هذا السطر
     { name: 'الأقسام', path: '/admin/collections', icon: '📂' },
-    { name: 'إدارة المنيو', path: '/admin/menu', icon: '📋' }, // التعديل هنا
+    { name: 'إدارة المنيو', path: '/admin/menu', icon: '📋' },
     { name: 'الصفحات', path: '/admin/pages', icon: '📄' },
-  ];
+];
 
   return (
     <div className="min-h-screen bg-[#121212] text-white flex font-sans" dir="rtl">

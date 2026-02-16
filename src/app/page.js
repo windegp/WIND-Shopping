@@ -8,7 +8,8 @@ import Link from 'next/link';
 
 // استيراد إعدادات Firebase
 import { db, storage } from "../lib/firebase";
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
+// تم إضافة doc و getDoc هنا 👇
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // --- تأثيرات الحركة (CSS في JS) - كما هي تماماً ---
@@ -46,16 +47,16 @@ export default function Home() {
   
   // الحالة الجديدة لحفظ المنتجات القادمة من Firebase
   const [allProducts, setAllProducts] = useState(staticProducts);
+  
+  // --- إضافة: حالة لحفظ الأقسام الديناميكية من لوحة التحكم ---
+  const [dynamicSections, setDynamicSections] = useState([]);
 
-  // --- تصنيف المنتجات بناءً على البيانات الجديدة من WIND ---
-  const bestSellers = allProducts.slice(0, 8); // الأكثر مبيعاً (أول 8 منتجات)
+  // --- تصنيف المنتجات بناءً على البيانات (للاستخدام في الأقسام الثابتة المتبقية) ---
+  const bestSellers = allProducts.slice(0, 8); 
   const newArrivals = allProducts.filter(p => p.categories?.includes('new-arrivals')).slice(0, 10);
   const topRated = allProducts.filter(p => parseFloat(p.rating) >= 4.5 || p.featured === true);
-  
-  // الأقسام الجديدة (فساتين وبلوزات) بدلاً من القديمة
   const dresses = allProducts.filter(p => p.categories?.includes('dress'));
   const blouses = allProducts.filter(p => p.categories?.includes('blouse'));
-  
   const discounts = allProducts.filter(p => p.compareAtPrice > p.price);
 
   useEffect(() => {
@@ -94,6 +95,20 @@ export default function Home() {
       }
     `;
     document.head.appendChild(styleSheet);
+
+    // --- إضافة: جلب إعدادات الصفحة الرئيسية (الأقسام الديناميكية) ---
+    const fetchPageSettings = async () => {
+      try {
+        const docRef = doc(db, "settings", "homePage");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().sections) {
+          setDynamicSections(docSnap.data().sections);
+        }
+      } catch (e) {
+        console.error("Error fetching home settings:", e);
+      }
+    };
+    fetchPageSettings();
 
     // 2. جلب التقييمات من Firebase
     const qReviews = query(collection(db, "reviews"), orderBy("timestamp", "desc"));
@@ -206,17 +221,50 @@ export default function Home() {
 
       <HeroSection />
 
-      {/* 1. أحدث صيحات WIND */}
-      <section>
-        <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
-        <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-          {newArrivals.map((product) => (
-            <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
-              <ProductCard {...product} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* --- 1. الأقسام الديناميكية (من لوحة التحكم) --- */}
+      {/* هذا الجزء يستبدل السيكشن الثابت ويعرض كل الأقسام التي تنشئها في الآدمن */}
+      {dynamicSections.length > 0 ? (
+        dynamicSections.map((section, index) => {
+          // تصفية المنتجات حسب القسم والاستثناءات
+          const displayProducts = allProducts.filter(p => 
+            p.categories?.includes(section.slug) && 
+            !section.excludedIds?.includes(p.id)
+          ).slice(0, 10);
+
+          const sectionLink = section.type === 'collection' 
+            ? `/collections/${section.slug}` 
+            : `/${section.slug}`;
+
+          return (
+            <section key={section.id || index} className="my-10">
+              <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
+              <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
+                {displayProducts.length > 0 ? (
+                  displayProducts.map((product) => (
+                    <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
+                      <ProductCard {...product} image={product.images?.[0] || product.image} />
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-600 text-xs px-4">جاري إضافة منتجات لهذا القسم...</p>
+                )}
+              </div>
+            </section>
+          );
+        })
+      ) : (
+        /* في حال لم يتم إعداد أقسام بعد، يظهر القسم الافتراضي */
+        <section>
+          <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
+          <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
+            {newArrivals.map((product) => (
+              <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
+                <ProductCard {...product} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 2. قسم تسوق التشكيلة الجديدة */}
       <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
@@ -322,17 +370,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. وصل حديثاً (مكرر بتصنيف دقيق) */}
-      <section className="my-12">
-        <SectionHeader title="وصل حديثاً" subTitle="أحدث ما أضافته WIND لخزانتك" />
-        <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-          {newArrivals.slice(0, 10).map((product) => (
-            <div key={product.id} className="min-w-[170px] snap-start">
-              <ProductCard {...product} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* 7.  تم حذف "وصل حديثاً" المكرر هنا لأنه سيظهر في الأقسام الديناميكية بالأعلى إذا أردت */}
 
       {/* 8. Magazine Style - كما هو تماماً */}
       <section className="px-4 max-w-[1280px] mx-auto my-16">
@@ -379,7 +417,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 11 & 12. تسوق حسب الفئة (التعديل للفساتين والبلوزات) */}
+      {/* 11 & 12. تسوق حسب الفئة (ثابت في الفوتر) */}
       <div className="bg-[#151515] py-12 border-t border-[#222]">
         <SectionHeader title="تسوق حسب الفئة" />
         <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
