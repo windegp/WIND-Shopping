@@ -1,99 +1,160 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from "@/lib/firebase"; 
+import { db, storage } from "@/lib/firebase"; 
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
-// استيراد مكتبة السحب والإفلات
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function AdminHomeManager() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [products, setProducts] = useState([]); // كل المنتجات
-  const [categories, setCategories] = useState([]); // قائمة الأقسام المستخرجة
-  const [sections, setSections] = useState([]); // حالة الأقسام
+  const [products, setProducts] = useState([]); 
+  const [categories, setCategories] = useState([]); 
+  const [sections, setSections] = useState([]); 
+  const [uploadingSectionId, setUploadingSectionId] = useState(null);
 
-  // الصفحات الثابتة
-  const staticPages = [
-    { name: "قصة WIND", slug: "story", path: "/story" },
-    { name: "المقالات (Blog)", slug: "blog", path: "/blog" },
-    { name: "التقييمات", slug: "reviews", path: "/reviews" },
-    { name: "كل المنتجات", slug: "all", path: "/collections/all" }
+  // --- تعريف هيكل موقعك الحالي بالكامل لنقله للوحة التحكم ---
+  const currentSiteStructure = [
+    { 
+      id: '1', title: "بانر الهيرو", subTitle: "", type: "component", slug: "", designType: "hero_section", 
+      contentData: { imageUrl: "", buttonText: "تسوق الآن", link: "/collections/all", description: "WIND STYLE - الأناقة في كل تفصيلة" }
+    },
+    { 
+      id: '2', title: "أحدث صيحات WIND", subTitle: "تصاميم شتوية تلامس الروح", type: "collection", slug: "new-arrivals", designType: "carousel", 
+      contentData: {}
+    },
+    { 
+      id: '3', title: "تسوق التشكيلة الجديدة", subTitle: "أناقة WIND في كل خطوة", type: "collection", slug: "all", designType: "marquee", 
+      contentData: {}
+    },
+    { 
+      id: '4', title: "الأكثر مبيعاً", subTitle: "", type: "collection", slug: "all", designType: "featured", 
+      contentData: {} // ملاحظة: يمكنك لاحقاً تحديد منتجات معينة للاستبعاد
+    },
+    { 
+      id: '5', title: "شريط الثقة", subTitle: "", type: "component", slug: "", designType: "trust_bar", 
+      contentData: {}
+    },
+    { 
+      id: '6', title: "مجموعات مميزة", subTitle: "", type: "component", slug: "", designType: "collections_slider", 
+      contentData: {}
+    },
+    { 
+      id: '7', title: "آراء عائلة WIND", subTitle: "أصوات حقيقية - تجارب صادقة", type: "component", slug: "", designType: "reviews_parallax", 
+      contentData: {}
+    },
+    { 
+      id: '8', title: "WIND Magazine", subTitle: "مقالات في الأناقة", type: "component", slug: "", designType: "magazine_grid", 
+      contentData: {}
+    },
+    { 
+      id: '9', title: "الأعلى تقييماً", subTitle: "القطع التي نالت إعجاب الجميع", type: "collection", slug: "all", designType: "grid", 
+      contentData: {}
+    },
+    { 
+      id: '10', title: "قصة WIND", subTitle: "", type: "component", slug: "", designType: "story_section", 
+      contentData: { imageUrl: "/images/story-bg.webp", description: "نحن لا نصنع الملابس، نحن ننسج خيوط الدفء لتصبح جزءاً من ذكرياتك الشتوية." }
+    },
+    { 
+      id: '11', title: "تسوق حسب الفئة", subTitle: "", type: "component", slug: "", designType: "category_split", 
+      contentData: {}
+    },
+    { 
+      id: '12', title: "تخفيضات WIND الحصرية", subTitle: "لفترة محدودة", type: "component", slug: "", designType: "winter_discounts", 
+      contentData: { buttonText: "اغتنم الفرصة", description: "خصومات حصرية لفترة محدودة" }
+    }
   ];
 
-  // خيارات التصميم (تم توسيعها لتشمل تصميمات صفحتك + تصميمات IMDb الجديدة)
   const designStyles = [
-    // التصميمات الأساسية للمنتجات
-    { id: 'carousel', name: 'شريط عرض (Carousel)', icon: '↔️' },
-    { id: 'grid', name: 'شبكة منتظمة (Grid)', icon: '🔳' },
-    { id: 'marquee', name: 'شريط متحرك (Marquee)', icon: '🏃' },
-    { id: 'featured', name: 'منتج مميز + شبكة (Best Seller Style)', icon: '⭐' },
-    // التصميمات الجديدة
-    { id: 'imdb', name: 'كارت أفقي (IMDb Style)', icon: '🎫' },
-    { id: 'ranked', name: 'قائمة مرقمة (Top 10)', icon: '🔢' },
-    { id: 'masonry', name: 'شبكة غير منتظمة (Pinterest)', icon: '🧱' },
-    // المكونات الثابتة المعقدة (لإتاحة تحريكها)
-    { id: 'hero_section', name: 'بانر الهيرو (Hero Section)', icon: '🚩' },
-    { id: 'trust_bar', name: 'شريط الثقة (Trust Bar)', icon: '🛡️' },
-    { id: 'reviews_parallax', name: 'آراء العملاء (Parallax)', icon: '💬' },
-    { id: 'story_section', name: 'قصة WIND (Story)', icon: '📖' },
-    { id: 'magazine_grid', name: 'مجلة WIND (Magazine)', icon: '📰' },
-    { id: 'collections_slider', name: 'سلايدر الكولكشنات (Circles)', icon: '⚪' },
-    { id: 'category_split', name: 'انقسام الفئات (Split Footer)', icon: '✂️' }
+    { id: 'carousel', name: 'شريط عرض (Carousel)', icon: '↔️', type: 'collection' },
+    { id: 'grid', name: 'شبكة منتظمة (Grid)', icon: '🔳', type: 'collection' },
+    { id: 'marquee', name: 'شريط متحرك (Marquee)', icon: '🏃', type: 'collection' },
+    { id: 'featured', name: 'الأكثر مبيعاً (Best Seller)', icon: '⭐', type: 'collection' },
+    { id: 'hero_section', name: 'بانر الهيرو', icon: '🚩', type: 'component' },
+    { id: 'story_section', name: 'قصة WIND', icon: '📖', type: 'component' },
+    { id: 'winter_discounts', name: 'بانر خصم', icon: '🏷️', type: 'component' },
+    { id: 'trust_bar', name: 'شريط الثقة', icon: '🛡️', type: 'component' },
+    { id: 'reviews_parallax', name: 'آراء العملاء', icon: '💬', type: 'component' },
+    { id: 'magazine_grid', name: 'مجلة WIND', icon: '📰', type: 'component' },
+    { id: 'collections_slider', name: 'سلايدر الكولكشنات', icon: '⚪', type: 'component' },
+    { id: 'category_split', name: 'انقسام الفئات', icon: '✂️', type: 'component' }
   ];
 
-  // 1. جلب البيانات عند التحميل
   useEffect(() => {
     const fetchData = async () => {
       setInitialLoading(true);
       try {
-        // جلب المنتجات
         const prodsSnap = await getDocs(collection(db, "products"));
         const prodsData = prodsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProducts(prodsData);
 
-        // استخراج الأقسام الفريدة
         const uniqueCats = [...new Set(prodsData.flatMap(p => p.categories || []))].filter(Boolean);
-        const allCats = [...new Set([...uniqueCats, 'new-arrivals', 'dress', 'blouse', 'summer', 'winter'])]; 
-        setCategories(allCats.sort());
+        setCategories(uniqueCats.sort());
 
-        // جلب الإعدادات المحفوظة
         const settingsRef = doc(db, "settings", "homePage");
         const settingsSnap = await getDoc(settingsRef);
         
-        if (settingsSnap.exists() && settingsSnap.data().sections) {
+        if (settingsSnap.exists() && settingsSnap.data().sections && settingsSnap.data().sections.length > 0) {
+          // إذا كانت البيانات موجودة، قم بتحميلها
           const loadedSections = settingsSnap.data().sections.map(s => ({
             ...s, 
             id: s.id.toString(),
-            excludedIds: s.excludedIds || [] // ضمان وجود المصفوفة
+            excludedIds: s.excludedIds || [],
+            contentData: s.contentData || { imageUrl: "", buttonText: "", link: "", description: "" }
           }));
           setSections(loadedSections);
         } else {
-          // البنية الافتراضية إذا لم تكن هناك إعدادات سابقة
-          setSections([
-            { id: '1', title: "الرئيسية", subTitle: "", type: "component", slug: "", designType: "hero_section", excludedIds: [] },
-            { id: '2', title: "أحدث صيحات WIND", subTitle: "تصاميم شتوية تلامس الروح", type: "collection", slug: "new-arrivals", designType: "carousel", excludedIds: [] },
-            { id: '3', title: "تسوق التشكيلة الجديدة", subTitle: "أناقة WIND في كل خطوة", type: "collection", slug: "all", designType: "marquee", excludedIds: [] },
-            { id: '4', title: "الأكثر مبيعاً", subTitle: "", type: "collection", slug: "all", designType: "featured", excludedIds: [] },
-            { id: '5', title: "", subTitle: "", type: "component", slug: "", designType: "trust_bar", excludedIds: [] },
-            { id: '6', title: "مجموعات مميزة", subTitle: "", type: "component", slug: "", designType: "collections_slider", excludedIds: [] },
-            { id: '7', title: "آراء عائلة WIND", subTitle: "", type: "component", slug: "", designType: "reviews_parallax", excludedIds: [] },
-            { id: '8', title: "WIND Magazine", subTitle: "مقالات في الأناقة", type: "component", slug: "", designType: "magazine_grid", excludedIds: [] },
-            { id: '9', title: "الأعلى تقييماً", subTitle: "القطع التي نالت إعجاب الجميع", type: "collection", slug: "all", designType: "grid", excludedIds: [] },
-            { id: '10', title: "قصة WIND", subTitle: "", type: "component", slug: "", designType: "story_section", excludedIds: [] },
-            { id: '11', title: "تسوق حسب الفئة", subTitle: "", type: "component", slug: "", designType: "category_split", excludedIds: [] },
-            { id: '12', title: "تخفيضات WIND الحصرية", subTitle: "", type: "collection", slug: "all", designType: "grid", excludedIds: [] }
-          ]);
+            // 🔥 هنا السحر: إذا لم تكن هناك إعدادات، قم بتحميل هيكل الموقع الحالي تلقائياً
+            console.log("Initializing Default Site Structure...");
+            setSections(currentSiteStructure);
+            // وحفظها فوراً في قاعدة البيانات
+            await setDoc(settingsRef, { sections: currentSiteStructure, lastUpdated: new Date().toISOString() }, { merge: true });
         }
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setInitialLoading(false);
-      }
+      } catch (error) { console.error(error); } finally { setInitialLoading(false); }
     };
     fetchData();
   }, []);
 
-  // دالة معالجة ترتيب السحب والإفلات
+  const handleImageUpload = async (file, sectionId) => {
+    if (!file) return;
+    setUploadingSectionId(sectionId);
+    try {
+      const imageRef = ref(storage, `banners/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(imageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      setSections(prev => prev.map(sec => sec.id === sectionId ? { ...sec, contentData: { ...sec.contentData, imageUrl: downloadURL } } : sec));
+      alert("✅ تم رفع الصورة!");
+    } catch (error) { alert("❌ فشل الرفع"); } 
+    finally { setUploadingSectionId(null); }
+  };
+
+  const updateSection = (id, field, value) => {
+    setSections(sections.map(sec => {
+      if (sec.id === id) {
+        const updated = { ...sec, [field]: value };
+        if (field === 'type') {
+            updated.excludedIds = [];
+            updated.designType = value === 'component' ? 'hero_section' : 'carousel';
+        }
+        return updated;
+      }
+      return sec;
+    }));
+  };
+
+  const updateContentData = (id, field, value) => {
+    setSections(sections.map(sec => sec.id === id ? { ...sec, contentData: { ...(sec.contentData || {}), [field]: value } } : sec));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await setDoc(doc(db, "settings", "homePage"), { sections, lastUpdated: new Date().toISOString() }, { merge: true });
+      alert("✅ تم تحديث واجهة المتجر بنجاح!");
+    } catch (error) { alert("❌ خطأ"); }
+    setLoading(false);
+  };
+
   const onDragEnd = (result) => {
     if (!result.destination) return;
     const items = Array.from(sections);
@@ -101,311 +162,92 @@ export default function AdminHomeManager() {
     items.splice(result.destination.index, 0, reorderedItem);
     setSections(items);
   };
+  
+  const removeSection = (id) => confirm("حذف القسم؟") && setSections(sections.filter(s => s.id !== id));
+  
+  const addSection = () => setSections([...sections, { 
+      id: Date.now().toString(), title: "قسم جديد", subTitle: "", type: "collection", slug: "", 
+      designType: "carousel", excludedIds: [], contentData: { imageUrl: "", buttonText: "تصفح", link: "", description: "" } 
+  }]);
 
-  const addSection = () => {
-    setSections([...sections, { 
-      id: Date.now().toString(), 
-      title: "قسم جديد", 
-      subTitle: "", 
-      type: "collection", 
-      slug: "", 
-      designType: "carousel", 
-      excludedIds: [] 
-    }]);
-  };
-
-  const removeSection = (id) => {
-    if (confirm("هل أنت متأكد من حذف هذا القسم نهائياً من الواجهة؟")) {
-      setSections(sections.filter(sec => sec.id !== id));
-    }
-  };
-
-  const updateSection = (id, field, value) => {
-    setSections(sections.map(sec => {
-      if (sec.id === id) {
-        const updated = { ...sec, [field]: value };
-        // تصفير الاستثناءات عند تغيير القسم لضمان عدم حدوث تداخل
-        if (field === 'slug' || field === 'type') updated.excludedIds = [];
-        // تعيين تصميم افتراضي عند تغيير النوع
-        if (field === 'type' && value === 'component') updated.designType = 'hero_section';
-        if (field === 'type' && value === 'collection') updated.designType = 'carousel';
-        return updated;
-      }
-      return sec;
-    }));
-  };
-
-  const toggleProductExclusion = (sectionId, productId) => {
-    setSections(sections.map(sec => {
-      if (sec.id === sectionId) {
-        const currentExcluded = sec.excludedIds || [];
-        return {
-          ...sec,
-          excludedIds: currentExcluded.includes(productId)
-            ? currentExcluded.filter(id => id !== productId)
-            : [...currentExcluded, productId]
-        };
-      }
-      return sec;
-    }));
-  };
-
-  const handleSave = async (e) => {
-    if (e) e.preventDefault();
-    setLoading(true);
-    try {
-      const docRef = doc(db, "settings", "homePage");
-      await setDoc(docRef, { 
-        sections,
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
-      alert("✅ تم حفظ ترتيب وتصميم الواجهة بنجاح!");
-    } catch (error) {
-      console.error(error);
-      alert("❌ خطأ أثناء الحفظ، يرجى التحقق من الاتصال.");
-    }
-    setLoading(false);
-  };
-
-  if (initialLoading) return (
-    <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-      <div className="text-[#F5C518] animate-pulse font-bold text-xl">جاري تحميل إعدادات الواجهة...</div>
-    </div>
-  );
+  if (initialLoading) return <div className="min-h-screen bg-[#121212] flex items-center justify-center text-[#F5C518]">جاري استيراد أقسام الموقع الحالية...</div>;
 
   return (
-    <div className="p-4 md:p-10 bg-[#121212] min-h-screen text-white text-right font-sans" dir="rtl">
-      
-      {/* Header الثابت */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-[#333] pb-4 sticky top-0 bg-[#121212]/95 backdrop-blur-md z-50 shadow-md gap-4">
-        <div>
-           <h1 className="text-2xl font-black text-[#F5C518] flex items-center gap-2">
-             <span className="text-3xl">🏠</span> إدارة واجهة WIND
-           </h1>
-           <p className="text-xs text-gray-500 mt-1 italic font-light">
-             نظام تحكم كامل (Drag & Drop CMS) - صمم متجرك كما تراه
-           </p>
-        </div>
-        <div className="flex gap-3">
-           <button 
-             onClick={addSection}
-             className="border border-[#F5C518] text-[#F5C518] font-bold px-4 py-2 rounded hover:bg-[#F5C518] hover:text-black transition-all text-sm"
-           >
-             + إضافة قسم جديد
-           </button>
-           <button 
-             onClick={handleSave}
-             disabled={loading}
-             className="bg-[#F5C518] text-black font-bold px-8 py-2 rounded hover:bg-yellow-500 shadow-[0_0_20px_rgba(245,197,24,0.4)] disabled:opacity-50 transition-all"
-           >
-             {loading ? "جاري الحفظ..." : "حفظ التغييرات"}
-           </button>
+    <div className="p-4 md:p-10 bg-[#121212] min-h-screen text-white text-right" dir="rtl">
+      <div className="flex justify-between items-center mb-8 sticky top-0 bg-[#121212] z-50 pb-4 border-b border-[#333]">
+        <h1 className="text-2xl font-black text-[#F5C518]">إدارة واجهة WIND</h1>
+        <div className="flex gap-2">
+           <button onClick={addSection} className="border border-[#F5C518] text-[#F5C518] px-4 py-2 rounded text-sm">+ قسم</button>
+           <button onClick={handleSave} disabled={loading} className="bg-[#F5C518] text-black font-bold px-6 py-2 rounded shadow-[0_0_15px_rgba(245,197,24,0.3)]">{loading ? "جاري..." : "حفظ التغييرات"}</button>
         </div>
       </div>
 
-      {/* منطقة السحب والإفلات */}
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="main-sections">
           {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef} className="max-w-5xl mx-auto space-y-6 pb-24">
-              
+            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-6 pb-20 max-w-5xl mx-auto">
               {sections.map((section, index) => (
                 <Draggable key={section.id} draggableId={section.id} index={index}>
                   {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      className={`bg-[#1A1A1A] p-6 rounded-xl border-2 ${snapshot.isDragging ? 'border-[#F5C518] scale-[1.02] shadow-2xl z-50 ring-4 ring-[#F5C518]/20' : 'border-[#333] hover:border-[#444]'} relative group transition-all duration-200`}
-                    >
-                      {/* مقبض السحب */}
-                      <div {...provided.dragHandleProps} className="absolute top-4 right-4 text-gray-500 cursor-grab active:cursor-grabbing hover:text-[#F5C518] p-2 bg-[#121212] rounded-lg transition-colors border border-[#333]">
-                         <span className="text-2xl">⠿</span>
+                    <div ref={provided.innerRef} {...provided.draggableProps} className={`bg-[#1A1A1A] p-6 rounded-xl border-2 ${snapshot.isDragging ? 'border-[#F5C518]' : 'border-[#333]'} relative group`}>
+                      <div {...provided.dragHandleProps} className="absolute top-4 right-4 text-gray-500 cursor-grab p-2 text-xl">⠿</div>
+                      <button onClick={() => removeSection(section.id)} className="absolute top-4 left-4 text-red-500 text-xs border border-red-900/30 p-2 rounded opacity-50 hover:opacity-100">حذف</button>
+
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="bg-[#222] text-[#F5C518] w-8 h-8 flex items-center justify-center rounded-full font-bold">{index + 1}</span>
+                        <h3 className="font-bold text-gray-200">{section.title || "بدون عنوان"} <span className="text-[10px] bg-[#333] px-2 py-0.5 rounded text-gray-400">{designStyles.find(s => s.id === section.designType)?.name}</span></h3>
                       </div>
 
-                      {/* زر الحذف */}
-                      <button 
-                        onClick={() => removeSection(section.id)}
-                        className="absolute top-4 left-4 text-red-500 hover:text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-all bg-[#121212] p-2 rounded-lg text-xs border border-red-900/30"
-                      >
-                        حذف القسم 🗑️
-                      </button>
-
-                      {/* ترقيم القسم */}
-                      <div className="flex items-center gap-3 mb-8">
-                        <span className="bg-[#222] text-[#F5C518] w-10 h-10 flex items-center justify-center rounded-full font-black border-2 border-[#F5C518]/20 text-lg">
-                          {index + 1}
-                        </span>
-                        <div className="flex flex-col">
-                          <h3 className="font-bold text-xl flex items-center gap-2 text-gray-100">
-                              {section.title || "عنوان القسم"}
-                              <span className="text-[10px] bg-[#333] px-2 py-1 rounded-full text-gray-400 font-medium uppercase tracking-wider">
-                                  {designStyles.find(s => s.id === section.designType)?.name || "تصميم غير محدد"}
-                              </span>
-                          </h3>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        {/* مدخلات النصوص */}
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-400 mr-1 italic">العنوان الرئيسي للقسم</label>
-                            <input 
-                                type="text"
-                                placeholder="مثال: الأكثر مبيعاً..."
-                                className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-white transition-all shadow-inner"
-                                value={section.title}
-                                onChange={(e) => updateSection(section.id, 'title', e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-400 mr-1 italic">الوصف أو العنوان الفرعي</label>
-                            <input 
-                                type="text"
-                                placeholder="وصف قصير يظهر تحت العنوان..."
-                                className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-gray-300 transition-all"
-                                value={section.subTitle}
-                                onChange={(e) => updateSection(section.id, 'subTitle', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        {/* نوع المحتوى */}
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-gray-400 mr-1">ماذا يعرض هذا القسم؟</label>
-                          <select 
-                            className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-[#F5C518] font-bold appearance-none cursor-pointer"
-                            value={section.type}
-                            onChange={(e) => updateSection(section.id, 'type', e.target.value)}
-                          >
-                            <option value="collection">عرض منتجات (Collection)</option>
-                            <option value="component">مكون جاهز (UI Component)</option>
-                            <option value="page">رابط صفحة (Redirect Link)</option>
-                          </select>
-                        </div>
-
-                        {/* اختيار المصدر بناءً على النوع */}
-                        <div className="space-y-2">
-                            {section.type === 'collection' && (
-                                <>
-                                <label className="text-xs font-bold text-gray-400 mr-1">اختر مجموعة المنتجات</label>
-                                <select 
-                                    className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-white font-bold appearance-none cursor-pointer"
-                                    value={section.slug}
-                                    onChange={(e) => updateSection(section.id, 'slug', e.target.value)}
-                                >
-                                    <option value="">-- اختر الفئة --</option>
-                                    <option value="all">كل المنتجات (All)</option>
-                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                </select>
-                                </>
-                            )}
-                            {section.type === 'page' && (
-                               <>
-                                <label className="text-xs font-bold text-gray-400 mr-1">اختر الصفحة المستهدفة</label>
-                                <select 
-                                    className="w-full bg-[#121212] border border-[#333] p-4 rounded-lg focus:border-[#F5C518] outline-none text-white font-bold appearance-none cursor-pointer"
-                                    value={section.slug}
-                                    onChange={(e) => updateSection(section.id, 'slug', e.target.value)}
-                                >
-                                    {staticPages.map(page => <option key={page.slug} value={page.slug}>{page.name}</option>)}
-                                </select>
-                               </>
-                            )}
-                            {section.type === 'component' && (
-                                <div className="h-full flex items-center">
-                                  <div className="p-4 bg-[#222]/50 border border-dashed border-[#444] rounded-lg text-gray-500 text-xs w-full text-center">
-                                      ✨ هذا القسم يعرض مكوناً برمجياً جاهزاً، تحكم بمكانه وترتيبه فقط.
-                                  </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* اختيار شكل التصميم */}
-                        <div className="md:col-span-2 mt-2">
-                          <label className="text-xs font-bold text-gray-400 mb-3 block mr-1">اختر نمط العرض (Layout)</label>
-                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                             {designStyles.filter(ds => {
-                                 const componentList = ['hero_section', 'trust_bar', 'reviews_parallax', 'story_section', 'magazine_grid', 'collections_slider', 'category_split'];
-                                 if (section.type === 'component') return componentList.includes(ds.id);
-                                 return !componentList.includes(ds.id);
-                             }).map((style) => (
-                               <div 
-                                 key={style.id}
-                                 onClick={() => updateSection(section.id, 'designType', style.id)}
-                                 className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all flex flex-col items-center justify-center gap-2 ${section.designType === style.id ? 'border-[#F5C518] bg-[#F5C518]/10 text-[#F5C518] shadow-lg' : 'border-[#222] bg-[#121212] text-gray-500 hover:border-[#444]'}`}
-                               >
-                                 <span className="text-2xl">{style.icon}</span>
-                                 <span className="text-[10px] font-bold leading-tight">{style.name}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input placeholder="العنوان الرئيسي" className="bg-[#121212] border border-[#333] p-3 rounded text-white w-full" value={section.title} onChange={(e) => updateSection(section.id, 'title', e.target.value)} />
+                        <input placeholder="العنوان الفرعي" className="bg-[#121212] border border-[#333] p-3 rounded text-white w-full" value={section.subTitle} onChange={(e) => updateSection(section.id, 'subTitle', e.target.value)} />
+                        
+                        <div className="md:col-span-2">
+                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                             {designStyles.filter(ds => ds.type === section.type).map(style => (
+                               <div key={style.id} onClick={() => updateSection(section.id, 'designType', style.id)} className={`cursor-pointer p-2 rounded border text-center ${section.designType === style.id ? 'border-[#F5C518] bg-[#F5C518]/10 text-[#F5C518]' : 'border-[#333] bg-[#121212] text-gray-500'}`}>
+                                 <div className="text-xl">{style.icon}</div><div className="text-[9px] font-bold">{style.name}</div>
                                </div>
                              ))}
-                          </div>
+                           </div>
                         </div>
-                      </div>
 
-                      {/* قسم استثناء المنتجات */}
-                      {section.type === 'collection' && (
-                        <div className="bg-[#121212] p-5 rounded-xl border border-[#333] shadow-inner">
-                          <h4 className="text-xs font-black text-[#F5C518] mb-4 flex items-center gap-2 uppercase tracking-widest">
-                            <span className="text-lg">🚫</span> استثناء منتجات محددة من الظهور في هذا القسم
-                          </h4>
-                          <div className="max-h-48 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-3 pr-2 scrollbar-thin scrollbar-thumb-[#333]">
-                            {products
-                              .filter(p => section.slug === 'all' || p.categories?.includes(section.slug))
-                              .map(product => {
-                                const isExcluded = section.excludedIds?.includes(product.id);
-                                return (
-                                  <label key={product.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-all ${isExcluded ? 'border-red-900/50 bg-red-900/10' : 'border-[#222] hover:border-[#444] bg-[#1A1A1A]'}`}>
-                                    <input 
-                                      type="checkbox" 
-                                      className="w-5 h-5 accent-red-600 rounded"
-                                      checked={isExcluded || false}
-                                      onChange={() => toggleProductExclusion(section.id, product.id)}
-                                    />
-                                    <div className="flex items-center gap-2 truncate">
-                                      {product.images?.[0] && <img src={product.images[0]} className="w-8 h-8 object-cover rounded shadow-sm" alt="" />}
-                                      <span className={`text-[11px] font-medium truncate ${isExcluded ? 'text-red-400 line-through' : 'text-gray-300'}`}>
-                                        {product.title}
-                                      </span>
-                                    </div>
-                                  </label>
-                                );
-                              })
-                            }
-                            {products.filter(p => section.slug === 'all' || p.categories?.includes(section.slug)).length === 0 && (
-                              <div className="col-span-full text-center py-4 text-gray-600 text-sm">لا توجد منتجات في هذا القسم حالياً.</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                        {section.type === 'collection' && (
+                             <select className="bg-[#121212] border border-[#333] p-3 rounded text-white w-full md:col-span-2" value={section.slug} onChange={(e) => updateSection(section.id, 'slug', e.target.value)}>
+                                <option value="all">كل المنتجات</option>
+                                <option value="new-arrivals">وصل حديثاً</option>
+                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        )}
+
+                        {['hero_section', 'story_section', 'winter_discounts', 'component'].includes(section.designType) && (
+                            <div className="md:col-span-2 bg-black p-4 rounded border border-[#F5C518]/30 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="border border-dashed border-[#444] p-4 text-center bg-[#121212]">
+                                    {section.contentData?.imageUrl && <img src={section.contentData.imageUrl} className="h-24 mx-auto mb-2 rounded" />}
+                                    {uploadingSectionId === section.id ? <span className="text-[#F5C518] text-xs">جاري الرفع...</span> : (
+                                        <>
+                                        <label htmlFor={`upload-${section.id}`} className="cursor-pointer bg-[#333] px-3 py-1 rounded text-[10px] hover:bg-[#F5C518] hover:text-black block w-fit mx-auto">{section.contentData?.imageUrl ? "تغيير الصورة" : "رفع صورة"}</label>
+                                        <input id={`upload-${section.id}`} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], section.id)} />
+                                        </>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <input placeholder="نص الزر" className="bg-[#121212] border border-[#333] p-2 text-xs rounded text-white w-full" value={section.contentData?.buttonText || ""} onChange={(e) => updateContentData(section.id, 'buttonText', e.target.value)} />
+                                    <input placeholder="الرابط" className="bg-[#121212] border border-[#333] p-2 text-xs rounded text-white w-full" value={section.contentData?.link || ""} onChange={(e) => updateContentData(section.id, 'link', e.target.value)} />
+                                    <textarea placeholder="الوصف" className="bg-[#121212] border border-[#333] p-2 text-xs rounded text-white w-full h-16 resize-none" value={section.contentData?.description || ""} onChange={(e) => updateContentData(section.id, 'description', e.target.value)} />
+                                </div>
+                            </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </Draggable>
               ))}
               {provided.placeholder}
-              
-              {/* رسالة توضيحية عند عدم وجود أقسام */}
-              {sections.length === 0 && (
-                <div className="text-center py-20 border-2 border-dashed border-[#333] rounded-2xl">
-                  <p className="text-gray-500 italic text-lg">لا توجد أقسام مضافة حالياً. ابدأ بإضافة قسم جديد!</p>
-                </div>
-              )}
             </div>
           )}
         </Droppable>
       </DragDropContext>
-
-      {/* زر الحفظ العائم للموبايل */}
-      <div className="fixed bottom-6 left-6 md:hidden">
-         <button 
-           onClick={handleSave}
-           disabled={loading}
-           className="bg-[#F5C518] text-black w-14 h-14 rounded-full flex items-center justify-center shadow-2xl font-bold"
-         >
-           {loading ? "..." : "✓"}
-         </button>
-      </div>
-
     </div>
   );
 }
