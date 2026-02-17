@@ -298,7 +298,6 @@ export default function AdminHomeManager() {
         if (docSnap.exists() && docSnap.data().sections && docSnap.data().sections.length > 0) {
             setSections(docSnap.data().sections);
         } else {
-            // !!! هذا هو السطر السحري: إذا لم يجد بيانات، يستخدم القالب الافتراضي !!!
             setSections(DEFAULT_SECTIONS_TEMPLATE);
         }
       } catch (e) { console.error(e); }
@@ -327,7 +326,7 @@ export default function AdminHomeManager() {
     <div className="min-h-screen bg-[#050505] text-white p-6 font-cairo" dir="rtl">
         
         {/* --- Header Bar --- */}
-        <div className="max-w-[1600px] mx-auto flex justify-between items-center mb-10 bg-[#111] p-6 rounded-[2rem] border border-white/5 shadow-2xl">
+        <div className="max-w-[1920px] mx-auto flex justify-between items-center mb-6 bg-[#111] p-6 rounded-[2rem] border border-white/5 shadow-2xl sticky top-4 z-50">
             <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-[#F5C518] rounded-2xl flex items-center justify-center text-black text-2xl font-black">W</div>
                 <div>
@@ -341,11 +340,11 @@ export default function AdminHomeManager() {
             </button>
         </div>
 
-      <div className="max-w-[1600px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8">
+      <div className="max-w-[1920px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-start h-[calc(100vh-160px)]">
         
-        {/* === التحكم (Sticky Sidebar) === */}
-        <div className="xl:col-span-5 space-y-6">
-          <div className="bg-[#111] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-8 sticky top-6">
+        {/* === التحكم (Sticky Sidebar) - Left Side === */}
+        <div className="xl:col-span-5 space-y-6 h-full overflow-y-auto pb-20 pr-2 custom-scrollbar">
+          <div className="bg-[#111] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-8">
             <h2 className="text-lg font-black text-[#F5C518] uppercase flex items-center gap-2">
                 <span className="w-2 h-6 bg-[#F5C518] rounded-full"></span>
                 إعدادات القسم
@@ -386,28 +385,51 @@ export default function AdminHomeManager() {
 
             <div className="bg-[#0a0a0a] p-5 rounded-[2rem] border border-[#222] space-y-4">
                 {newSection.type === 'products' ? (
-                    <div className="space-y-3">
-                        <select value={newSection.selectedCategory} onChange={e => setNewSection({...newSection, selectedCategory: e.target.value, selectionMode: 'automated'})} className="w-full bg-[#111] border border-[#333] p-3 rounded-xl text-xs font-bold text-[#F5C518] outline-none">
-                            <option value="">-- اختيار آلي (حسب القسم) --</option>
-                            {dataLibrary.categories.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <div className="max-h-40 overflow-y-auto pr-2 space-y-2 scrollbar-hide">
-                            {dataLibrary.products.map(p => (
-                                <label key={p.id} className="flex items-center justify-between p-2.5 bg-[#151515] rounded-xl border border-[#333] cursor-pointer hover:border-[#F5C518]/50 transition-all">
-                                    <span className="text-[10px] font-bold truncate w-4/5">{p.title}</span>
-                                    <input type="checkbox" checked={newSection.selectedItems.includes(p.id)} onChange={() => { toggleItem(p.id, 'selectedItems'); setNewSection(prev => ({...prev, selectionMode: 'manual'})); }} className="w-3.5 h-3.5 accent-[#F5C518]" />
-                                </label>
-                            ))}
+                    <div className="space-y-6">
+                        {/* 1. اختيار المنتجات */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] text-gray-500 font-bold block">1. اختيار المنتجات (آلي/يدوي)</label>
+                            <select value={newSection.selectedCategory} onChange={e => setNewSection({...newSection, selectedCategory: e.target.value, selectionMode: 'automated'})} className="w-full bg-[#111] border border-[#333] p-3 rounded-xl text-xs font-bold text-[#F5C518] outline-none">
+                                <option value="">-- اختيار آلي (حسب القسم) --</option>
+                                {dataLibrary.categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <div className="max-h-40 overflow-y-auto pr-2 space-y-2 scrollbar-hide border border-[#222] p-2 rounded-xl">
+                                {dataLibrary.products.map(p => (
+                                    <label key={p.id} className="flex items-center justify-between p-2.5 bg-[#151515] rounded-xl border border-[#333] cursor-pointer hover:border-[#F5C518]/50 transition-all">
+                                        <span className="text-[10px] font-bold truncate w-4/5">{p.title}</span>
+                                        <input type="checkbox" checked={newSection.selectedItems.includes(p.id)} onChange={() => { toggleItem(p.id, 'selectedItems'); setNewSection(prev => ({...prev, selectionMode: 'manual'})); }} className="w-3.5 h-3.5 accent-[#F5C518]" />
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 2. إضافة جديدة: اختيار الكولكشنات للمنتجات */}
+                        <div className="space-y-3 pt-4 border-t border-[#222]">
+                             <label className="text-[10px] text-gray-500 font-bold block flex items-center gap-2">
+                                <span>📚</span> 2. أقسام مرتبطة (تظهر كفلاتر أو دوائر)
+                             </label>
+                             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto scrollbar-hide">
+                                {dataLibrary.categories.map(cat => (
+                                    <label key={cat} className={`p-2 rounded-lg border text-[9px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-[#F5C518] text-black border-[#F5C518]' : 'bg-[#151515] border-[#333] text-gray-500'}`}>
+                                        {cat}
+                                        <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto scrollbar-hide">
-                        {dataLibrary.categories.map(cat => (
-                            <label key={cat} className={`p-3 rounded-xl border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-[#F5C518]/20 border-[#F5C518] text-white' : 'bg-[#151515] border-[#333] text-gray-500'}`}>
-                                {cat}
-                                <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
-                            </label>
-                        ))}
+                    // اختيار الكولكشنات للكولكشنات
+                    <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 font-bold block">اختر الكولكشنات المراد عرضها</label>
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto scrollbar-hide">
+                            {dataLibrary.categories.map(cat => (
+                                <label key={cat} className={`p-3 rounded-xl border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-[#F5C518]/20 border-[#F5C518] text-white' : 'bg-[#151515] border-[#333] text-gray-500'}`}>
+                                    {cat}
+                                    <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
+                                </label>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
@@ -418,25 +440,28 @@ export default function AdminHomeManager() {
           </div>
         </div>
 
-        {/* === المعاينة الحية للهيكل (Live Stage) === */}
-        <div className="xl:col-span-7 space-y-8">
-            <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] pr-2">الهيكل الحالي للصفحة</h2>
+        {/* === المعاينة الحية للهيكل (Live Stage) - Right Side === */}
+        <div className="xl:col-span-7 space-y-8 h-full overflow-y-auto pb-20 custom-scrollbar">
+            <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] pr-2 sticky top-0 bg-[#050505] py-2 z-10">الهيكل الحالي للصفحة</h2>
             {sections.length === 0 ? (
                 <div className="py-32 text-center border-2 border-dashed border-[#222] rounded-[3rem] text-gray-700 font-bold italic">
                     جاري تحميل الهيكل الافتراضي...
                 </div>
             ) : (
-                <div className="flex flex-col gap-6 pb-20">
+                <div className="flex flex-col gap-6">
                     {sections.map((s, i) => (
                         <div key={s.id} className="relative group pl-12">
                             <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-3">
-                                <button onClick={() => { setNewSection(s); setEditingId(s.id); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="w-10 h-10 bg-[#222] text-white border border-[#333] rounded-full flex items-center justify-center hover:bg-[#F5C518] hover:text-black transition-all hover:scale-110">✎</button>
+                                <button onClick={() => { setNewSection(s); setEditingId(s.id); }} className="w-10 h-10 bg-[#222] text-white border border-[#333] rounded-full flex items-center justify-center hover:bg-[#F5C518] hover:text-black transition-all hover:scale-110">✎</button>
                                 <button onClick={() => setSections(sections.filter(x => x.id !== s.id))} className="w-10 h-10 bg-[#222] text-red-500 border border-[#333] rounded-full flex items-center justify-center hover:bg-red-600 hover:text-white transition-all hover:scale-110">✕</button>
                             </div>
                             <div className="bg-[#111] p-2 rounded-[2.5rem] border border-[#222] transition-all hover:border-[#F5C518]/30">
                                 <div className="text-[9px] text-gray-600 font-bold px-6 py-2 uppercase flex justify-between">
                                     <span>ORDER #{i+1}</span>
-                                    <span>{s.layout}</span>
+                                    <span className="flex items-center gap-2">
+                                        {s.layout}
+                                        {s.selectedCollections.length > 0 && <span className="bg-[#F5C518] text-black px-1 rounded text-[8px]">+Coll</span>}
+                                    </span>
                                 </div>
                                 <WINDVisualMockup section={s} />
                             </div>
@@ -451,6 +476,10 @@ export default function AdminHomeManager() {
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         .font-cairo { font-family: Cairo, sans-serif; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #F5C518; }
       `}</style>
     </div>
   );
