@@ -26,22 +26,3 @@ export default function FailurePage() {
     </div>
   );
 }
-```
-
----
-
-## ملخص المسارات
-```
-your-project/
-├── .env.local                              ← ملف ١ (حط Keys الجديدة هنا)
-└── app/
-    ├── api/
-    │   ├── create-order/
-    │   │   └── route.js                    ← ملف ٢
-    │   └── kashier-webhook/
-    │       └── route.js                    ← ملف ٣
-    └── checkout/
-        ├── success/
-        │   └── page.js                     ← ملف ٤ (أول جزء)
-        └── failure/
-            └── page.js                     ← ملف ٤ (تاني جزء)
