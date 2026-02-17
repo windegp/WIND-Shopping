@@ -1,20 +1,18 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useCart } from "../../context/CartContext";
+import { useCart } from "../../context/CartContext"; // تأكد أن المسار صحيح عندك
 import { db } from "../../lib/firebase"; 
-import { doc, onSnapshot, collection } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState({}); // حالة للتحكم في فتح القوائم الفرعية
   const { cartItems = [], toggleCart } = useCart() || {};
   
+  // الحالة الافتراضية (تظهر لحظياً حتى يتم تحميل البيانات من الأدمن)
   const [categories, setCategories] = useState([
     { name: "الرئيسية", link: "/", children: [] },
-    { name: "وصل حديثاً", link: "/new-arrivals", children: [] },
-    { name: "الأكثر مبيعاً", link: "/best-sellers", children: [] },
-    { name: "تخفيضات", link: "/sale", highlight: true, children: [] },
   ]);
 
   // دالة لفتح/إغلاق القوائم الفرعية
@@ -26,38 +24,21 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    // 1. مراقبة المنيو الثابت
+    // --- الاستماع لإعدادات المنيو من لوحة التحكم فقط ---
     const unsubSettings = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
-      let menuItemsFromSettings = [];
       if (docSnap.exists() && docSnap.data().menuItems) {
-        menuItemsFromSettings = docSnap.data().menuItems.map(item => ({
-          name: item.title,
-          link: item.link.startsWith('/') ? item.link : `/${item.link}`,
-          highlight: item.title === "تخفيضات" || item.highlight,
+        // تحويل البيانات لتناسب النافبار
+        // ملاحظة: الأدمن يحفظ الاسم في 'title' والنافبار يتوقع 'name' في المستوى الأول
+        const menuItemsFromSettings = docSnap.data().menuItems.map(item => ({
+          name: item.title, 
+          title: item.title, // نحتفظ بالاثنين للأمان
+          link: item.link.startsWith('/') || item.link.startsWith('http') ? item.link : `/${item.link}`,
+          highlight: item.highlight || false,
           children: item.children || []
         }));
+
+        setCategories(menuItemsFromSettings);
       }
-
-      // 2. مراقبة كولكشن الأقسام (عشان تسمع أي كولكشن جديد فوراً)
-      const unsubCols = onSnapshot(collection(db, "collections"), (colSnap) => {
-        const dynamicCols = colSnap.docs.map(d => ({
-          name: d.data().name,
-          link: `/category/${d.data().slug || d.id}`,
-          children: d.data().subCategories || [] 
-        }));
-
-        // دمج القوائم ومنع التكرار
-        const combinedMenu = [...menuItemsFromSettings];
-        dynamicCols.forEach(col => {
-          if (!combinedMenu.find(m => m.link === col.link)) {
-            combinedMenu.push(col);
-          }
-        });
-
-        setCategories(combinedMenu.length > 0 ? combinedMenu : categories);
-      });
-
-      return () => unsubCols();
     });
 
     return () => unsubSettings();
@@ -167,7 +148,8 @@ export default function Navbar() {
                               : 'text-gray-200 hover:bg-[#252525] hover:text-[#F5C518] font-bold border-b border-[#333]/30'
                             }`}
                         >
-                          <span className="text-base">{cat.name}</span>
+                          {/* هنا نستخدم cat.name لأننا قمنا بتعيينه في useEffect */}
+                          <span className="text-base">{cat.name || cat.title}</span>
                         </Link>
 
                         {cat.children && cat.children.length > 0 && (
@@ -193,6 +175,7 @@ export default function Navbar() {
                                         onClick={() => !sub.children?.length && setIsMenuOpen(false)}
                                         className="flex-1 p-3 text-sm text-gray-400 hover:text-white transition-colors border-b border-[#333]/10"
                                     >
+                                        {/* هنا نستخدم sub.title لأن الأطفال يأتون مباشرة من الأدمن */}
                                         {sub.title || sub.name}
                                     </Link>
                                     
