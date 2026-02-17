@@ -52,13 +52,24 @@ export default function Home() {
         setLoading(false);
     });
     
-    // 2. المنتجات
+    // 2. المنتجات (مع تحسين البحث)
     const productsUnsub = onSnapshot(query(collection(db, "products"), orderBy("createdAt", "desc")), (snap) => {
-        const data = snap.docs.map(d => ({ 
-            id: d.id, 
-            ...d.data(), 
-            image: d.data().images?.[0] || d.data().image || '/images/placeholder.jpg' 
-        }));
+        const data = snap.docs.map(d => {
+            const raw = d.data();
+            // إنشاء مصفوفة بحث موحدة (lowercase + trimmed) لحل مشاكل الكتابة
+            const searchCats = [
+                raw.category, 
+                raw.collection, 
+                ...(raw.categories || [])
+            ].filter(Boolean).map(s => s.toString().toLowerCase().trim());
+
+            return { 
+                id: d.id, 
+                ...raw, 
+                searchCategories: searchCats, // حقل جديد للمقارنة الذكية
+                image: raw.images?.[0] || raw.image || '/images/placeholder.jpg' 
+            };
+        });
         setAllProducts(data);
     });
 
@@ -72,10 +83,10 @@ export default function Home() {
 
   // --- تصنيف المنتجات (للاستخدام في الوضع الافتراضي Fallback) ---
   const bestSellers = allProducts.slice(0, 8); 
-  const newArrivals = allProducts.filter(p => p.categories?.includes('new-arrivals') || p.category === 'new-arrivals').slice(0, 10);
+  const newArrivals = allProducts.filter(p => p.searchCategories?.includes('new-arrivals')).slice(0, 10);
   const topRated = allProducts.filter(p => parseFloat(p.rating) >= 4.5 || p.featured === true);
-  const dresses = allProducts.filter(p => p.categories?.includes('dress') || p.category === 'dress');
-  const blouses = allProducts.filter(p => p.categories?.includes('blouse') || p.category === 'blouse');
+  const dresses = allProducts.filter(p => p.searchCategories?.includes('dress') || p.searchCategories?.includes('فساتين'));
+  const blouses = allProducts.filter(p => p.searchCategories?.includes('blouse') || p.searchCategories?.includes('بلوزات'));
   const discounts = allProducts.filter(p => p.compareAtPrice > p.price);
 
   // --- دالة إرسال التقييم ---
@@ -101,227 +112,281 @@ export default function Home() {
     setReviewLoading(false);
   };
 
-// --- محرك عرض الأقسام الديناميكية (Dynamic Render Engine) ---
+  // --- محرك عرض الأقسام الديناميكية (Dynamic Render Engine) ---
   const RenderDynamicSection = ({ section }) => {
-    let data = [];
     
-    // منطق الفلترة الذكي الجديد (Products Logic)
+    // ==========================================
+    // 1. منطق عرض المنتجات (Products Logic)
+    // ==========================================
     if (section.type === 'products') {
-        // الحالة 1: اختيار يدوي (Manual)
+        let data = [];
+        
+        // أ) اختيار يدوي
         if (section.selectionMode === 'manual' && section.selectedItems?.length > 0) {
              data = allProducts.filter(p => section.selectedItems.includes(p.id));
         } 
-        // الحالة 2: أقسام مرتبطة (Related Collections) - الجديد
+        // ب) أقسام مرتبطة (البحث الذكي)
         else if (section.selectedCollections?.length > 0) {
-             data = allProducts.filter(p => 
-                // نتأكد إن المنتج ينتمي لأحد الأقسام المختارة
-                section.selectedCollections.includes(p.category) || 
-                section.selectedCollections.includes(p.collection) ||
-                (p.categories && p.categories.some(c => section.selectedCollections.includes(c)))
-             );
+             data = allProducts.filter(p => {
+                // هل المنتج ينتمي لأي من الأقسام المختارة؟
+                return section.selectedCollections.some(selCol => {
+                    const cleanSel = selCol.toString().toLowerCase().trim();
+                    return p.searchCategories.includes(cleanSel);
+                });
+             });
         }
-        // الحالة 3: فئة واحدة (Legacy/Automated)
+        // ج) فئة واحدة (Legacy)
         else if (section.selectedCategory) {
-             data = allProducts.filter(p => p.category === section.selectedCategory || p.categories?.includes(section.selectedCategory));
+             const cleanCat = section.selectedCategory.toString().toLowerCase().trim();
+             data = allProducts.filter(p => p.searchCategories.includes(cleanCat));
         }
-        // الحالة 4: (Default) عرض أحدث المنتجات لو مفيش أي تحديد
+        // د) الافتراضي
         else {
              data = allProducts.slice(0, 10);
         }
-    }
-    
-    const sectionLink = section.type === 'products' ? `/collections/${section.selectedCategory || 'all'}` : '#';
 
-    return (
-      <div className="mb-12">
-        {/* 1. ستايل الأكثر مبيعاً (Bestseller Split) */}
-        {section.layout === 'bestseller_split' && (
-             <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
-                <div className="px-4 mb-4" dir="rtl">
-                    <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">{section.title}</h2>
-                </div>
-                <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto" dir="rtl">
-                    {data[0] && (
-                        <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
-                            <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأكثر طلباً #1</div>
-                            <ProductCard {...data[0]} />
+        const sectionLink = section.type === 'products' ? `/collections/${section.selectedCategory || 'all'}` : '#';
+
+        // --- قوالب عرض المنتجات ---
+        return (
+            <div className="mb-12">
+                {/* 1. ستايل الأكثر مبيعاً (Split) */}
+                {section.layout === 'bestseller_split' && data.length > 0 && (
+                    <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
+                        <div className="px-4 mb-4" dir="rtl">
+                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">{section.title}</h2>
                         </div>
-                    )}
-                    <div className="md:w-2/3 w-full grid grid-cols-2 gap-3">
-                        {data.slice(1, 5).map(p => (
-                            <div key={p.id} className="scale-90 origin-top-right"><ProductCard {...p} /></div>
-                        ))}
-                    </div>
-                </div>
-             </section>
-        )}
-
-        {/* 2. ستايل الماركي اللانهائي (Infinite Marquee) */}
-        {section.layout === 'infinite_marquee' && (
-            <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
-                <SectionHeader title={section.title} subTitle={section.subTitle} />
-                <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
-                    <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
-                        {[...data, ...data, ...data].slice(0, 15).map((p, idx) => (
-                            <div key={`${p.id}-${idx}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
-                                <ProductCard {...p} />
+                        <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto" dir="rtl">
+                            {data[0] && (
+                                <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
+                                    <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأكثر طلباً #1</div>
+                                    <ProductCard {...data[0]} />
+                                </div>
+                            )}
+                            <div className="md:w-2/3 w-full grid grid-cols-2 gap-3">
+                                {data.slice(1, 5).map(p => (
+                                    <div key={p.id} className="scale-90 origin-top-right"><ProductCard {...p} /></div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-        )}
-
-        {/* 3. شريط الثقة (Trust Bar) */}
-        {section.layout === 'trust_bar' && (
-            <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
-                <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
-                    <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">4.9<span className="text-sm text-gray-500">/5</span></h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">{section.title || "تقييم العملاء"}</p></div>
-                    <div className="w-px h-10 bg-[#333]"></div>
-                    <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">+10k</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">قطعة بيعت</p></div>
-                    <div className="w-px h-10 bg-[#333]"></div>
-                    <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">100%</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">ضمان الجودة</p></div>
-                </div>
-            </section>
-        )}
-
-        {/* 4. آراء العملاء (Reviews Marquee) */}
-        {section.layout === 'review_marquee' && (
-            <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
-                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
-                <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-                    <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-right" dir="rtl">
-                        <div>
-                            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter">{section.title || "آراء عائلة WIND"}</h2>
-                            <p className="text-[#F5C518] text-sm font-bold mt-2 uppercase tracking-[0.2em]">أصوات حقيقية - تجارب صادقة</p>
                         </div>
-                        <button onClick={() => setIsReviewModalOpen(true)} className="bg-transparent border-2 border-[#F5C518] text-[#F5C518] px-8 py-3 font-black text-sm hover:bg-[#F5C518] hover:text-black transition-all duration-300 rounded-sm">+ أضف تجربتك</button>
-                    </div>
-                    <div className="relative flex overflow-hidden pointer-events-none">
-                        <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
-                            {[...reviews, ...reviews].slice(0, 10).map((rev, index) => (
-                                <div key={`${rev.id}-${index}`} className="min-w-[300px] md:min-w-[400px] bg-[#121212] border border-[#333] p-6 rounded-lg hover:border-[#F5C518]/50 transition-all duration-500">
-                                    <div className="flex items-center gap-4 mb-4" dir="rtl">
-                                        {rev.userImage ? (<img src={rev.userImage} className="w-12 h-12 rounded-full object-cover border-2 border-[#F5C518]/20" alt="" />) : (<div className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center text-[#F5C518] font-black border border-[#333]">{rev.userName?.charAt(0)}</div>)}
-                                        <div className="text-right">
-                                            <h4 className="text-white font-black text-sm">{rev.userName}</h4>
-                                            <div className="flex gap-0.5 mt-1">{[...Array(5)].map((_, i) => (<span key={i} className="text-[#F5C518] text-[10px]">★</span>))}</div>
-                                        </div>
+                    </section>
+                )}
+
+                {/* 2. ستايل الماركي (Marquee) */}
+                {section.layout === 'infinite_marquee' && data.length > 0 && (
+                    <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
+                        <SectionHeader title={section.title} subTitle={section.subTitle} />
+                        <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
+                            <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
+                                {[...data, ...data].slice(0, 15).map((p, idx) => (
+                                    <div key={`${p.id}-${idx}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
+                                        <ProductCard {...p} />
                                     </div>
-                                    <p className="text-gray-400 text-sm leading-relaxed italic text-right" dir="rtl">"{rev.userComment}"</p>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* 3. ستايل الشبكة الافتراضي (Grid) */}
+                {(section.layout === 'grid_default' || !section.layout) && data.length > 0 && (
+                    <section className="px-4">
+                        <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
+                        <div className="flex overflow-x-auto pb-6 gap-4 scrollbar-hide snap-x" dir="rtl">
+                            {data.map((product) => (
+                                <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
+                                    <ProductCard {...product} />
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </section>
-        )}
+                    </section>
+                )}
 
-        {/* 5. المجلة (Magazine) */}
-        {section.layout === 'magazine_grid' && (
-            <section className="px-4 max-w-[1280px] mx-auto my-16">
-                <SectionHeader title={section.title || "WIND Magazine"} subTitle={section.subTitle} />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1" dir="rtl">
-                    {[{ id: 1, title: "كيفية تنسيق الفستان في الشتاء", tag: "نصائح" }, { id: 2, title: "رحلة WIND: من الفكرة إلى التصميم", tag: "قصتنا" }].map((art) => (
-                        <div key={art.id} className="relative h-64 group cursor-pointer overflow-hidden bg-[#222]">
-                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all z-10"></div>
-                            <img src={`/images/blog${art.id}.jpg`} onError={e => e.target.src='https://via.placeholder.com/800x600/111/333?text=WIND+MAGAZINE'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt="" />
-                            <div className="absolute bottom-0 right-0 p-6 z-20 w-full bg-gradient-to-t from-black via-black/60 to-transparent text-right">
-                                <span className="bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 mb-2 inline-block">{art.tag}</span>
-                                <h3 className="text-white font-black text-xl group-hover:text-[#F5C518] transition-colors">{art.title}</h3>
-                            </div>
+                {/* 4. ستايل البوسترات (Posters) */}
+                {section.layout === 'imdb_posters' && data.length > 0 && (
+                    <section className="px-4">
+                        <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
+                        <div className="flex overflow-x-auto gap-4 md:gap-6 pb-8 scrollbar-hide snap-x" dir="rtl">
+                            {data.map(p => (
+                                <div key={p.id} className="min-w-[170px] md:min-w-[240px] snap-start group cursor-pointer">
+                                    <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl transition-all duration-500 group-hover:scale-[1.02]">
+                                        <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                                        <div className="absolute bottom-6 right-6 left-6 text-right">
+                                            <div className="text-[#F5C518] font-black text-xl mb-1">{p.price} EGP</div>
+                                            <h4 className="text-white font-black text-sm uppercase leading-tight line-clamp-2">{p.title}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </section>
-        )}
+                    </section>
+                )}
 
-        {/* 6. قصة البراند (Story) */}
-        {section.layout === 'story_banner' && (
-            <section className="relative h-[400px] overflow-hidden border-t border-[#333]">
-                <div className="absolute inset-0 bg-black/50 z-10"></div>
-                <img src="/images/story-bg.webp" onError={e => e.target.src='https://via.placeholder.com/1600x900/111/333?text=WIND+STORY'} className="absolute inset-0 w-full h-full object-cover animate-kenburns" style={styles.kenBurns} alt="Story" />
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
-                    <h2 className="text-[#F5C518] text-5xl md:text-7xl font-black mb-6 uppercase tracking-tighter mix-blend-screen opacity-90">{section.title || "قصة WIND"}</h2>
-                    <p className="text-white max-w-lg mx-auto text-lg font-light leading-relaxed drop-shadow-md">
-                        {section.subTitle || "نحن لا نصنع الملابس، نحن ننسج خيوط الدفء لتصبح جزءاً من ذكرياتك الشتوية."}
-                    </p>
-                    <button className="mt-8 border border-white text-white px-8 py-3 text-sm font-bold hover:bg-white hover:text-black transition-all">اكتشف المزيد</button>
-                </div>
-            </section>
-        )}
-
-        {/* 7. الاستايلات الافتراضية (Grid, Posters, Bento, etc) */}
-        {(section.layout === 'grid_default' || !section.layout) && (
-            <section className="px-4">
-                <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
-                <div className="flex overflow-x-auto pb-6 gap-4 scrollbar-hide snap-x" dir="rtl">
-                    {data.map((product) => (
-                        <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
-                            <ProductCard {...product} />
-                        </div>
-                    ))}
-                </div>
-            </section>
-        )}
-
-        {section.layout === 'imdb_posters' && (
-            <section className="px-4">
-                <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
-                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-8 scrollbar-hide snap-x" dir="rtl">
-                    {data.map(p => (
-                        <div key={p.id} className="min-w-[170px] md:min-w-[240px] snap-start group cursor-pointer">
-                            <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl transition-all duration-500 group-hover:scale-[1.02]">
-                                <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                                <div className="absolute bottom-6 right-6 left-6 text-right">
-                                    <div className="text-[#F5C518] font-black text-xl mb-1">{p.price} EGP</div>
-                                    <h4 className="text-white font-black text-sm uppercase leading-tight line-clamp-2">{p.title}</h4>
+                {/* 5. ستايل البنتو (Bento) */}
+                {section.layout === 'bento_modern' && data.length >= 3 && (
+                    <section className="px-4">
+                        <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
+                        <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 h-auto md:h-[600px]" dir="rtl">
+                            <div className="md:col-span-2 md:row-span-2 relative rounded-[2rem] overflow-hidden group border border-white/5">
+                                <img src={data[0]?.image} className="w-full h-full object-cover" alt="" />
+                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all" />
+                                <div className="absolute bottom-10 right-10">
+                                    <h3 className="text-3xl md:text-5xl font-black text-white mb-4 leading-none tracking-tighter">{data[0]?.title}</h3>
+                                    <Link href={`/product/${data[0]?.id}`} className="bg-[#F5C518] text-black px-8 py-3 rounded-full font-black text-sm uppercase">اكتشف الآن</Link>
                                 </div>
                             </div>
+                            <div className="md:col-span-2 md:row-span-1 rounded-[2rem] overflow-hidden border border-white/5 relative group">
+                                <img src={data[1]?.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                            </div>
+                            <div className="md:col-span-1 md:row-span-1 rounded-[2rem] overflow-hidden border border-white/5">
+                                <img src={data[2]?.image} className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="md:col-span-1 md:row-span-1 bg-[#F5C518] rounded-[2rem] flex items-center justify-center p-6 text-center text-black font-black text-xl italic leading-tight shadow-[inset_0_0_30px_rgba(0,0,0,0.1)]">
+                                {section.title}
+                            </div>
                         </div>
-                    ))}
-                </div>
-            </section>
-        )}
-        
-        {section.layout === 'bento_modern' && data.length >= 3 && (
-            <section className="px-4">
-                <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
-                <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 h-auto md:h-[600px]" dir="rtl">
-                    <div className="md:col-span-2 md:row-span-2 relative rounded-[2rem] overflow-hidden group border border-white/5">
-                        <img src={data[0]?.image} className="w-full h-full object-cover" alt="" />
-                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all" />
-                        <div className="absolute bottom-10 right-10">
-                            <h3 className="text-3xl md:text-5xl font-black text-white mb-4 leading-none tracking-tighter">{data[0]?.title}</h3>
-                            <Link href={`/product/${data[0]?.id}`} className="bg-[#F5C518] text-black px-8 py-3 rounded-full font-black text-sm uppercase">اكتشف الآن</Link>
-                        </div>
-                    </div>
-                    <div className="md:col-span-2 md:row-span-1 rounded-[2rem] overflow-hidden border border-white/5 relative group">
-                        <img src={data[1]?.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                    </div>
-                    <div className="md:col-span-1 md:row-span-1 rounded-[2rem] overflow-hidden border border-white/5">
-                         <img src={data[2]?.image} className="w-full h-full object-cover" alt="" />
-                    </div>
-                    <div className="md:col-span-1 md:row-span-1 bg-[#F5C518] rounded-[2rem] flex items-center justify-center p-6 text-center text-black font-black text-xl italic leading-tight shadow-[inset_0_0_30px_rgba(0,0,0,0.1)]">
-                        {section.title}
-                    </div>
-                </div>
-            </section>
-        )}
+                    </section>
+                )}
 
-        {section.layout === 'sale_grid' && (
-             <section className="py-12 px-4">
-                <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,24,0.3)]">
-                    {section.title}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4" dir="rtl">
-                    {data.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
-                </div>
-             </section>
-        )}
-      </div>
-    );
+                {/* 6. ستايل التخفيضات (Sale Grid) */}
+                {section.layout === 'sale_grid' && data.length > 0 && (
+                    <section className="py-12 px-4">
+                        <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,24,0.3)]">
+                            {section.title}
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4" dir="rtl">
+                            {data.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
+                        </div>
+                    </section>
+                )}
+            </div>
+        );
+    }
+
+    // ==========================================
+    // 2. منطق عرض الأقسام والمحتوى العام (Collections & General Logic)
+    // ==========================================
+    if (section.type === 'collections_list') {
+        
+        // تجهيز بيانات الأقسام (صورة واسم ورابط)
+        const collectionItems = (section.selectedCollections || []).map(catName => {
+            // نحاول إيجاد صورة من أي منتج يتبع هذا القسم
+            const cleanCatName = catName.toString().toLowerCase().trim();
+            const repProduct = allProducts.find(p => p.searchCategories.includes(cleanCatName));
+            return {
+                title: catName,
+                image: repProduct?.image || '/images/placeholder_cat.jpg', 
+                link: `/collections/${catName}`
+            };
+        });
+
+        return (
+            <div className="mb-12">
+                
+                {/* أ) دوائر الأقسام (Circle Avatars) */}
+                {section.layout === 'circle_avatars' && (
+                    <section className="px-4 my-8">
+                        <SectionHeader title={section.title} subTitle={section.subTitle} />
+                        <div className="flex gap-6 overflow-x-auto pb-4 justify-start md:justify-center scrollbar-hide" dir="rtl">
+                            {collectionItems.map((item, idx) => (
+                                <Link key={idx} href={item.link} className="flex flex-col items-center gap-3 min-w-[80px] group cursor-pointer">
+                                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full p-1 border-2 border-dashed border-[#333] group-hover:border-[#F5C518] transition-colors">
+                                        <div className="w-full h-full rounded-full overflow-hidden relative">
+                                            <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={item.title} />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">{item.title}</span>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* ب) بانرات عريضة (Rect Banners) */}
+                {section.layout === 'rect_banners' && (
+                    <section className="px-4 my-8">
+                         <SectionHeader title={section.title} subTitle={section.subTitle} />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4" dir="rtl">
+                            {collectionItems.slice(0, 4).map((item, idx) => (
+                                <Link key={idx} href={item.link} className="relative h-40 rounded-xl overflow-hidden group border border-[#333]">
+                                    <img src={item.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-60 group-hover:opacity-80" alt={item.title} />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <h3 className="text-2xl font-black text-white uppercase tracking-widest border-b-2 border-[#F5C518] pb-1">{item.title}</h3>
+                                    </div>
+                                </Link>
+                            ))}
+                         </div>
+                    </section>
+                )}
+
+                {/* ج) شريط الثقة (Trust Bar) */}
+                {section.layout === 'trust_bar' && (
+                     <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
+                        <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
+                            <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">4.9<span className="text-sm text-gray-500">/5</span></h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">{section.title || "تقييم العملاء"}</p></div>
+                            <div className="w-px h-10 bg-[#333]"></div>
+                            <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">+10k</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">قطعة بيعت</p></div>
+                            <div className="w-px h-10 bg-[#333]"></div>
+                            <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">100%</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">ضمان الجودة</p></div>
+                        </div>
+                    </section>
+                )}
+
+                {/* د) آراء العملاء (Review Marquee) */}
+                {section.layout === 'review_marquee' && (
+                    <section className="bg-[#1a1a1a] py-16 relative overflow-hidden border-y border-[#222]">
+                        <SectionHeader title={section.title || "آراء العملاء"} />
+                         <div className="relative flex overflow-hidden pointer-events-none">
+                            <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
+                                {[...reviews, ...reviews].slice(0, 10).map((rev, index) => (
+                                    <div key={`${rev.id}-${index}`} className="min-w-[300px] bg-[#121212] border border-[#333] p-6 rounded-lg">
+                                        <div className="flex items-center gap-3 mb-2 justify-end">
+                                            <h4 className="text-white font-bold text-right">{rev.userName}</h4>
+                                            <div className="w-8 h-8 rounded-full bg-[#333] flex items-center justify-center text-[#F5C518]">{rev.userName?.charAt(0)}</div>
+                                        </div>
+                                        <p className="text-gray-400 text-xs text-right">"{rev.userComment}"</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* هـ) قصة البراند (Story Banner) */}
+                {section.layout === 'story_banner' && (
+                     <section className="relative h-[400px] overflow-hidden border-t border-[#333]">
+                        <div className="absolute inset-0 bg-black/60 z-10"></div>
+                        <img src="/images/story-bg.webp" className="absolute inset-0 w-full h-full object-cover" style={styles.kenBurns} onError={(e) => e.target.src='https://via.placeholder.com/1500x500/111/333?text=OUR+STORY'} alt="" />
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
+                            <h2 className="text-[#F5C518] text-5xl font-black mb-4 uppercase tracking-tighter">{section.title || "قصة WIND"}</h2>
+                            <p className="text-white max-w-lg mx-auto text-lg font-light">{section.subTitle}</p>
+                            <button className="mt-6 border border-white text-white px-6 py-2 text-sm hover:bg-white hover:text-black transition-all">اقرأ المزيد</button>
+                        </div>
+                    </section>
+                )}
+
+                {/* و) المجلة (Magazine) */}
+                {section.layout === 'magazine_grid' && (
+                    <section className="px-4 my-12">
+                        <SectionHeader title={section.title} subTitle={section.subTitle} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1" dir="rtl">
+                            <div className="h-64 bg-[#222] relative group cursor-pointer border border-[#333]">
+                                <div className="absolute inset-0 flex items-center justify-center"><span className="text-gray-600 font-bold text-xl">Article #1</span></div>
+                                <div className="absolute inset-0 border-2 border-[#F5C518] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
+                            <div className="h-64 bg-[#222] relative group cursor-pointer border border-[#333]">
+                                 <div className="absolute inset-0 flex items-center justify-center"><span className="text-gray-600 font-bold text-xl">Article #2</span></div>
+                                 <div className="absolute inset-0 border-2 border-[#F5C518] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+            </div>
+        );
+    }
+
+    return null;
   };
 
   if (loading) return (
@@ -332,7 +397,6 @@ export default function Home() {
 
   return (
     <main className="pb-20 bg-[#121212] min-h-screen text-white relative font-cairo" dir="rtl">
-      
       {/* ===== REVIEW MODAL (يعمل دائماً) ===== */}
       {isReviewModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={styles.modalOverlay}>
@@ -367,165 +431,8 @@ export default function Home() {
             // (A) العرض الديناميكي (إذا كان هناك أقسام في الأدمن)
             sections.map((section, index) => <RenderDynamicSection key={section.id || index} section={section} />)
         ) : (
-            // (B) العرض الافتراضي الثابت (إذا لم تقم بإنشاء أقسام بعد)
-            // هذا الجزء يضمن عدم ظهور الموقع فارغاً ويعرض نفس الأقسام التي طلبتها
-            <>
-                {/* 1. أحدث الصيحات */}
-                <section>
-                    <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
-                    <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-                        {newArrivals.map((product) => (
-                        <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
-                            <ProductCard {...product} />
-                        </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* 2. تسوق التشكيلة الجديدة */}
-                <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
-                    <SectionHeader title="تسوق التشكيلة الجديدة" subTitle="أناقة WIND في كل خطوة" />
-                    <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
-                        <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
-                            {[...allProducts.slice(0,10), ...allProducts.slice(0,10)].map((product, index) => (
-                            <div key={`${product.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-80 hover:opacity-100 transition-opacity">
-                                <ProductCard {...product} />
-                            </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* 3. الأكثر مبيعاً */}
-                <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
-                    <div className="px-4 mb-4" dir="rtl">
-                        <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">الأكثر مبيعاً</h2>
-                    </div>
-                    <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto">
-                        {bestSellers[0] && (
-                        <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
-                            <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأكثر طلباً #1</div>
-                            <ProductCard {...bestSellers[0]} />
-                        </div>
-                        )}
-                        <div className="md:w-2/3 w-full grid grid-cols-2 gap-3">
-                            {bestSellers.slice(1, 5).map(p => (
-                                <div key={p.id} className="scale-90 origin-top-right"><ProductCard {...p} /></div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* 4. شريط الثقة */}
-                <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
-                    <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
-                        <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">4.9<span className="text-sm text-gray-500">/5</span></h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">تقييم العملاء</p></div>
-                        <div className="w-px h-10 bg-[#333]"></div>
-                        <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">+10k</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">قطعة بيعت</p></div>
-                        <div className="w-px h-10 bg-[#333]"></div>
-                        <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">100%</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">ضمان الجودة</p></div>
-                    </div>
-                </section>
-
-                {/* 5. مجموعات مميزة */}
-                <div className="my-10">
-                    <SectionHeader title="مجموعات مميزة" />
-                    <CollectionsSection />
-                </div>
-
-                {/* 6. آراء عائلة WIND */}
-                <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
-                    <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-                        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-right" dir="rtl">
-                            <div>
-                                <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter">آراء عائلة WIND</h2>
-                                <p className="text-[#F5C518] text-sm font-bold mt-2 uppercase tracking-[0.2em]">أصوات حقيقية - تجارب صادقة</p>
-                            </div>
-                            <button onClick={() => setIsReviewModalOpen(true)} className="bg-transparent border-2 border-[#F5C518] text-[#F5C518] px-8 py-3 font-black text-sm hover:bg-[#F5C518] hover:text-black transition-all duration-300 rounded-sm">+ أضف تجربتك</button>
-                        </div>
-                        <div className="relative flex overflow-hidden pointer-events-none">
-                            <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
-                                {[...reviews, ...reviews].map((rev, index) => (
-                                    <div key={`${rev.id}-${index}`} className="min-w-[300px] md:min-w-[400px] bg-[#121212] border border-[#333] p-6 rounded-lg hover:border-[#F5C518]/50 transition-all duration-500">
-                                        <div className="flex items-center gap-4 mb-4" dir="rtl">
-                                            {rev.userImage ? (<img src={rev.userImage} className="w-12 h-12 rounded-full object-cover border-2 border-[#F5C518]/20" alt="" />) : (<div className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center text-[#F5C518] font-black border border-[#333]">{rev.userName?.charAt(0)}</div>)}
-                                            <div className="text-right">
-                                                <h4 className="text-white font-black text-sm">{rev.userName}</h4>
-                                                <div className="flex gap-0.5 mt-1">{[...Array(5)].map((_, i) => (<span key={i} className="text-[#F5C518] text-[10px]">★</span>))}</div>
-                                            </div>
-                                        </div>
-                                        <p className="text-gray-400 text-sm leading-relaxed italic text-right" dir="rtl">"{rev.userComment}"</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* 8. Magazine */}
-                <section className="px-4 max-w-[1280px] mx-auto my-16">
-                    <SectionHeader title="WIND Magazine" subTitle="مقالات في الأناقة" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                        {[{ id: 1, title: "كيفية تنسيق الفستان في الشتاء", tag: "نصائح" }, { id: 2, title: "رحلة WIND: من الفكرة إلى التصميم", tag: "قصتنا" }].map((art) => (
-                            <div key={art.id} className="relative h-64 group cursor-pointer overflow-hidden bg-[#222]">
-                                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all z-10"></div>
-                                <div className="absolute inset-0 bg-[#333] group-hover:scale-110 transition-transform duration-[2s]"></div> 
-                                <div className="absolute bottom-0 right-0 p-6 z-20 w-full bg-gradient-to-t from-black via-black/60 to-transparent text-right">
-                                    <span className="bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 mb-2 inline-block">{art.tag}</span>
-                                    <h3 className="text-white font-black text-xl group-hover:text-[#F5C518] transition-colors">{art.title}</h3>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* 9. الأعلى تقييماً */}
-                <section className="px-4 mb-12">
-                    <SectionHeader title="الأعلى تقييماً" subTitle="القطع التي نالت إعجاب الجميع" />
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {topRated.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
-                    </div>
-                </section>
-
-                {/* 10. قصة WIND */}
-                <section className="relative h-[400px] overflow-hidden border-t border-[#333]">
-                    <div className="absolute inset-0 bg-black/50 z-10"></div>
-                    <img src="/images/story-bg.webp" className="absolute inset-0 w-full h-full object-cover" style={styles.kenBurns} alt="Story Background" />
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
-                        <h2 className="text-[#F5C518] text-5xl md:text-7xl font-black mb-6 uppercase tracking-tighter mix-blend-screen opacity-90">قصة WIND</h2>
-                        <p className="text-white max-w-lg mx-auto text-lg font-light leading-relaxed drop-shadow-md">"نحن لا نصنع الملابس، نحن ننسج خيوط الدفء لتصبح جزءاً من ذكرياتك الشتوية."</p>
-                        <button className="mt-8 border border-white text-white px-8 py-3 text-sm font-bold hover:bg-white hover:text-black transition-all">اكتشف المزيد</button>
-                    </div>
-                </section>
-
-                {/* 11. تسوق حسب الفئة (فوتر) */}
-                <div className="bg-[#151515] py-12 border-t border-[#222]">
-                    <SectionHeader title="تسوق حسب الفئة" />
-                    <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
-                        <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
-                            <h3 className="text-2xl font-black text-white mb-4 z-10 relative">فساتين WIND</h3>
-                            <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
-                                {dresses.slice(0,5).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
-                            </div>
-                        </div>
-                        <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
-                            <h3 className="text-2xl font-black text-white mb-4 z-10 relative">البلوزات العصرية</h3>
-                            <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
-                                {blouses.slice(0,5).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 13. تخفيضات */}
-                <section className="py-12 px-4">
-                    <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest">تخفيضات WIND الحصرية - لفترة محدودة</div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {discounts.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
-                    </div>
-                </section>
-            </>
+            // (B) العرض الافتراضي (Fallback) في حالة عدم وجود أقسام
+            <div className="text-center py-20 text-gray-500">لا توجد أقسام للعرض، يرجى ضبط الصفحة الرئيسية من لوحة التحكم.</div>
         )}
       </div>
 
