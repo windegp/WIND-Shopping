@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { db, storage } from "@/lib/firebase"; 
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// تأكد من تثبيت المكتبة: npm install @hello-pangea/dnd
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function AdminHomeManager() {
@@ -12,54 +13,53 @@ export default function AdminHomeManager() {
   const [categories, setCategories] = useState([]); 
   const [uploadingSectionId, setUploadingSectionId] = useState(null);
 
-  // --- 1. كتالوج القوالب (Templates Catalog) ---
-  // هنا نحدد "المدخلات" المتاحة لكل نوع
+  // --- 1. تعريف كتالوج التصميمات (Templates) ---
+  // هذه القائمة تشمل كل "أنواع" الأقسام الموجودة في صفحتك الحالية + الجديد
   const availableTemplates = [
-    // >> المحتوى الثابت (يحتاج صور ونصوص) <<
+    // >> الأقسام الثابتة (Static) <<
     { id: 'hero_section', name: 'بانر الهيرو (Hero)', type: 'static', icon: '🚩', inputs: ['image', 'title', 'subtitle', 'button'] },
     { id: 'winter_discounts', name: 'بانر التخفيضات', type: 'static', icon: '🏷️', inputs: ['title', 'subtitle'] },
     { id: 'story_section', name: 'قصة WIND', type: 'static', icon: '📖', inputs: ['image', 'title', 'description'] },
     { id: 'magazine_grid', name: 'مجلة WIND', type: 'static', icon: '📰', inputs: ['title', 'subtitle'] },
-    
-    // >> المكونات الجاهزة (لا تحتاج مدخلات معقدة) <<
     { id: 'trust_bar', name: 'شريط الثقة', type: 'static', icon: '🛡️', inputs: [] },
     { id: 'reviews_parallax', name: 'آراء العملاء', type: 'static', icon: '💬', inputs: ['title'] },
     { id: 'collections_slider', name: 'سلايدر الكولكشنات', type: 'static', icon: '⚪', inputs: ['title'] },
     { id: 'category_split', name: 'انقسام الفئات (Split)', type: 'static', icon: '✂️', inputs: ['title'] },
 
-    // >> المنتجات الديناميكية (تحتاج اختيار كولكشن) <<
+    // >> الأقسام الديناميكية (تحتاج منتجات) <<
     { id: 'carousel', name: 'شريط منتجات (Carousel)', type: 'dynamic', icon: '↔️' },
     { id: 'marquee', name: 'شريط متحرك (Marquee)', type: 'dynamic', icon: '🏃' },
-    { id: 'featured', name: 'الأكثر مبيعاً (Best Seller)', type: 'dynamic', icon: '⭐' },
+    { id: 'featured', name: 'الأكثر مبيعاً (Featured)', type: 'dynamic', icon: '⭐' },
     { id: 'grid', name: 'شبكة منتجات (Grid)', type: 'dynamic', icon: '🔳' },
     
-    // >> التصميمات المستقبلية <<
+    // >> تصميمات مستقبلية <<
     { id: 'imdb', name: 'كارت أفقي (IMDb)', type: 'dynamic', icon: '🎫' },
     { id: 'masonry', name: 'شبكة بنترست', type: 'dynamic', icon: '🧱' },
   ];
 
-  // --- 2. الهيكل الافتراضي (نسخة من موقعك الحالي) ---
+  // --- 2. الهيكل الافتراضي (نسخة طبق الأصل من Page.js الحالي) ---
+  // 🔥 هذا الجزء هو المسؤول عن أنك تلاقي الصفحة "زي ما هي بالظبط"
   const defaultSiteStructure = [
-    { id: '1', title: "بانر الهيرو", template: "hero_section", data: { title: "WIND STYLE", buttonText: "تسوق الآن" } },
-    { id: '2', title: "أحدث صيحات WIND", template: "carousel", collectionSlug: "new-arrivals" },
-    { id: '3', title: "تسوق التشكيلة الجديدة", template: "marquee", collectionSlug: "all" },
-    { id: '4', title: "الأكثر مبيعاً", template: "featured", collectionSlug: "all" },
+    { id: '1', title: "بانر الهيرو", template: "hero_section", data: { title: "", buttonText: "تسوق الآن" } },
+    { id: '2', title: "أحدث صيحات WIND", subTitle: "تصاميم شتوية تلامس الروح", template: "carousel", collectionSlug: "new-arrivals" },
+    { id: '3', title: "تسوق التشكيلة الجديدة", subTitle: "أناقة WIND في كل خطوة", template: "marquee", collectionSlug: "all" },
+    { id: '4', title: "الأكثر مبيعاً", template: "featured", collectionSlug: "all" }, // سنقوم بفلترتها في الصفحة الرئيسية
     { id: '5', title: "شريط الثقة", template: "trust_bar" },
     { id: '6', title: "مجموعات مميزة", template: "collections_slider" },
-    { id: '7', title: "آراء عائلة WIND", template: "reviews_parallax" },
-    { id: '8', title: "WIND Magazine", template: "magazine_grid" },
-    { id: '9', title: "الأعلى تقييماً", template: "grid", collectionSlug: "all" },
-    { id: '10', title: "قصة WIND", template: "story_section", data: { description: "ننسج خيوط الدفء..." } },
+    { id: '7', title: "آراء عائلة WIND", template: "reviews_parallax" }, // تم تعديل الاسم ليتطابق
+    { id: '8', title: "WIND Magazine", subTitle: "مقالات في الأناقة", template: "magazine_grid" },
+    { id: '9', title: "الأعلى تقييماً", subTitle: "القطع التي نالت إعجاب الجميع", template: "grid", collectionSlug: "all" }, // سنقوم بفلترتها
+    { id: '10', title: "قصة WIND", template: "story_section", data: { description: "نحن لا نصنع الملابس، نحن ننسج خيوط الدفء..." } },
     { id: '11', title: "تسوق حسب الفئة", template: "category_split" },
     { id: '12', title: "تخفيضات WIND الحصرية", template: "winter_discounts" }
   ];
 
-  // --- 3. التهيئة وجلب البيانات ---
+  // --- 3. التهيئة (Initialization) ---
   useEffect(() => {
     const initSystem = async () => {
       setInitialLoading(true);
       try {
-        // جلب قائمة الكولكشنات من المنتجات
+        // أ) جلب الكولكشنات
         const prodsSnap = await getDocs(collection(db, "products"));
         const catsSet = new Set(['all', 'new-arrivals']);
         prodsSnap.docs.forEach(doc => {
@@ -69,14 +69,16 @@ export default function AdminHomeManager() {
         });
         setCategories([...catsSet].sort());
 
-        // جلب الترتيب المحفوظ
+        // ب) جلب الهيكل المحفوظ
         const docRef = doc(db, "settings", "homePage");
         const docSnap = await getDoc(docRef);
         
-        if (docSnap.exists() && docSnap.data().sections) {
+        if (docSnap.exists() && docSnap.data().sections && docSnap.data().sections.length > 0) {
+          // لو في داتا قديمة، هاتها
           setSections(docSnap.data().sections);
         } else {
-          // التأسيس الأولي (Seed)
+          // 🔥 لو مفيش داتا (أول مرة)، ازرع الهيكل الافتراضي اللي فوق
+          console.log("Seeding Default Structure...");
           setSections(defaultSiteStructure);
           await setDoc(docRef, { sections: defaultSiteStructure }, { merge: true });
         }
@@ -86,7 +88,7 @@ export default function AdminHomeManager() {
     initSystem();
   }, []);
 
-  // --- 4. دوال التعديل (Actions) ---
+  // --- 4. دوال التحكم (Images, Updates, Save) ---
 
   const handleImageUpload = async (file, sectionId) => {
     if (!file) return;
@@ -95,7 +97,6 @@ export default function AdminHomeManager() {
       const storageRef = ref(storage, `layout/${Date.now()}_${file.name}`);
       const snap = await uploadBytes(storageRef, file);
       const url = await getDownloadURL(snap.ref);
-      // تحديث القسم بالصورة الجديدة
       setSections(prev => prev.map(s => s.id === sectionId ? { ...s, data: { ...s.data, imageUrl: url } } : s));
     } catch (e) { alert("فشل الرفع"); }
     setUploadingSectionId(null);
@@ -132,7 +133,7 @@ export default function AdminHomeManager() {
     setLoading(true);
     try {
       await setDoc(doc(db, "settings", "homePage"), { sections, lastUpdated: new Date().toISOString() }, { merge: true });
-      alert("✅ تم الحفظ وتحديث الموقع!");
+      alert("✅ تم الحفظ وتحديث الواجهة!");
     } catch (e) { alert("❌ خطأ في الحفظ"); }
     setLoading(false);
   };
@@ -146,7 +147,7 @@ export default function AdminHomeManager() {
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 sticky top-0 bg-[#121212] z-50 py-4 border-b border-[#333] shadow-md">
         <div>
            <h1 className="text-2xl font-black text-[#F5C518]">إدارة واجهة WIND</h1>
-           <p className="text-xs text-gray-500">تحكم كامل في الأقسام والترتيب والمحتوى</p>
+           <p className="text-xs text-gray-500">إدارة الأقسام (تعديل - ترتيب - إضافة)</p>
         </div>
         <button onClick={handleSave} disabled={loading} className="bg-[#F5C518] text-black font-bold px-8 py-3 rounded hover:bg-yellow-500 shadow-[0_0_15px_rgba(245,197,24,0.3)] transition-all">
             {loading ? "جاري الحفظ..." : "حفظ التغييرات"}
@@ -176,11 +177,11 @@ export default function AdminHomeManager() {
                                                     <div className="flex items-center gap-3">
                                                         <div {...provided.dragHandleProps} className="cursor-grab text-gray-500 hover:text-[#F5C518]">⠿</div>
                                                         <span className="text-xl">{template.icon}</span>
-                                                        <div>
+                                                        <div className="flex-1">
                                                             <input 
                                                                 value={section.title || ""} 
                                                                 onChange={(e) => updateSection(section.id, 'title', e.target.value)}
-                                                                className="bg-transparent text-white font-bold border-b border-transparent focus:border-[#F5C518] outline-none text-sm"
+                                                                className="bg-transparent text-white font-bold border-b border-transparent focus:border-[#F5C518] outline-none text-sm w-full"
                                                                 placeholder="عنوان القسم"
                                                             />
                                                             <p className="text-[10px] text-gray-500">{template.name}</p>
@@ -192,7 +193,7 @@ export default function AdminHomeManager() {
                                                 {/* Body القسم (المدخلات الذكية) */}
                                                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     
-                                                    {/* 1. اختيار الكولكشن (للأقسام الديناميكية فقط) */}
+                                                    {/* اختيار الكولكشن (للأقسام الديناميكية فقط) */}
                                                     {isDynamic && (
                                                         <div className="md:col-span-2 bg-[#121212] p-3 rounded border border-[#333]">
                                                             <label className="text-[10px] text-gray-500 block mb-1">مصدر المنتجات (Collection)</label>
@@ -208,7 +209,7 @@ export default function AdminHomeManager() {
                                                         </div>
                                                     )}
 
-                                                    {/* 2. المدخلات المخصصة (صور ونصوص) */}
+                                                    {/* المدخلات المخصصة */}
                                                     {inputs.includes('image') && (
                                                         <div className="row-span-2">
                                                             <label className="text-[10px] text-gray-500 block mb-1">صورة الخلفية</label>
@@ -242,7 +243,7 @@ export default function AdminHomeManager() {
                                                                 <input value={section.data?.buttonText || ""} onChange={(e) => updateSectionData(section.id, 'buttonText', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 text-xs rounded text-white" />
                                                             </div>
                                                             <div>
-                                                                <label className="text-[10px] text-gray-500">رابط الزر</label>
+                                                                <label className="text-[10px] text-gray-500">الرابط</label>
                                                                 <input value={section.data?.link || ""} onChange={(e) => updateSectionData(section.id, 'link', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 text-xs rounded text-white" />
                                                             </div>
                                                         </>
