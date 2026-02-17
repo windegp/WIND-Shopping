@@ -64,16 +64,51 @@ export default function CheckoutPage() {
     if (errors[name]) setErrors({ ...errors, [name]: false });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return window.scrollTo(0, 0);
-    setLoading(true);
-    setTimeout(() => {
-      setOrderCompleted(true);
-      clearCart();
-      setLoading(false);
-    }, 2000);
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validate()) return window.scrollTo(0, 0);
+  setLoading(true);
+
+  const orderId = `WIND-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+  try {
+    if (paymentMethod === 'card') {
+      // ← طلب رابط الدفع من كاشير
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          amount: finalTotal.toFixed(2),
+          customerName: `${formData.firstName} ${formData.lastName}`,
+          customerEmail: formData.email,
+          phone: formData.phone,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.paymentUrl) {
+        throw new Error(data.error || 'حدث خطأ، حاول مرة أخرى');
+      }
+
+      // ← تحويل العميل لصفحة كاشير
+      window.location.href = data.paymentUrl;
+
+    } else {
+      // ← COD أو InstaPay
+      setTimeout(() => {
+        setOrderCompleted(true);
+        clearCart();
+        setLoading(false);
+      }, 2000);
+    }
+
+  } catch (err) {
+    alert(err.message);
+    setLoading(false);
+  }
+};
 
   if (orderCompleted) {
     return (
@@ -348,7 +383,7 @@ export default function CheckoutPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  جارٍ المعالجة...
+              {paymentMethod === 'card' ? 'جارٍ التحويل لكاشير...' : 'جارٍ المعالجة...'}
                 </>
               ) : paymentMethod === 'card' ? (
                 <>ادفع الآن — ج.م {finalTotal}.00</>
