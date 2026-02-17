@@ -1,182 +1,279 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db, storage } from "@/lib/firebase"; 
+import { db } from "@/lib/firebase"; 
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function AdminHomeManager() {
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [sections, setSections] = useState([]); 
-  const [categories, setCategories] = useState([]); 
-  const [uploadingSectionId, setUploadingSectionId] = useState(null);
+  const [dbData, setDbData] = useState({ categories: [], collections: [] }); // لحفظ البيانات المتاحة للاختيار
+  const [sections, setSections] = useState([]); // الأقسام الحالية
+  
+  // الحالة الخاصة بالقسم الجديد اللي بنضيفه
+  const [newSection, setNewSection] = useState({
+    title: '',
+    subTitle: '',
+    type: 'products', // products, collection, page, hero
+    dataSource: '', // ID of the category/collection
+    layout: 'grid_default', // standard, imdb_card, masonry, etc.
+    mediaUrl: '', // صورة مخصصة للقسم
+    heroSlides: [] // للهيرو فقط: قائمة روابط
+  });
 
-  // --- 1. كتالوج القوالب (Templates) ---
-  // تم تعريف كل تصميم موجود في كودك الأصلي كـ "قالب" مستقل
-  const availableTemplates = [
-    // القوالب الثابتة (Static)
-    { id: 'hero_section', name: 'بانر الهيرو (Hero)', type: 'static', icon: '🚩', inputs: ['image', 'title', 'subtitle', 'button'] },
-    { id: 'trust_bar', name: 'شريط الثقة', type: 'static', icon: '🛡️', inputs: [] },
-    { id: 'collections_slider', name: 'سلايدر الكولكشنات', type: 'static', icon: '⚪', inputs: ['title'] },
-    { id: 'reviews_parallax', name: 'آراء العملاء (Parallax)', type: 'static', icon: '💬', inputs: ['title'] },
-    { id: 'magazine_grid', name: 'مجلة WIND', type: 'static', icon: '📰', inputs: ['title', 'subtitle'] },
-    { id: 'story_section', name: 'قصة WIND', type: 'static', icon: '📖', inputs: ['image', 'title', 'description'] },
-    { id: 'category_split', name: 'انقسام الفئات (فساتين/بلوزات)', type: 'static', icon: '✂️', inputs: ['title'] },
-    { id: 'winter_discounts', name: 'بانر التخفيضات', type: 'static', icon: '🏷️', inputs: ['title', 'subtitle'] },
+  // حالة مؤقتة لإضافة رابط سلايد في الهيرو
+  const [tempHeroSlide, setTempHeroSlide] = useState('');
 
-    // القوالب الديناميكية (Dynamic)
-    { id: 'carousel', name: 'شريط منتجات (Carousel)', type: 'dynamic', icon: '↔️' },
-    { id: 'marquee', name: 'شريط متحرك (Marquee)', type: 'dynamic', icon: '🏃' },
-    { id: 'featured', name: 'الأكثر مبيعاً (Best Seller)', type: 'dynamic', icon: '⭐' },
-    { id: 'grid', name: 'شبكة منتجات (Grid)', type: 'dynamic', icon: '🔳' },
-    
-    // تصميمات إضافية
-    { id: 'imdb', name: 'كارت أفقي (IMDb)', type: 'dynamic', icon: '🎫' },
-    { id: 'masonry', name: 'شبكة بنترست', type: 'dynamic', icon: '🧱' },
-  ];
+  // --- 1. مكتبة التصميمات (Layouts Library) ---
+  const layoutOptions = {
+    products: [
+      { id: 'grid_default', name: 'شبكة منتجات تقليدية (Grid)', icon: 'bb' },
+      { id: 'slider_row', name: 'شريط سحب أفقي (Slider)', icon: '↔️' },
+      { id: 'marquee_scroll', name: 'شريط متحرك تلقائي (Marquee)', icon: '🏃' },
+      { id: 'imdb_cards', name: 'كروت عريضة (IMDb Style)', icon: '🎫' },
+      { id: 'masonry_wall', name: 'شبكة غير منتظمة (Pinterest)', icon: '🧱' },
+    ],
+    collection: [
+        { id: 'circle_row', name: 'دوائر (Stories Style)', icon: 'DQ' },
+        { id: 'rect_cards', name: 'كروت بوسترات', icon: 'cj' },
+    ],
+    hero: [
+        { id: 'full_screen', name: 'شاشة كاملة (Full Screen)', icon: 'pc' },
+        { id: 'split_screen', name: 'منقسم (Split)', icon: 'D|' },
+    ]
+  };
 
-  // --- 2. الهيكل الافتراضي (نسخة طبق الأصل من Page.js القديم) ---
-  // 🔥 هذا هو السر: سنحفظ هذا الهيكل في القاعدة، فتظهر الصفحة كما هي تماماً
-  const defaultSiteStructure = [
-    { id: '1', title: "بانر الهيرو", template: "hero_section", data: { title: "", buttonText: "تسوق الآن" } },
-    { id: '2', title: "أحدث صيحات WIND", subTitle: "تصاميم شتوية تلامس الروح", template: "carousel", collectionSlug: "new-arrivals" },
-    { id: '3', title: "تسوق التشكيلة الجديدة", subTitle: "أناقة WIND في كل خطوة", template: "marquee", collectionSlug: "all" },
-    { id: '4', title: "الأكثر مبيعاً", template: "featured", collectionSlug: "all" },
-    { id: '5', title: "شريط الثقة", template: "trust_bar" },
-    { id: '6', title: "مجموعات مميزة", template: "collections_slider" },
-    { id: '7', title: "آراء عائلة WIND", template: "reviews_parallax" },
-    { id: '8', title: "WIND Magazine", subTitle: "مقالات في الأناقة", template: "magazine_grid" },
-    { id: '9', title: "الأعلى تقييماً", subTitle: "القطع التي نالت إعجاب الجميع", template: "grid", collectionSlug: "all" },
-    { id: '10', title: "قصة WIND", template: "story_section", data: { description: "نحن لا نصنع الملابس، نحن ننسج خيوط الدفء..." } },
-    { id: '11', title: "تسوق حسب الفئة", template: "category_split" },
-    { id: '12', title: "تخفيضات WIND الحصرية", template: "winter_discounts" }
-  ];
-
-  // --- 3. التهيئة وجلب البيانات ---
+  // --- 2. جلب البيانات (عشان القوائم المنسدلة) ---
   useEffect(() => {
-    const initSystem = async () => {
-      setInitialLoading(true);
-      try {
-        // جلب الأقسام
-        const prodsSnap = await getDocs(collection(db, "products"));
-        const catsSet = new Set(['all', 'new-arrivals']);
-        prodsSnap.docs.forEach(doc => {
-            const d = doc.data();
-            if(d.category) catsSet.add(d.category);
-            if(Array.isArray(d.categories)) d.categories.forEach(c => catsSet.add(c));
-        });
-        setCategories([...catsSet].sort());
+    const fetchData = async () => {
+      // هنا مفروض نجيب الأقسام الحقيقية، هحط داتا وهمية للتجربة لحد ما نربط صح
+      // في النسخة النهائية ده هيجي من Firebase Products
+      const cats = ['فساتين', 'بلوزات', 'جواكيت', 'وصل حديثاً']; 
+      const cols = ['كولكشن الشتاء', 'كولكشن الصيف', 'تخفيضات'];
+      setDbData({ categories: cats, collections: cols });
 
-        // جلب الإعدادات أو "زرع" الهيكل الافتراضي
-        const docRef = doc(db, "settings", "homePage");
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists() && docSnap.data().sections && docSnap.data().sections.length > 0) {
-          setSections(docSnap.data().sections);
-        } else {
-          // إذا كانت القاعدة فارغة، احفظ الهيكل المطابق لكودك القديم
-          console.log("Seeding Default Structure...");
-          setSections(defaultSiteStructure);
-          await setDoc(docRef, { sections: defaultSiteStructure }, { merge: true });
-        }
-      } catch (error) { console.error(error); } 
-      finally { setInitialLoading(false); }
+      // جلب الأقسام المحفوظة سابقاً
+      const docRef = doc(db, "settings", "homePage_v2"); // اصدار جديد v2
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setSections(docSnap.data().sections || []);
+      }
     };
-    initSystem();
+    fetchData();
   }, []);
 
-  // --- 4. دوال التحكم (رفع صور، حفظ، ترتيب) ---
-  const handleImageUpload = async (file, sectionId) => {
-    if (!file) return;
-    setUploadingSectionId(sectionId);
-    try {
-      const storageRef = ref(storage, `layout/${Date.now()}_${file.name}`);
-      const snap = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snap.ref);
-      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, data: { ...s.data, imageUrl: url } } : s));
-    } catch (e) { alert("فشل الرفع"); }
-    setUploadingSectionId(null);
+  // --- 3. المنطق (Logic) ---
+
+  const handleAddHeroSlide = () => {
+    if(!tempHeroSlide) return;
+    setNewSection({...newSection, heroSlides: [...newSection.heroSlides, tempHeroSlide]});
+    setTempHeroSlide('');
   };
 
-  const updateSection = (id, field, value) => {
-    setSections(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  const handleAddSection = () => {
+    if (!newSection.title && newSection.type !== 'hero') return alert("اكتب عنوان للقسم!");
+    
+    const sectionToAdd = {
+        id: Date.now().toString(),
+        ...newSection
+    };
+
+    setSections([...sections, sectionToAdd]);
+    // تصفير الفورم
+    setNewSection({ ...newSection, title: '', subTitle: '', dataSource: '', mediaUrl: '', heroSlides: [] });
   };
-  const updateSectionData = (id, field, value) => {
-    setSections(prev => prev.map(s => s.id === id ? { ...s, data: { ...(s.data || {}), [field]: value } } : s));
-  };
-  const handleAddSection = (template) => {
-    setSections([...sections, { id: Date.now().toString(), title: template.name, template: template.id, collectionSlug: 'all', data: {} }]);
-  };
-  const onDragEnd = (result) => {
-    if (!result.destination) return;
-    const items = [...sections];
-    const [reordered] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reordered);
-    setSections(items);
-  };
-  const handleSave = async () => {
+
+  const handleSaveToDb = async () => {
     setLoading(true);
     try {
-      await setDoc(doc(db, "settings", "homePage"), { sections, lastUpdated: new Date().toISOString() }, { merge: true });
-      alert("✅ تم الحفظ! الصفحة الرئيسية الآن مطابقة لهذا الترتيب.");
-    } catch (e) { alert("❌ خطأ في الحفظ"); }
+        await setDoc(doc(db, "settings", "homePage_v2"), { 
+            sections: sections,
+            lastUpdate: new Date().toISOString()
+        });
+        alert("تم حفظ هيكل الصفحة بنجاح! 🚀");
+    } catch (e) {
+        alert("حدث خطأ: " + e.message);
+    }
     setLoading(false);
   };
 
-  if (initialLoading) return <div className="h-screen flex items-center justify-center text-[#F5C518] bg-[#121212]">جاري تحميل النظام...</div>;
+  const handleDelete = (id) => {
+    setSections(sections.filter(s => s.id !== id));
+  };
 
+  // --- 4. الواجهة (UI) ---
   return (
-    <div className="min-h-screen bg-[#121212] text-white p-4 md:p-8 font-sans" dir="rtl">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 sticky top-0 bg-[#121212] z-50 py-4 border-b border-[#333] shadow-md">
-        <div><h1 className="text-2xl font-black text-[#F5C518]">إدارة واجهة WIND</h1><p className="text-xs text-gray-500">قم بترتيب الأقسام لتظهر في الصفحة الرئيسية</p></div>
-        <button onClick={handleSave} disabled={loading} className="bg-[#F5C518] text-black font-bold px-8 py-3 rounded hover:bg-yellow-500 shadow-lg">{loading ? "جاري الحفظ..." : "حفظ التغييرات"}</button>
-      </div>
+    <div className="min-h-screen bg-[#0f0f0f] text-gray-100 p-8 font-sans" dir="rtl">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10">
+        
+        {/* === الجزء الأيمن: نموذج الإضافة (Control Panel) === */}
+        <div className="bg-[#1a1a1a] p-6 rounded-xl border border-[#333] shadow-2xl h-fit sticky top-10">
+            <h2 className="text-2xl font-bold text-[#f5c518] mb-6 border-b border-[#333] pb-4">🛠️ مصنع الأقسام</h2>
+            
+            <div className="space-y-4">
+                {/* 1. نوع القسم */}
+                <div>
+                    <label className="text-xs text-gray-500 mb-1 block">نوع القسم</label>
+                    <div className="grid grid-cols-4 gap-2">
+                        {['products', 'collection', 'pages', 'hero'].map(type => (
+                            <button 
+                                key={type}
+                                onClick={() => setNewSection({...newSection, type})}
+                                className={`p-2 text-sm rounded border transition-all ${newSection.type === type ? 'bg-[#f5c518] text-black border-[#f5c518] font-bold' : 'bg-[#222] border-[#333] hover:bg-[#333]'}`}
+                            >
+                                {type === 'products' && 'منتجات'}
+                                {type === 'collection' && 'كولكشن'}
+                                {type === 'pages' && 'صفحة'}
+                                {type === 'hero' && 'Hero'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-2">
-            <DragDropContext onDragEnd={onDragEnd}>
-                <Droppable droppableId="sections-list">
-                    {(provided) => (
-                        <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4 pb-20">
-                            {sections.map((section, index) => {
-                                const template = availableTemplates.find(t => t.id === section.template) || {};
-                                const isDynamic = template.type === 'dynamic';
-                                const inputs = template.inputs || [];
-                                return (
-                                    <Draggable key={section.id} draggableId={section.id} index={index}>
-                                        {(provided, snapshot) => (
-                                            <div ref={provided.innerRef} {...provided.draggableProps} className={`bg-[#1A1A1A] rounded-lg border ${snapshot.isDragging ? 'border-[#F5C518] shadow-2xl z-50' : 'border-[#333]'} overflow-hidden group`}>
-                                                <div className="p-4 bg-[#222] flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div {...provided.dragHandleProps} className="cursor-grab text-gray-500 hover:text-[#F5C518]">⠿</div>
-                                                        <span className="text-xl">{template.icon}</span>
-                                                        <div className="flex-1"><input value={section.title || ""} onChange={(e) => updateSection(section.id, 'title', e.target.value)} className="bg-transparent text-white font-bold border-b border-transparent focus:border-[#F5C518] outline-none text-sm w-full" placeholder="عنوان القسم" /><p className="text-[10px] text-gray-500">{template.name}</p></div>
-                                                    </div>
-                                                    <button onClick={() => confirm("حذف؟") && setSections(sections.filter(s => s.id !== section.id))} className="text-red-500 text-xs hover:bg-red-900/20 px-2 py-1 rounded">حذف</button>
-                                                </div>
-                                                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {isDynamic && (<div className="md:col-span-2 bg-[#121212] p-3 rounded border border-[#333]"><label className="text-[10px] text-gray-500 block mb-1">مصدر المنتجات</label><select value={section.collectionSlug || 'all'} onChange={(e) => updateSection(section.id, 'collectionSlug', e.target.value)} className="w-full bg-[#222] border border-[#333] p-2 rounded text-sm text-white outline-none focus:border-[#F5C518]"><option value="all">كل المنتجات (All)</option><option value="new-arrivals">وصل حديثاً</option>{categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>)}
-                                                    {inputs.includes('image') && (<div className="row-span-2"><label className="text-[10px] text-gray-500 block mb-1">صورة</label><div className="border border-dashed border-[#444] bg-[#121212] p-2 text-center rounded relative min-h-[80px] flex flex-col items-center justify-center">{section.data?.imageUrl && <img src={section.data.imageUrl} className="h-16 object-cover rounded mb-2" />}{uploadingSectionId === section.id ? <span className="text-xs text-[#F5C518]">جاري الرفع...</span> : <input type="file" className="text-[9px] w-full cursor-pointer" onChange={(e) => handleImageUpload(e.target.files[0], section.id)} />}</div></div>)}
-                                                    {inputs.includes('subtitle') && <div><label className="text-[10px] text-gray-500">عنوان فرعي</label><input value={section.subTitle || ""} onChange={(e) => updateSection(section.id, 'subTitle', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 text-xs rounded text-white" /></div>}
-                                                    {inputs.includes('description') && <div className="md:col-span-2"><label className="text-[10px] text-gray-500">الوصف</label><textarea value={section.data?.description || ""} onChange={(e) => updateSectionData(section.id, 'description', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 text-xs rounded text-white h-16 resize-none" /></div>}
-                                                    {inputs.includes('button') && <><div><label className="text-[10px] text-gray-500">نص الزر</label><input value={section.data?.buttonText || ""} onChange={(e) => updateSectionData(section.id, 'buttonText', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 text-xs rounded text-white" /></div><div><label className="text-[10px] text-gray-500">الرابط</label><input value={section.data?.link || ""} onChange={(e) => updateSectionData(section.id, 'link', e.target.value)} className="w-full bg-[#121212] border border-[#333] p-2 text-xs rounded text-white" /></div></>}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Draggable>
-                                );
-                            })}
-                            {provided.placeholder}
+                {/* 2. بيانات الهيرو الخاصة (تظهر فقط لو اخترت Hero) */}
+                {newSection.type === 'hero' ? (
+                    <div className="bg-[#222] p-4 rounded border border-dashed border-[#444]">
+                        <label className="text-xs text-[#f5c518] mb-2 block">روابط الصور/الفيديو (BBImage or MP4)</label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={tempHeroSlide}
+                                onChange={(e) => setTempHeroSlide(e.target.value)}
+                                placeholder="ضع رابط الصورة هنا..."
+                                className="flex-1 bg-[#111] border border-[#333] p-2 text-sm text-white rounded outline-none focus:border-[#f5c518]"
+                            />
+                            <button onClick={handleAddHeroSlide} className="bg-[#333] hover:bg-[#444] text-white px-3 rounded">+</button>
                         </div>
-                    )}
-                </Droppable>
-            </DragDropContext>
+                        <div className="mt-2 space-y-1">
+                            {newSection.heroSlides.map((slide, i) => (
+                                <div key={i} className="text-[10px] bg-[#111] p-1 px-2 rounded flex justify-between">
+                                    <span className="truncate w-3/4">{slide}</span>
+                                    <span className="text-red-500 cursor-pointer" onClick={() => setNewSection({...newSection, heroSlides: newSection.heroSlides.filter((_, idx) => idx !== i)})}>x</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* 2. العنوان والعنوان الفرعي (للأقسام العادية) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs text-gray-500">العنوان الرئيسي</label>
+                                <input 
+                                    value={newSection.title} 
+                                    onChange={(e) => setNewSection({...newSection, title: e.target.value})}
+                                    className="w-full bg-[#222] border border-[#333] p-2 text-sm rounded focus:border-[#f5c518] outline-none" 
+                                    placeholder="مثلاً: أحدث الفساتين"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500">العنوان الفرعي</label>
+                                <input 
+                                    value={newSection.subTitle} 
+                                    onChange={(e) => setNewSection({...newSection, subTitle: e.target.value})}
+                                    className="w-full bg-[#222] border border-[#333] p-2 text-sm rounded focus:border-[#f5c518] outline-none" 
+                                    placeholder="وصف بسيط..."
+                                />
+                            </div>
+                        </div>
+
+                        {/* 3. مصدر البيانات */}
+                        <div>
+                            <label className="text-xs text-gray-500">اختر المحتوى (Data Source)</label>
+                            <select 
+                                value={newSection.dataSource}
+                                onChange={(e) => setNewSection({...newSection, dataSource: e.target.value})}
+                                className="w-full bg-[#222] border border-[#333] p-2 text-sm rounded focus:border-[#f5c518] outline-none"
+                            >
+                                <option value="">-- اختر --</option>
+                                {newSection.type === 'products' && dbData.categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                {newSection.type === 'collection' && dbData.collections.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+
+                        {/* 4. صورة مخصصة */}
+                        <div>
+                            <label className="text-xs text-gray-500">صورة مخصصة (اختياري - رابط مباشر)</label>
+                            <input 
+                                value={newSection.mediaUrl}
+                                onChange={(e) => setNewSection({...newSection, mediaUrl: e.target.value})}
+                                className="w-full bg-[#222] border border-[#333] p-2 text-sm rounded focus:border-[#f5c518] outline-none text-left" 
+                                placeholder="https://..."
+                                dir="ltr"
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* 5. اختيار التصميم (Layout) */}
+                <div>
+                    <label className="text-xs text-gray-500 mb-2 block">شكل التصميم (Layout)</label>
+                    <div className="grid grid-cols-3 gap-2">
+                        {(layoutOptions[newSection.type === 'hero' ? 'hero' : (newSection.type === 'collection' ? 'collection' : 'products')] || []).map(layout => (
+                            <div 
+                                key={layout.id}
+                                onClick={() => setNewSection({...newSection, layout: layout.id})}
+                                className={`cursor-pointer p-2 rounded border text-center transition-all ${newSection.layout === layout.id ? 'bg-[#f5c518]/20 border-[#f5c518] text-[#f5c518]' : 'bg-[#222] border-[#333] hover:bg-[#333]'}`}
+                            >
+                                <div className="text-xl mb-1">{layout.icon}</div>
+                                <div className="text-[10px] font-bold">{layout.name}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <button 
+                    onClick={handleAddSection}
+                    className="w-full bg-[#f5c518] text-black font-black py-3 rounded mt-4 hover:bg-yellow-400 transition-colors shadow-lg"
+                >
+                    + إضافة القسم للمعاينة
+                </button>
+            </div>
         </div>
-        <div className="bg-[#1A1A1A] border border-[#333] rounded-xl p-4 sticky top-24 h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar">
-            <h3 className="font-bold text-[#F5C518] mb-4 border-b border-[#333] pb-2">إضافة قسم جديد</h3>
-            <div className="space-y-2">{availableTemplates.map(template => (<button key={template.id} onClick={() => handleAddSection(template)} className="w-full flex items-center gap-3 p-3 bg-[#121212] hover:bg-[#222] border border-[#333] hover:border-[#F5C518]/50 rounded transition-all text-right group"><span className="text-xl group-hover:scale-110 transition-transform">{template.icon}</span><div><div className="font-bold text-xs text-gray-300 group-hover:text-white">{template.name}</div></div></button>))}</div>
+
+        {/* === الجزء الأيسر: المعاينة والترتيب (Live Preview List) === */}
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white">هيكل الصفحة الحالي ({sections.length})</h2>
+                <button 
+                    onClick={handleSaveToDb}
+                    disabled={loading}
+                    className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold text-sm shadow-lg disabled:opacity-50"
+                >
+                    {loading ? 'جاري الحفظ...' : 'حفظ التغييرات 💾'}
+                </button>
+            </div>
+
+            {sections.length === 0 ? (
+                <div className="text-center py-20 border-2 border-dashed border-[#333] rounded-xl text-gray-600">
+                    الصفحة فارغة تماماً.. ابدأ بإضافة أول قسم من اليمين
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {sections.map((section, index) => (
+                        <div key={section.id} className="bg-[#1a1a1a] p-4 rounded-lg border border-[#333] flex justify-between items-center group hover:border-[#f5c518] transition-colors">
+                            <div className="flex items-center gap-4">
+                                <span className="bg-[#222] text-gray-500 w-8 h-8 flex items-center justify-center rounded-full font-mono text-xs border border-[#333]">{index + 1}</span>
+                                <div>
+                                    <h3 className="font-bold text-gray-200 text-sm">
+                                        {section.type === 'hero' ? 'Hero Section' : section.title}
+                                    </h3>
+                                    <div className="flex gap-2 text-[10px] text-gray-500 mt-1">
+                                        <span className="bg-[#222] px-1 rounded border border-[#333]">{section.type}</span>
+                                        <span className="bg-[#222] px-1 rounded border border-[#333]">{section.layout}</span>
+                                        {section.dataSource && <span className="text-[#f5c518]">({section.dataSource})</span>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {section.mediaUrl && <img src={section.mediaUrl} className="w-10 h-6 object-cover rounded border border-[#444]" alt="preview" />}
+                                <button onClick={() => handleDelete(section.id)} className="text-red-500 hover:text-red-400 p-2">✕</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
+
       </div>
     </div>
   );
