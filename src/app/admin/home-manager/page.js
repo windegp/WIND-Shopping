@@ -135,6 +135,9 @@ export default function AdminHomeManager() {
   const [editingId, setEditingId] = useState(null);
   const [dataLibrary, setDataLibrary] = useState({ products: [], categories: [] });
 
+  // إضافة حالة للتحكم في نوع اختيار المنتجات (كل المنتجات / أقسام)
+  const [productSource, setProductSource] = useState('all'); // 'all' or 'collections'
+
   const [newSection, setNewSection] = useState({
     title: '', subTitle: '', type: 'products', selectionMode: 'automated',
     selectedCategory: '', selectedItems: [], selectedCollections: [], layout: 'grid_default',
@@ -237,6 +240,7 @@ export default function AdminHomeManager() {
         setEditingId(null);
     } else { setSections([...sections, sectionData]); }
     setNewSection({ title: '', subTitle: '', type: 'products', selectionMode: 'automated', selectedCategory: '', selectedItems: [], selectedCollections: [], layout: 'grid_default' });
+    setProductSource('all');
   };
 
   return (
@@ -259,11 +263,11 @@ export default function AdminHomeManager() {
             </div>
         </div>
 
-      {/* --- Main Layout: Changed to `lg:grid-cols-12` to force split on laptops --- */}
+      {/* --- Main Layout --- */}
       <div className="max-w-[1920px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 items-start h-[calc(100vh-80px)]">
         
-        {/* === RIGHT PANEL (Inputs/Controls) - First in DOM = Right in RTL === */}
-        <div className="lg:col-span-5 h-full overflow-y-auto pb-32 pr-2 custom-scrollbar">
+        {/* === RIGHT PANEL (Inputs/Controls) - Expanded Width (col-span-6) === */}
+        <div className="lg:col-span-6 h-full overflow-y-auto pb-32 pr-2 custom-scrollbar">
           <div className="bg-neutral-900/60 backdrop-blur-sm p-6 rounded-3xl border border-white/5 shadow-2xl relative">
             
             <div className="flex items-center justify-between mb-6">
@@ -275,6 +279,7 @@ export default function AdminHomeManager() {
             </div>
 
             <div className="space-y-6">
+                {/* 1. العناوين */}
                 <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-[11px] text-neutral-400 font-medium mr-1">العنوان الرئيسي</label>
@@ -286,11 +291,54 @@ export default function AdminHomeManager() {
                     </div>
                 </div>
 
-                <div className="bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800 flex relative">
-                    <button onClick={() => setNewSection({...newSection, type: 'products'})} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${newSection.type === 'products' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>منتجات 👕</button>
-                    <button onClick={() => setNewSection({...newSection, type: 'collections_list'})} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${newSection.type === 'collections_list' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>محتوى عام 📚</button>
+                {/* 2. نوع المحتوى واختياراته */}
+                <div className="space-y-4">
+                     <label className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mr-1">نوع المحتوى</label>
+                     <div className="bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800 flex relative">
+                        <button onClick={() => { setNewSection({...newSection, type: 'products'}); setProductSource('all'); }} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${newSection.type === 'products' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>منتجات 👕</button>
+                        <button onClick={() => setNewSection({...newSection, type: 'collections_list'})} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${newSection.type === 'collections_list' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>محتوى عام 📚</button>
+                    </div>
+
+                    {/* خيارات المنتجات */}
+                    {newSection.type === 'products' && (
+                        <div className="space-y-3 px-2">
+                             <div className="flex gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="prodSource" checked={productSource === 'all'} onChange={() => { setProductSource('all'); setNewSection({...newSection, selectionMode: 'automated', selectedCategory: ''}) }} className="accent-amber-500" />
+                                    <span className="text-xs text-neutral-300 font-medium">كل المنتجات (آلي)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="prodSource" checked={productSource === 'collections'} onChange={() => setProductSource('collections')} className="accent-amber-500" />
+                                    <span className="text-xs text-neutral-300 font-medium">أقسام مرتبطة</span>
+                                </label>
+                             </div>
+
+                             {/* قائمة الأقسام المرتبطة (تظهر فقط عند اختيارها) */}
+                             {productSource === 'collections' && (
+                                <div className="mt-2 bg-neutral-950 p-3 rounded-xl border border-neutral-800 max-h-40 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-2">
+                                    {dataLibrary.categories.map(cat => (
+                                        <label key={cat} className={`p-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
+                                            {cat} <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
+                                        </label>
+                                    ))}
+                                </div>
+                             )}
+                        </div>
+                    )}
+
+                    {/* خيارات المحتوى العام (تظهر القائمة مباشرة) */}
+                    {newSection.type === 'collections_list' && (
+                         <div className="mt-2 bg-neutral-950 p-3 rounded-xl border border-neutral-800 max-h-40 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-2">
+                            {dataLibrary.categories.map(cat => (
+                                <label key={cat} className={`p-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500 text-black border-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
+                                    {cat} <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
+                                </label>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
+                {/* 3. التصميم والمعاينة */}
                 <div className="space-y-2">
                     <label className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mr-1">اختر التصميم</label>
                     <div className="relative group">
@@ -305,52 +353,6 @@ export default function AdminHomeManager() {
                      <WINDVisualMockup section={newSection} />
                 </div>
 
-                <div className="bg-neutral-950 p-5 rounded-2xl border border-neutral-800 space-y-4">
-                    {newSection.type === 'products' ? (
-                        <div className="space-y-5">
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">1. المصدر الآلي</label>
-                                <select value={newSection.selectedCategory} onChange={e => setNewSection({...newSection, selectedCategory: e.target.value, selectionMode: 'automated'})} className="w-full bg-neutral-900 border border-neutral-800 p-2.5 rounded-lg text-xs font-bold text-white outline-none focus:border-amber-500/50">
-                                    <option value="">-- عرض كل المنتجات --</option>
-                                    {dataLibrary.categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">أو اختر يدوياً ({newSection.selectedItems.length})</label>
-                                <div className="max-h-32 overflow-y-auto pr-2 space-y-1.5 custom-scrollbar bg-neutral-900/50 p-2 rounded-lg border border-white/5">
-                                    {dataLibrary.products.map(p => (
-                                        <label key={p.id} className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${newSection.selectedItems.includes(p.id) ? 'bg-amber-500/10 border-amber-500/30' : 'bg-transparent border-transparent hover:bg-white/5'}`}>
-                                            <span className="text-[10px] font-medium truncate w-4/5 text-neutral-300">{p.title}</span>
-                                            <input type="checkbox" checked={newSection.selectedItems.includes(p.id)} onChange={() => { toggleItem(p.id, 'selectedItems'); setNewSection(prev => ({...prev, selectionMode: 'manual'})); }} className="w-3.5 h-3.5 accent-amber-500 bg-neutral-800 border-neutral-600 rounded" />
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="pt-4 border-t border-white/5 space-y-2">
-                                 <label className="text-[10px] text-amber-500 font-bold uppercase tracking-wider flex items-center gap-2"><span>🔗</span> أقسام مرتبطة (فلاتر/دوائر)</label>
-                                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                    {dataLibrary.categories.map(cat => (
-                                        <label key={cat} className={`p-2 rounded-lg border text-[9px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-white text-black border-white' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
-                                            {cat} <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">اختر الكولكشنات للعرض</label>
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                {dataLibrary.categories.map(cat => (
-                                    <label key={cat} className={`p-3 rounded-xl border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500 text-black border-amber-500 shadow-lg shadow-amber-500/20' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
-                                        {cat} <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
                 <button onClick={handleAddOrUpdate} className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-black font-black py-4 rounded-xl text-sm uppercase tracking-widest hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-amber-500/20">
                     {editingId ? "حفظ التعديلات ✓" : "إضافة القسم للقائمة +"}
                 </button>
@@ -358,8 +360,8 @@ export default function AdminHomeManager() {
           </div>
         </div>
 
-        {/* === LEFT PANEL (Structure List) - Second in DOM = Left in RTL === */}
-        <div className="lg:col-span-7 h-full overflow-y-auto pb-32 custom-scrollbar pl-2">
+        {/* === LEFT PANEL (Structure List) - Smaller Width (col-span-6) === */}
+        <div className="lg:col-span-6 h-full overflow-y-auto pb-32 custom-scrollbar pl-2">
             <div className="sticky top-0 bg-neutral-950/80 backdrop-blur-md z-20 pb-4 mb-2 border-b border-white/5 flex justify-between items-end">
                  <h2 className="text-xs font-black text-neutral-500 uppercase tracking-[0.4em]">هيكل الصفحة ({sections.length})</h2>
             </div>
@@ -373,7 +375,7 @@ export default function AdminHomeManager() {
                     {sections.map((s, i) => (
                         <div key={s.id} className="group relative bg-neutral-900/40 hover:bg-neutral-900/80 border border-white/5 hover:border-white/10 rounded-2xl p-1 transition-all duration-200">
                             <div className="flex items-stretch">
-                                {/* Order Number & Controls (Arrows added here) */}
+                                {/* Order Number & Controls (Arrows) */}
                                 <div className="flex flex-col items-center justify-center w-12 border-l border-white/5 ml-2 gap-2">
                                     <button onClick={() => moveSection(i, 'up')} disabled={i === 0} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors">▲</button>
                                     <span className="text-[10px] font-mono text-neutral-400 font-bold">{(i+1).toString().padStart(2, '0')}</span>
