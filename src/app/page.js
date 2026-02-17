@@ -101,15 +101,35 @@ export default function Home() {
     setReviewLoading(false);
   };
 
-  // --- محرك عرض الأقسام الديناميكية (Dynamic Render Engine) ---
-  // هذا الجزء يعرض الأقسام بناءً على ما اخترته في لوحة التحكم
+// --- محرك عرض الأقسام الديناميكية (Dynamic Render Engine) ---
   const RenderDynamicSection = ({ section }) => {
     let data = [];
+    
+    // منطق الفلترة الذكي الجديد (Products Logic)
     if (section.type === 'products') {
-        data = section.selectionMode === 'manual' 
-            ? allProducts.filter(p => section.selectedItems?.includes(p.id)) 
-            : allProducts.filter(p => p.category === section.selectedCategory || p.categories?.includes(section.selectedCategory));
+        // الحالة 1: اختيار يدوي (Manual)
+        if (section.selectionMode === 'manual' && section.selectedItems?.length > 0) {
+             data = allProducts.filter(p => section.selectedItems.includes(p.id));
+        } 
+        // الحالة 2: أقسام مرتبطة (Related Collections) - الجديد
+        else if (section.selectedCollections?.length > 0) {
+             data = allProducts.filter(p => 
+                // نتأكد إن المنتج ينتمي لأحد الأقسام المختارة
+                section.selectedCollections.includes(p.category) || 
+                section.selectedCollections.includes(p.collection) ||
+                (p.categories && p.categories.some(c => section.selectedCollections.includes(c)))
+             );
+        }
+        // الحالة 3: فئة واحدة (Legacy/Automated)
+        else if (section.selectedCategory) {
+             data = allProducts.filter(p => p.category === section.selectedCategory || p.categories?.includes(section.selectedCategory));
+        }
+        // الحالة 4: (Default) عرض أحدث المنتجات لو مفيش أي تحديد
+        else {
+             data = allProducts.slice(0, 10);
+        }
     }
+    
     const sectionLink = section.type === 'products' ? `/collections/${section.selectedCategory || 'all'}` : '#';
 
     return (

@@ -278,22 +278,56 @@ export default function AdminHomeManager() {
     setSections(newArr);
   };
 
-  const handleAddOrUpdate = () => {
+const handleAddOrUpdate = () => {
     if (!newSection.title) return alert("يرجى إدخال العنوان الرئيسي");
     
-    // تصحيح النوع قبل الحفظ بناءً على التبويب المختار
+    // تصحيح النوع وتنظيف البيانات المتضاربة قبل الحفظ
     let finalType = 'products';
+    let finalSelectionMode = newSection.selectionMode;
+    let finalSelectedItems = newSection.selectedItems;
+    let finalSelectedCollections = newSection.selectedCollections;
+    let finalSelectedCategory = newSection.selectedCategory;
+
+    // 1. إذا كان التبويب "أقسام" أو "محتوى عام"
     if (contentTypeTab === 'categories' || contentTypeTab === 'general') {
         finalType = 'collections_list';
+        // في هذه الحالة لا نحتاج لمنتجات ولا فئة
+        finalSelectedItems = [];
+        finalSelectedCategory = '';
+    } 
+    // 2. إذا كان التبويب "منتجات"
+    else if (contentTypeTab === 'products') {
+        finalType = 'products';
+        // نحدد بناءً على مصدر المنتجات المختار
+        if (productSourceTab === 'all_products') {
+            // اختيار يدوي للمنتجات
+            finalSelectionMode = 'manual';
+            finalSelectedCollections = []; // تصفير الأقسام المرتبطة لمنع التضارب
+            finalSelectedCategory = ''; 
+        } else if (productSourceTab === 'related_collections') {
+            // اختيار أقسام مرتبطة
+            finalSelectionMode = 'automated'; // نعتبرها أوتوماتيكية بناء على الأقسام
+            finalSelectedItems = []; // تصفير المنتجات اليدوية
+            finalSelectedCategory = ''; 
+        }
     }
 
-    const sectionData = { ...newSection, type: finalType, id: editingId || Date.now().toString() };
+    const sectionData = { 
+        ...newSection, 
+        type: finalType,
+        selectionMode: finalSelectionMode,
+        selectedItems: finalSelectedItems,
+        selectedCollections: finalSelectedCollections,
+        selectedCategory: finalSelectedCategory,
+        id: editingId || Date.now().toString() 
+    };
+
     if (editingId) {
         setSections(sections.map(s => s.id === editingId ? sectionData : s));
         setEditingId(null);
     } else { setSections([...sections, sectionData]); }
     
-    // Reset
+    // إعادة تعيين الحقول
     setNewSection({ title: '', subTitle: '', type: 'products', selectionMode: 'automated', selectedCategory: '', selectedItems: [], selectedCollections: [], layout: 'grid_default' });
     setContentTypeTab('products');
     setProductSourceTab('all_products');
