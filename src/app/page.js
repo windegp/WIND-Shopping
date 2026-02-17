@@ -8,11 +8,10 @@ import Link from 'next/link';
 
 // استيراد إعدادات Firebase
 import { db, storage } from "../lib/firebase";
-// تم إضافة doc و getDoc هنا 👇
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// --- تأثيرات الحركة (CSS في JS) - كما هي تماماً ---
+// --- تأثيرات الحركة (CSS في JS) ---
 const styles = {
   kenBurns: {
     animation: 'kenburns 20s infinite alternate',
@@ -23,7 +22,7 @@ const styles = {
   }
 };
 
-// --- مكون الهيدر - كما هو تماماً ---
+// --- مكون الهيدر ---
 const SectionHeader = ({ title, subTitle, link = "#" }) => (
   <div className="flex items-center justify-between mb-6 px-4 pt-10" dir="rtl">
     <div className="flex items-center gap-3">
@@ -48,10 +47,10 @@ export default function Home() {
   // الحالة الجديدة لحفظ المنتجات القادمة من Firebase
   const [allProducts, setAllProducts] = useState(staticProducts);
   
-  // --- إضافة: حالة لحفظ الأقسام الديناميكية من لوحة التحكم ---
+  // حالة لحفظ الأقسام الديناميكية من لوحة التحكم
   const [dynamicSections, setDynamicSections] = useState([]);
 
-  // --- تصنيف المنتجات بناءً على البيانات (للاستخدام في الأقسام الثابتة المتبقية) ---
+  // --- تصنيف المنتجات بناءً على البيانات ---
   const bestSellers = allProducts.slice(0, 8); 
   const newArrivals = allProducts.filter(p => p.categories?.includes('new-arrivals')).slice(0, 10);
   const topRated = allProducts.filter(p => parseFloat(p.rating) >= 4.5 || p.featured === true);
@@ -96,7 +95,7 @@ export default function Home() {
     `;
     document.head.appendChild(styleSheet);
 
-    // --- إضافة: جلب إعدادات الصفحة الرئيسية (الأقسام الديناميكية) ---
+    // --- جلب إعدادات الصفحة الرئيسية (الأقسام الديناميكية) ---
     const fetchPageSettings = async () => {
       try {
         const docRef = doc(db, "settings", "homePage");
@@ -126,6 +125,8 @@ export default function Home() {
           return {
             id: doc.id,
             ...data,
+            // توحيد مصفوفة الفئات لتسهيل الفلترة
+            searchCategories: (data.categories || []).map(c => c.toLowerCase().trim()),
             image: data.images ? data.images[0] : data.image 
           };
         });
@@ -174,9 +175,9 @@ export default function Home() {
   };
 
   return (
-    <main className="pb-20 bg-[#121212] min-h-screen text-white relative" dir="rtl">
+    <main className="pb-20 bg-[#121212] min-h-screen text-white relative font-cairo" dir="rtl">
       
-      {/* ===== REVIEW POPUP MODAL - كما هو تماماً ===== */}
+      {/* ===== REVIEW POPUP MODAL ===== */}
       {isReviewModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={styles.modalOverlay}>
           <div className="bg-[#1A1A1A] w-full max-w-lg rounded-sm border border-[#F5C518] shadow-[0_0_30px_rgba(245,197,24,0.1)] relative animate-[fadeIn_0.3s_ease-out]">
@@ -221,15 +222,21 @@ export default function Home() {
 
       <HeroSection />
 
-      {/* --- 1. الأقسام الديناميكية (من لوحة التحكم) --- */}
-      {/* هذا الجزء يستبدل السيكشن الثابت ويعرض كل الأقسام التي تنشئها في الآدمن */}
+      {/* --- 1. الأقسام الديناميكية (المصلحة) --- */}
       {dynamicSections.length > 0 ? (
         dynamicSections.map((section, index) => {
-          // تصفية المنتجات حسب القسم والاستثناءات
-          const displayProducts = allProducts.filter(p => 
-            p.categories?.includes(section.slug) && 
-            !section.excludedIds?.includes(p.id)
-          ).slice(0, 10);
+          // فلترة ذكية: تحويل slug القسم والمنتجات لـ lowercase لضمان التطابق
+          const sectionSlug = section.slug?.toLowerCase().trim();
+          
+          const displayProducts = allProducts.filter(p => {
+             const hasCategory = p.searchCategories?.includes(sectionSlug) || 
+                                p.category?.toLowerCase().trim() === sectionSlug;
+             const isNotExcluded = !section.excludedIds?.includes(p.id);
+             return hasCategory && isNotExcluded;
+          }).slice(0, 10);
+
+          // الحل الجذري: إذا كان القسم فارغاً، لا ترسمه نهائياً (Return null)
+          if (displayProducts.length === 0) return null;
 
           const sectionLink = section.type === 'collection' 
             ? `/collections/${section.slug}` 
@@ -239,22 +246,18 @@ export default function Home() {
             <section key={section.id || index} className="my-10">
               <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
               <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-                {displayProducts.length > 0 ? (
-                  displayProducts.map((product) => (
+                  {displayProducts.map((product) => (
                     <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
                       <ProductCard {...product} image={product.images?.[0] || product.image} />
                     </div>
-                  ))
-                ) : (
-                  <p className="text-gray-600 text-xs px-4">جاري إضافة منتجات لهذا القسم...</p>
-                )}
+                  ))}
               </div>
             </section>
           );
         })
       ) : (
-        /* في حال لم يتم إعداد أقسام بعد، يظهر القسم الافتراضي */
-        <section>
+        /* القسم الافتراضي يظهر فقط إذا كانت المصفوفة فارغة تماماً */
+        <section className="my-10">
           <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
           <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
             {newArrivals.map((product) => (
@@ -280,7 +283,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. الأكثر مبيعاً في WIND */}
+      {/* 3. الأكثر مبيعاً */}
       <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
         <div className="px-4 mb-4" dir="rtl">
             <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">الأكثر مبيعاً</h2>
@@ -300,7 +303,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. شريط الثقة - كما هو تماماً */}
+      {/* 4. شريط الثقة */}
       <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
         <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
           <div className="group">
@@ -326,7 +329,7 @@ export default function Home() {
         <CollectionsSection />
       </div>
 
-      {/* 6. آراء وتجارب عائلة WIND - كما هو تماماً */}
+      {/* 6. آراء عائلة WIND */}
       <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
@@ -358,7 +361,6 @@ export default function Home() {
                       <h4 className="text-white font-black text-sm">{rev.userName}</h4>
                       <div className="flex gap-0.5 mt-1">
                         {[...Array(5)].map((_, i) => (<span key={i} className="text-[#F5C518] text-[10px]">★</span>))}
-                        <span className="text-gray-500 text-[9px] mr-2 italic">({rev.rating}/10)</span>
                       </div>
                     </div>
                   </div>
@@ -370,9 +372,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7.  تم حذف "وصل حديثاً" المكرر هنا لأنه سيظهر في الأقسام الديناميكية بالأعلى إذا أردت */}
-
-      {/* 8. Magazine Style - كما هو تماماً */}
+      {/* 8. Magazine Style */}
       <section className="px-4 max-w-[1280px] mx-auto my-16">
         <SectionHeader title="WIND Magazine" subTitle="مقالات في الأناقة" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
@@ -397,7 +397,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 10. قصة WIND - كما هو تماماً */}
+      {/* 10. قصة WIND */}
       <section className="relative h-[400px] overflow-hidden border-t border-[#333]">
         <div className="absolute inset-0 bg-black/50 z-10"></div>
         <img 
@@ -417,26 +417,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 11 & 12. تسوق حسب الفئة (ثابت في الفوتر) */}
+      {/* 11 & 12. تسوق حسب الفئة */}
       <div className="bg-[#151515] py-12 border-t border-[#222]">
         <SectionHeader title="تسوق حسب الفئة" />
         <div className="px-4 grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
-           <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
+            <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
               <h3 className="text-2xl font-black text-white mb-4 z-10 relative">فساتين WIND</h3>
               <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
                  {dresses.slice(0,5).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
               </div>
-           </div>
-           <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
+            </div>
+            <div className="bg-[#121212] p-6 border border-[#333] relative overflow-hidden">
               <h3 className="text-2xl font-black text-white mb-4 z-10 relative">البلوزات العصرية</h3>
               <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x relative z-10" dir="ltr">
                  {blouses.slice(0,5).map(p => <div key={p.id} className="min-w-[140px]"><ProductCard {...p} /></div>)}
               </div>
-           </div>
+            </div>
         </div>
       </div>
 
-      {/* 13. تخفيضات شتوية */}
+      {/* 13. تخفيضات */}
       <section className="py-12 px-4">
         <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest">
           تخفيضات WIND الحصرية - لفترة محدودة
@@ -445,6 +445,11 @@ export default function Home() {
           {discounts.slice(0, 8).map((product) => <ProductCard key={product.id} {...product} />)}
         </div>
       </section>
+
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        .font-cairo { font-family: 'Cairo', sans-serif; }
+      `}</style>
     </main>
   );
 }
