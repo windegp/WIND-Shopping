@@ -21,7 +21,8 @@ export default function AdminHomeManager() {
     const { layout, title, subTitle } = section;
     
     return (
-      <div className="w-full bg-[#0d0d0d] rounded-3xl p-6 border border-white/5 space-y-6 overflow-hidden transition-all duration-500">
+      // تم تعديل الخلفية والظل لتظهر بوضوح داخل الصفحة السوداء
+      <div className="w-full bg-[#1A1A1A] rounded-3xl p-6 border border-white/10 shadow-2xl space-y-6 overflow-hidden transition-all duration-500">
         {/* الهيدر الأصلي الخاص بك */}
         <div className="flex items-center justify-between px-2" dir="rtl">
           <div className="flex items-center gap-3">
@@ -37,33 +38,38 @@ export default function AdminHomeManager() {
         </div>
 
         {/* رسم الأنماط الجديدة كلياً */}
-        <div className="px-2 min-h-[120px]">
+        <div className="px-2 min-h-[140px] flex flex-col justify-center">
             {/* الأكثر مبيعاً - ستايل 1/3 و 2/3 */}
             {layout === 'bestseller_split' && (
-                <div className="flex gap-4 h-40">
-                    <div className="w-1/3 bg-[#F5C518]/10 border border-[#F5C518]/30 rounded-xl relative">
-                        <div className="absolute top-2 right-2 bg-[#F5C518] w-8 h-3 rounded-full"></div>
+                <div className="flex gap-4 h-40 w-full">
+                    <div className="w-1/3 bg-[#F5C518]/5 border border-[#F5C518]/20 rounded-2xl relative overflow-hidden">
+                        <div className="absolute top-3 right-3 bg-[#F5C518] px-2 py-1 text-[8px] text-black font-bold rounded-md z-10">#1</div>
+                        <div className="w-full h-full opacity-50 bg-gradient-to-t from-black/80 to-transparent absolute bottom-0"></div>
                     </div>
-                    <div className="w-2/3 grid grid-cols-2 gap-2">
-                        {[...Array(4)].map((_, i) => <div key={i} className="bg-white/5 rounded-lg border border-white/5"></div>)}
+                    <div className="w-2/3 grid grid-cols-2 gap-3">
+                        {[...Array(4)].map((_, i) => <div key={i} className="bg-white/5 rounded-xl border border-white/5 hover:border-[#F5C518]/30 transition-all"></div>)}
                     </div>
                 </div>
             )}
 
             {/* ماركي لا نهائي - التشكيلة الجديدة */}
             {layout === 'infinite_marquee' && (
-                <div className="py-6 border-y border-white/5 flex gap-4 animate-pulse overflow-hidden">
-                    {[...Array(6)].map((_, i) => <div key={i} className="min-w-[80px] aspect-[3/4] bg-white/5 rounded-xl"></div>)}
+                <div className="py-6 border-y border-white/5 flex gap-4 overflow-hidden relative">
+                    <div className="flex gap-4 w-full animate-pulse">
+                        {[...Array(6)].map((_, i) => <div key={i} className="min-w-[100px] aspect-[3/4] bg-white/5 rounded-2xl border border-white/5"></div>)}
+                    </div>
                 </div>
             )}
 
             {/* شريط الثقة WIND */}
             {layout === 'trust_bar' && (
-                <div className="bg-gradient-to-r from-transparent via-white/5 to-transparent py-6 border-y border-white/10 flex justify-around">
+                <div className="bg-gradient-to-r from-transparent via-white/5 to-transparent py-8 border-y border-white/10 flex justify-between items-center px-4">
                     {[...Array(3)].map((_, i) => (
-                        <div key={i} className="flex flex-col items-center gap-1">
-                            <div className="w-8 h-4 bg-white/20 rounded-md"></div>
-                            <div className="w-12 h-2 bg-white/5 rounded-full"></div>
+                        <div key={i} className="flex flex-col items-center gap-2 group">
+                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-[#F5C518] transition-colors">
+                                <div className="w-4 h-4 bg-white/50 rounded-sm"></div>
+                            </div>
+                            <div className="w-16 h-2 bg-white/10 rounded-full"></div>
                         </div>
                     ))}
                 </div>
@@ -71,26 +77,30 @@ export default function AdminHomeManager() {
 
             {/* مجلة ويند - Magazine Grid */}
             {layout === 'magazine_grid' && (
-                <div className="grid grid-cols-2 gap-2 h-32">
-                    <div className="bg-white/5 rounded-xl relative overflow-hidden">
-                        <div className="absolute bottom-2 right-2 w-12 h-2 bg-[#F5C518] rounded-full"></div>
+                <div className="grid grid-cols-2 gap-4 h-40">
+                    <div className="bg-white/5 rounded-2xl relative overflow-hidden border border-white/5 group">
+                        <div className="absolute inset-0 bg-black/40"></div>
+                        <div className="absolute bottom-4 right-4 w-20 h-3 bg-[#F5C518] rounded-sm"></div>
+                        <div className="absolute bottom-10 right-4 w-3/4 h-3 bg-white/80 rounded-sm"></div>
                     </div>
-                    <div className="bg-white/5 rounded-xl relative overflow-hidden">
-                        <div className="absolute bottom-2 right-2 w-12 h-2 bg-[#F5C518] rounded-full"></div>
+                    <div className="bg-white/5 rounded-2xl relative overflow-hidden border border-white/5 group">
+                        <div className="absolute inset-0 bg-black/40"></div>
+                        <div className="absolute bottom-4 right-4 w-20 h-3 bg-[#F5C518] rounded-sm"></div>
+                        <div className="absolute bottom-10 right-4 w-3/4 h-3 bg-white/80 rounded-sm"></div>
                     </div>
                 </div>
             )}
 
             {/* آراء العملاء - Testimonials */}
             {layout === 'review_marquee' && (
-                <div className="flex gap-4 py-4 overflow-hidden">
-                    {[...Array(2)].map((_, i) => (
-                        <div key={i} className="min-w-[150px] bg-white/5 p-3 rounded-xl border border-white/10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-6 h-6 rounded-full bg-[#F5C518]/20"></div>
-                                <div className="w-10 h-2 bg-white/20 rounded-full"></div>
+                <div className="flex gap-4 py-4 overflow-hidden mask-linear-fade">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="min-w-[180px] bg-[#111] p-4 rounded-2xl border border-white/10 flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#F5C518]/20 border border-[#F5C518]/50"></div>
+                                <div className="w-16 h-2 bg-white/20 rounded-full"></div>
                             </div>
-                            <div className="w-full h-8 bg-white/5 rounded-md"></div>
+                            <div className="w-full h-12 bg-white/5 rounded-lg"></div>
                         </div>
                     ))}
                 </div>
@@ -98,22 +108,33 @@ export default function AdminHomeManager() {
 
             {/* قصة ويند - Story Banner */}
             {layout === 'story_banner' && (
-                <div className="h-40 bg-white/5 rounded-[2rem] flex flex-col items-center justify-center p-6 text-center border border-white/10">
-                    <div className="text-[#F5C518] text-2xl font-black mb-2 italic">WIND STORY</div>
-                    <div className="w-3/4 h-2 bg-white/10 rounded-full mb-1"></div>
-                    <div className="w-1/2 h-2 bg-white/10 rounded-full"></div>
+                <div className="h-48 bg-[#111] rounded-[2rem] flex flex-col items-center justify-center p-8 text-center border border-white/10 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    <div className="text-[#F5C518] text-3xl font-black mb-4 italic tracking-tighter relative z-10">WIND STORY</div>
+                    <div className="w-2/3 h-2 bg-white/10 rounded-full mb-2 relative z-10"></div>
+                    <div className="w-1/3 h-2 bg-white/10 rounded-full relative z-10"></div>
                 </div>
             )}
 
             {/* الأنماط التقليدية السابقة */}
             {layout === 'grid_default' && (
-                <div className="grid grid-cols-4 gap-2">
-                    {[...Array(4)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-xl border border-white/5"></div>)}
+                <div className="grid grid-cols-4 gap-3">
+                    {[...Array(4)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-2xl border border-white/5 hover:border-[#F5C518]/40 transition-all"></div>)}
                 </div>
             )}
             {layout === 'imdb_posters' && (
-                <div className="flex gap-4">
-                    {[...Array(4)].map((_, i) => <div key={i} className="min-w-[80px] aspect-[2/3] bg-white/5 rounded-2xl"></div>)}
+                <div className="flex gap-4 overflow-hidden">
+                    {[...Array(5)].map((_, i) => <div key={i} className="min-w-[100px] aspect-[2/3] bg-white/5 rounded-2xl border border-white/5 relative">
+                         <div className="absolute bottom-3 right-3 w-8 h-2 bg-[#F5C518]/20 rounded-full"></div>
+                    </div>)}
+                </div>
+            )}
+             {layout === 'bento_modern' && (
+                <div className="grid grid-cols-4 grid-rows-2 gap-2 h-40">
+                    <div className="col-span-2 row-span-2 bg-[#F5C518]/10 rounded-3xl border border-[#F5C518]/20 relative"><div className="absolute bottom-4 right-4 bg-[#F5C518] text-black text-[8px] font-black px-2 py-1 rounded">HOT</div></div>
+                    <div className="col-span-2 row-span-1 bg-white/5 rounded-3xl border border-white/5"></div>
+                    <div className="col-span-1 row-span-1 bg-white/5 rounded-3xl border border-white/5"></div>
+                    <div className="col-span-1 row-span-1 bg-[#F5C518] rounded-3xl flex items-center justify-center text-black font-black text-[8px]">WIND</div>
                 </div>
             )}
         </div>
@@ -121,7 +142,6 @@ export default function AdminHomeManager() {
     );
   };
 
-  // --- تحديث قائمة الاستايلات لتشمل الاستايلات الجديدة ---
   const layoutOptions = {
     products: [
       { id: 'grid_default', name: 'WIND: أحدث الصيحات (Scroll)', icon: '▦' },
@@ -209,15 +229,19 @@ export default function AdminHomeManager() {
             {/* --- القائمة المنسدلة الجديدة للاستايلات --- */}
             <div className="space-y-3">
                 <label className="text-[10px] font-black text-gray-500 mr-2 uppercase tracking-widest">اختر ستايل العرض (Style Selector)</label>
-                <select 
-                    value={newSection.layout} 
-                    onChange={e => setNewSection({...newSection, layout: e.target.value})}
-                    className="w-full bg-black border-2 border-white/10 p-5 rounded-2xl text-sm font-black text-[#F5C518] focus:border-[#F5C518] transition-all outline-none appearance-none cursor-pointer"
-                >
-                    {(layoutOptions[newSection.type] || []).map(l => (
-                        <option key={l.id} value={l.id} className="bg-[#111] text-white">{l.icon} {l.name}</option>
-                    ))}
-                </select>
+                {/* تم إصلاح استايل القائمة لتظهر بوضوح */}
+                <div className="relative">
+                    <select 
+                        value={newSection.layout} 
+                        onChange={e => setNewSection({...newSection, layout: e.target.value})}
+                        className="w-full bg-[#0a0a0a] border-2 border-[#222] p-5 rounded-2xl text-sm font-black text-[#F5C518] focus:border-[#F5C518] transition-all outline-none appearance-none cursor-pointer"
+                    >
+                        {(layoutOptions[newSection.type] || []).map(l => (
+                            <option key={l.id} value={l.id} className="bg-[#111] text-white py-2">{l.icon} ➖ {l.name}</option>
+                        ))}
+                    </select>
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">▼</div>
+                </div>
                 <div className="text-[9px] text-gray-500 italic px-2">* سيظهر شكل التصميم المختار بالأسفل مباشرة قبل الحفظ.</div>
             </div>
 
