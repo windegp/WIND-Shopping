@@ -7,7 +7,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import HeroSection from "../components/sections/HeroSection";
 import ProductCard from "../components/products/ProductCard";
 
-// --- 1. إعدادات التصميم (مكون الهيدر الثابت) ---
+// --- مكون الهيدر الموحد ---
 const SectionHeader = ({ title, subTitle, link = "#" }) => (
   <div className="flex items-center justify-between mb-8 px-4 pt-10 font-cairo" dir="rtl">
     <div className="flex items-center gap-3">
@@ -31,20 +31,23 @@ export default function Home() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // حالات المودال الخاص بالتقييم (من الكود الخاص بك)
+  // حالات المودال
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false); 
   const [newReview, setNewReview] = useState({ name: '', comment: '', rating: 10, image: null });
   const [reviewLoading, setReviewLoading] = useState(false);
 
-  // --- 2. جلب البيانات (الأقسام + المنتجات + التقييمات) ---
+  // --- تجهيز البيانات للاستايل الافتراضي (في حال عدم وجود أقسام ديناميكية) ---
+  const bestSellers = products.slice(0, 8); 
+  const newArrivals = products.slice(0, 10);
+  const discounts = products.filter(p => p.compareAtPrice > p.price).slice(0, 8);
+
+  // --- جلب البيانات ---
   useEffect(() => {
-    // جلب ترتيب الصفحة من لوحة التحكم
     const settingsUnsub = onSnapshot(doc(db, "settings", "homePage_v2"), (snap) => {
         if (snap.exists()) setSections(snap.data().sections || []);
         setLoading(false);
     });
     
-    // جلب المنتجات
     const productsUnsub = onSnapshot(query(collection(db, "products"), orderBy("createdAt", "desc")), (snap) => {
         setProducts(snap.docs.map(d => ({ 
             id: d.id, 
@@ -53,7 +56,6 @@ export default function Home() {
         })));
     });
 
-    // جلب التقييمات
     const reviewsUnsub = onSnapshot(query(collection(db, "reviews"), orderBy("timestamp", "desc")), (snap) => {
         setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -61,7 +63,7 @@ export default function Home() {
     return () => { settingsUnsub(); productsUnsub(); reviewsUnsub(); };
   }, []);
 
-  // --- 3. دالة رفع التقييم (من الكود الخاص بك) ---
+  // --- دالة رفع التقييم ---
   const handleSendReview = async (e) => {
     e.preventDefault();
     if (!newReview.name || !newReview.comment) return alert("يرجى إدخال الاسم والتعليق");
@@ -84,9 +86,8 @@ export default function Home() {
     setReviewLoading(false);
   };
 
-  // --- 4. محرك العرض (Render Engine) - يطبق الاستايلات حسب اختيارك ---
+  // --- محرك العرض (Render Engine) ---
   const RenderSection = ({ section }) => {
-    // تجهيز بيانات المنتجات للقسم الحالي
     let data = [];
     if (section.type === 'products') {
         data = section.selectionMode === 'manual' 
@@ -97,87 +98,66 @@ export default function Home() {
 
     return (
       <section className="mb-12 font-cairo max-w-[1600px] mx-auto overflow-hidden animate-fade-in relative">
-        
-        {/* إخفاء الهيدر التقليدي لبعض الاستايلات الخاصة */}
         {!['story_banner', 'trust_bar', 'infinite_marquee', 'review_marquee'].includes(section.layout) && (
             <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
         )}
 
-        {/* === [Style 1] الأكثر مبيعاً (تقسيم 1/3 و 2/3) === */}
+        {/* 1. الأكثر مبيعاً (1/3 & 2/3) */}
         {section.layout === 'bestseller_split' && (
              <div className="bg-[#181818] py-8 my-4 border-y border-[#222]">
                 <div className="px-4 mb-4" dir="rtl">
                     <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">{section.title}</h2>
                 </div>
                 <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto" dir="rtl">
-                    {/* الكارت الكبير */}
                     {data[0] && (
                         <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
                             <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأكثر طلباً #1</div>
                             <ProductCard {...data[0]} />
                         </div>
                     )}
-                    {/* الشبكة الصغيرة */}
                     <div className="md:w-2/3 w-full grid grid-cols-2 gap-3">
                         {data.slice(1, 5).map(p => (
-                            <div key={p.id} className="scale-95 origin-top hover:scale-100 transition-all duration-300">
-                                <ProductCard {...p} />
-                            </div>
+                            <div key={p.id} className="scale-95 origin-top hover:scale-100 transition-all duration-300"><ProductCard {...p} /></div>
                         ))}
                     </div>
                 </div>
              </div>
         )}
 
-        {/* === [Style 2] التشكيلة الجديدة (ماركي لانهائي) === */}
+        {/* 2. ماركي لانهائي */}
         {section.layout === 'infinite_marquee' && (
             <div className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
-                {/* تم استخدام الهيدر الخاص بك هنا */}
                 <SectionHeader title={section.title} subTitle={section.subTitle} />
-                <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
+                <div className="relative flex overflow-x-auto scrollbar-hide" dir="ltr">
                     <div className="flex gap-6 animate-marquee-infinite pause-on-hover">
-                        {/* تكرار المنتجات لعمل حلقة لانهائية */}
                         {[...data, ...data, ...data].slice(0, 12).map((p, index) => (
-                            <div key={`${p.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-90 hover:opacity-100 transition-opacity">
-                                <ProductCard {...p} />
-                            </div>
+                            <div key={`${p.id}-${index}`} className="min-w-[200px] md:min-w-[250px] opacity-90 hover:opacity-100 transition-opacity"><ProductCard {...p} /></div>
                         ))}
                     </div>
                 </div>
             </div>
         )}
 
-        {/* === [Style 3] شريط الثقة (Trust Bar) === */}
+        {/* 3. شريط الثقة */}
         {section.layout === 'trust_bar' && (
             <div className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
                 <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
-                    <div className="group">
-                        <h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">4.9<span className="text-sm text-gray-500">/5</span></h4>
-                        <p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">{section.title || "تقييم العملاء"}</p>
-                    </div>
+                    <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">4.9<span className="text-sm text-gray-500">/5</span></h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">{section.title || "تقييم العملاء"}</p></div>
                     <div className="w-px h-10 bg-[#333]"></div>
-                    <div className="group">
-                        <h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">+10k</h4>
-                        <p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">قطعة بيعت</p>
-                    </div>
+                    <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">+10k</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">قطعة بيعت</p></div>
                     <div className="w-px h-10 bg-[#333]"></div>
-                    <div className="group">
-                        <h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">100%</h4>
-                        <p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">ضمان الجودة</p>
-                    </div>
+                    <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">100%</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">ضمان الجودة</p></div>
                 </div>
             </div>
         )}
 
-        {/* === [Style 4] المجلة (Magazine Grid) === */}
+        {/* 4. المجلة */}
         {section.layout === 'magazine_grid' && (
             <div className="px-4 max-w-[1280px] mx-auto">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1" dir="rtl">
-                    {/* بيانات وهمية للمجلة أو يمكن ربطها بمدونة لاحقاً */}
                     {[{ id: 1, title: "كيفية تنسيق الفستان في الشتاء", tag: "نصائح", img: "/images/blog1.jpg" }, { id: 2, title: "رحلة WIND: من الفكرة إلى التصميم", tag: "قصتنا", img: "/images/blog2.jpg" }].map((art) => (
                         <div key={art.id} className="relative h-64 group cursor-pointer overflow-hidden bg-[#222]">
                             <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all z-10"></div>
-                            {/* تأثير Ken Burns عند الهوفر */}
                             <img src={art.img} onError={e => e.target.src='https://via.placeholder.com/600x400/222/555?text=WIND+MAGAZINE'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt="" />
                             <div className="absolute bottom-0 right-0 p-6 z-20 w-full bg-gradient-to-t from-black via-black/60 to-transparent text-right">
                                 <span className="bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 mb-2 inline-block">{art.tag}</span>
@@ -189,7 +169,7 @@ export default function Home() {
             </div>
         )}
 
-        {/* === [Style 5] آراء العملاء (Reviews Marquee) === */}
+        {/* 5. آراء العملاء */}
         {section.layout === 'review_marquee' && (
             <div className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222]">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
@@ -205,7 +185,6 @@ export default function Home() {
                     </div>
                     <div className="relative flex overflow-hidden pointer-events-none">
                         <div className="flex gap-6 animate-marquee pause-on-hover" dir="ltr">
-                            {/* تكرار التقييمات للحركة */}
                             {[...reviews, ...reviews].slice(0, 10).map((rev, index) => (
                                 <div key={`${rev.id}-${index}`} className="min-w-[300px] md:min-w-[400px] bg-[#121212] border border-[#333] p-6 rounded-lg hover:border-[#F5C518]/50 transition-all duration-500">
                                     <div className="flex items-center gap-4 mb-4" dir="rtl">
@@ -228,11 +207,10 @@ export default function Home() {
             </div>
         )}
 
-        {/* === [Style 6] قصة البراند (Story Banner) === */}
+        {/* 6. قصة البراند */}
         {section.layout === 'story_banner' && (
             <div className="relative h-[400px] overflow-hidden border-t border-[#333]">
                 <div className="absolute inset-0 bg-black/50 z-10"></div>
-                {/* استخدام كلاس الأنيميشن المضاف في الستايل بالأسفل */}
                 <img src="/images/story-bg.webp" onError={e => e.target.src='https://via.placeholder.com/1600x900/111/333?text=WIND+STORY'} className="absolute inset-0 w-full h-full object-cover animate-kenburns" alt="Story Background" />
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
                     <h2 className="text-[#F5C518] text-5xl md:text-7xl font-black mb-6 uppercase tracking-tighter mix-blend-screen opacity-90">{section.title}</h2>
@@ -244,7 +222,7 @@ export default function Home() {
             </div>
         )}
 
-        {/* === [Style 7] تخفيضات (Sale Grid) === */}
+        {/* 7. تخفيضات */}
         {section.layout === 'sale_grid' && (
              <div className="px-4">
                 <div className="bg-[#F5C518] text-black p-4 mb-6 text-center font-black text-xl uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,24,0.3)]">
@@ -256,7 +234,7 @@ export default function Home() {
              </div>
         )}
 
-        {/* === [Style 8] الاستايلات الأساسية (الشبكة، بوسترات، بنتو) === */}
+        {/* 8. الاستايلات الأساسية (الشبكة) */}
         {section.layout === 'grid_default' && (
              <div className="px-4">
                 <div className="flex overflow-x-auto pb-6 gap-4 scrollbar-hide snap-x" dir="rtl">
@@ -269,6 +247,7 @@ export default function Home() {
              </div>
         )}
         
+        {/* 9. بوسترات IMDb */}
         {section.layout === 'imdb_posters' && (
              <div className="px-4">
                  <div className="flex overflow-x-auto gap-4 md:gap-6 pb-8 scrollbar-hide snap-x" dir="rtl">
@@ -288,6 +267,7 @@ export default function Home() {
              </div>
         )}
 
+        {/* 10. بنتو Bento */}
         {section.layout === 'bento_modern' && data.length >= 3 && (
             <div className="px-4">
                  <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 h-auto md:h-[600px]" dir="rtl">
@@ -312,6 +292,7 @@ export default function Home() {
             </div>
         )}
 
+        {/* 11. الدوائر (الأقسام) */}
         {section.layout === 'circle_avatars' && (
              <div className="px-4">
                 <div className="flex overflow-x-auto gap-8 md:gap-12 px-4 py-4 scrollbar-hide justify-center" dir="rtl">
@@ -333,7 +314,6 @@ export default function Home() {
     );
   };
 
-  // --- شاشة التحميل ---
   if (loading) return (
     <div className="h-screen bg-[#121212] flex items-center justify-center">
         <span className="text-[#F5C518] text-2xl font-black animate-pulse tracking-[0.5em]">WIND LOADING...</span>
@@ -343,7 +323,7 @@ export default function Home() {
   return (
     <main className="pb-20 bg-[#121212] min-h-screen text-white relative font-cairo" dir="rtl">
       
-      {/* 1. مودال التقييمات (Review Modal) */}
+      {/* 1. مودال التقييمات */}
       {isReviewModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
           <div className="bg-[#1A1A1A] w-full max-w-lg rounded-sm border border-[#F5C518] shadow-[0_0_30px_rgba(245,197,24,0.1)] relative animate-[fadeIn_0.3s_ease-out]">
@@ -361,19 +341,62 @@ export default function Home() {
         </div>
       )}
 
-      {/* 2. Hero Section */}
+      {/* 2. الهيرو */}
       <HeroSection />
 
-      {/* 3. الأقسام الديناميكية (Dynamic Sections) */}
+      {/* 3. الأقسام (ديناميكية + احتياطية) */}
       <div className="mt-10">
         {sections.length > 0 ? (
             sections.map((section, index) => <RenderSection key={section.id || index} section={section} />)
         ) : (
-            <div className="text-center py-20 text-gray-500">جاري إعداد الواجهة...</div>
+            // --- الواجهة الاحتياطية (Static Fallback) إذا لم يكن هناك أقسام في الأدمن ---
+            <>
+                {/* أحدث الصيحات */}
+                <section className="mb-12 font-cairo max-w-[1600px] mx-auto overflow-hidden px-4">
+                    <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
+                    <div className="flex overflow-x-auto pb-6 gap-4 scrollbar-hide snap-x" dir="rtl">
+                        {newArrivals.map((product) => (
+                        <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
+                            <ProductCard {...product} />
+                        </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* الأكثر مبيعاً */}
+                <section className="bg-[#181818] py-8 my-4 border-y border-[#222]">
+                    <div className="px-4 mb-4" dir="rtl">
+                        <h2 className="text-xl md:text-2xl font-black text-white tracking-tight border-r-4 border-[#F5C518] pr-3">الأكثر مبيعاً</h2>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-6 px-4 max-w-[1400px] mx-auto" dir="rtl">
+                        {bestSellers[0] && (
+                        <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group">
+                            <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-xs px-2 py-1 z-10">الأكثر طلباً #1</div>
+                            <ProductCard {...bestSellers[0]} />
+                        </div>
+                        )}
+                        <div className="md:w-2/3 w-full grid grid-cols-2 gap-3">
+                            {bestSellers.slice(1, 5).map(p => (
+                                <div key={p.id} className="scale-95 origin-top"><ProductCard {...p} /></div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* شريط الثقة */}
+                <section className="bg-gradient-to-r from-[#121212] via-[#222] to-[#121212] py-8 border-y border-[#333] my-8">
+                    <div className="flex justify-around items-center max-w-4xl mx-auto text-center px-4">
+                        <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">4.9<span className="text-sm text-gray-500">/5</span></h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">تقييم العملاء</p></div>
+                        <div className="w-px h-10 bg-[#333]"></div>
+                        <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">+10k</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">قطعة بيعت</p></div>
+                        <div className="w-px h-10 bg-[#333]"></div>
+                        <div className="group"><h4 className="text-white group-hover:text-[#F5C518] transition-colors text-3xl font-black">100%</h4><p className="text-gray-400 text-[10px] mt-1 font-bold uppercase tracking-widest">ضمان الجودة</p></div>
+                    </div>
+                </section>
+            </>
         )}
       </div>
 
-      {/* Styles Global Injections */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         .font-cairo { font-family: 'Cairo', sans-serif; }
