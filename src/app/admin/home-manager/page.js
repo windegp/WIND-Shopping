@@ -299,6 +299,17 @@ export default function AdminHomeManager() {
     setNewSection({ ...newSection, [listType]: updatedList });
   };
 
+  // وظيفة جديدة لتحريك الأقسام (إضافة مسموحة)
+  const moveSection = (index, direction) => {
+    const newArr = [...sections];
+    if (direction === 'up' && index > 0) {
+        [newArr[index - 1], newArr[index]] = [newArr[index], newArr[index - 1]];
+    } else if (direction === 'down' && index < sections.length - 1) {
+        [newArr[index + 1], newArr[index]] = [newArr[index], newArr[index + 1]];
+    }
+    setSections(newArr);
+  };
+
   const handleAddOrUpdate = () => {
     if (!newSection.title) return alert("يرجى إدخال العنوان الرئيسي");
     const sectionData = { ...newSection, id: editingId || Date.now().toString() };
@@ -333,7 +344,7 @@ export default function AdminHomeManager() {
 
       <div className="max-w-[1920px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 p-6 items-start h-[calc(100vh-80px)]">
         
-        {/* === Left Panel: Controls (Glassmorphism Card) === */}
+        {/* === Right Panel (RTL First): Controls & Inputs === */}
         <div className="xl:col-span-5 space-y-6 h-full overflow-y-auto pb-32 pr-2 custom-scrollbar">
           <div className="bg-neutral-900/60 backdrop-blur-sm p-6 rounded-3xl border border-white/5 shadow-2xl relative">
             
@@ -456,7 +467,7 @@ export default function AdminHomeManager() {
           </div>
         </div>
 
-        {/* === Right Panel: Layer List (Clean List View) === */}
+        {/* === Left Panel (RTL Second): Structure List === */}
         <div className="xl:col-span-7 h-full overflow-y-auto pb-32 custom-scrollbar pl-2">
             <div className="sticky top-0 bg-neutral-950/80 backdrop-blur-md z-20 pb-4 mb-2 border-b border-white/5 flex justify-between items-end">
                  <h2 className="text-xs font-black text-neutral-500 uppercase tracking-[0.4em]">هيكل الصفحة ({sections.length})</h2>
@@ -471,16 +482,18 @@ export default function AdminHomeManager() {
                     {sections.map((s, i) => (
                         <div key={s.id} className="group relative bg-neutral-900/40 hover:bg-neutral-900/80 border border-white/5 hover:border-white/10 rounded-2xl p-1 transition-all duration-200">
                             <div className="flex items-stretch">
-                                {/* Order Number & Controls */}
+                                {/* Order Number & Controls (Arrows) */}
                                 <div className="flex flex-col items-center justify-center w-12 border-l border-white/5 ml-2 gap-2">
-                                    <span className="text-[10px] font-mono text-neutral-600">{(i+1).toString().padStart(2, '0')}</span>
-                                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                         <button onClick={() => { setNewSection(s); setEditingId(s.id); }} className="w-6 h-6 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center">✎</button>
-                                         <button onClick={() => setSections(sections.filter(x => x.id !== s.id))} className="w-6 h-6 bg-red-500/10 text-red-400 rounded hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center">✕</button>
-                                    </div>
+                                    {/* زر الصعود */}
+                                    <button onClick={() => moveSection(i, 'up')} disabled={i === 0} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors">▲</button>
+                                    
+                                    <span className="text-[10px] font-mono text-neutral-400 font-bold">{(i+1).toString().padStart(2, '0')}</span>
+                                    
+                                    {/* زر الهبوط */}
+                                    <button onClick={() => moveSection(i, 'down')} disabled={i === sections.length - 1} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors">▼</button>
                                 </div>
 
-                                {/* Content Preview */}
+                                {/* Content Preview & Actions */}
                                 <div className="flex-1 py-2 pl-2">
                                      <div className="flex justify-between items-center mb-2">
                                         <div className="flex items-center gap-2">
@@ -488,7 +501,12 @@ export default function AdminHomeManager() {
                                                 {s.type === 'products' ? 'PROD' : 'CONTENT'}
                                             </span>
                                             <span className="text-[10px] text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded border border-white/5">{s.layout}</span>
-                                            {s.selectedCollections.length > 0 && <span className="text-[9px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">+ {s.selectedCollections.length} Coll</span>}
+                                        </div>
+                                        
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                             <button onClick={() => { setNewSection(s); setEditingId(s.id); }} className="w-6 h-6 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center">✎</button>
+                                             <button onClick={() => setSections(sections.filter(x => x.id !== s.id))} className="w-6 h-6 bg-red-500/10 text-red-400 rounded hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center">✕</button>
                                         </div>
                                      </div>
                                      
