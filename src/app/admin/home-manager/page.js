@@ -136,14 +136,6 @@ export default function AdminHomeManager() {
   const [dataLibrary, setDataLibrary] = useState({ products: [], categories: [] });
 
   // 1. حالة للتحكم في نوع المحتوى الرئيسي (3 خيارات)
-  // 'products' | 'categories' | 'general'
-  // سنستخدم newSection.type لتخزين هذا، لكن سنحتاج لتعديل القيم لتعكس الـ 3 خيارات
-  // سنعتبر: 
-  // products -> products
-  // categories -> collections_list (مع سياق خاص)
-  // general -> collections_list (مع سياق خاص)
-  
-  // لتبسيط الأمر في الواجهة، سنستخدم state مساعد
   const [contentTypeTab, setContentTypeTab] = useState('products'); // 'products', 'categories', 'general'
 
   // 2. حالة للتحكم في مصدر المنتجات (داخل تبويب المنتجات)
@@ -186,7 +178,7 @@ export default function AdminHomeManager() {
     );
   };
 
-  // خيارات التصميم (تم التحديث لتعكس الـ 3 أنواع منطقياً)
+  // خيارات التصميم
   const layoutOptions = {
     products: [
       { id: 'grid_default', name: 'أحدث الصيحات (Grid)', icon: '▦' },
@@ -196,12 +188,10 @@ export default function AdminHomeManager() {
       { id: 'imdb_posters', name: 'بوسترات (Posters)', icon: '🎬' },
       { id: 'bento_modern', name: 'بنتو (Bento Grid)', icon: '🍱' },
     ],
-    // خيارات الأقسام (Categories)
     categories: [
         { id: 'circle_avatars', name: 'أقسام دائرية (Circles)', icon: '◯' },
         { id: 'rect_banners', name: 'بانرات عريضة (Banners)', icon: '▭' },
     ],
-    // خيارات المحتوى العام (General)
     general: [
         { id: 'trust_bar', name: 'شريط الثقة (Trust)', icon: '🛡️' },
         { id: 'review_marquee', name: 'آراء العملاء (Reviews)', icon: '💬' },
@@ -210,7 +200,6 @@ export default function AdminHomeManager() {
     ]
   };
 
-  // أنواع المحتوى العام الثابتة
   const generalContentTypes = [
       { id: 'trust_bar', label: 'شريط الثقة والضمان' },
       { id: 'review_marquee', label: 'آراء العملاء' },
@@ -222,10 +211,43 @@ export default function AdminHomeManager() {
     const fetchContent = async () => {
       setFetching(true);
       try {
+        // 1. جلب المنتجات
         const prodsSnap = await getDocs(collection(db, "products"));
         const prods = prodsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
         const cats = new Set();
-        prods.forEach(p => { if(p.category) cats.add(p.category); });
+        
+        // أ. استخراج الأقسام من المنتجات (بحث ذكي في عدة حقول محتملة)
+        prods.forEach(p => { 
+            if(p.category) cats.add(p.category);
+            if(p.collection) cats.add(p.collection);
+            if(p.type) cats.add(p.type);
+        });
+
+        // ب. محاولة جلب الأقسام من كولكشن 'categories' إذا وجد
+        try {
+            const catCol = await getDocs(collection(db, "categories"));
+            if(!catCol.empty) {
+                catCol.forEach(d => { 
+                    const data = d.data();
+                    if(data.name) cats.add(data.name);
+                    else if(data.title) cats.add(data.title);
+                });
+            }
+        } catch(e) { console.log("Categories collection not found or error", e); }
+
+        // ج. محاولة جلب الأقسام من كولكشن 'collections' إذا وجد
+        try {
+            const colCol = await getDocs(collection(db, "collections"));
+             if(!colCol.empty) {
+                colCol.forEach(d => { 
+                    const data = d.data();
+                    if(data.name) cats.add(data.name);
+                    else if(data.title) cats.add(data.title);
+                });
+            }
+        } catch(e) { console.log("Collections collection not found or error", e); }
+
         setDataLibrary({ products: prods, categories: Array.from(cats) });
         
         const docSnap = await getDoc(doc(db, "settings", "homePage_v2"));
@@ -234,7 +256,7 @@ export default function AdminHomeManager() {
         } else {
             setSections(DEFAULT_SECTIONS_TEMPLATE);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Error fetching content:", e); }
       setFetching(false);
     };
     fetchContent();
@@ -357,31 +379,39 @@ export default function AdminHomeManager() {
                              {/* كارت المنتجات */}
                              {productSourceTab === 'all_products' && (
                                 <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 max-h-60 overflow-y-auto custom-scrollbar">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {dataLibrary.products.map(p => (
-                                            <label key={p.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${newSection.selectedItems.includes(p.id) ? 'bg-amber-500/10 border-amber-500/50' : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'}`}>
-                                                <input type="checkbox" checked={newSection.selectedItems.includes(p.id)} onChange={() => { toggleItem(p.id, 'selectedItems'); setNewSection(prev => ({...prev, selectionMode: 'manual'})); }} className="w-4 h-4 accent-amber-500 rounded bg-neutral-800 border-neutral-600" />
-                                                <div className="flex flex-col overflow-hidden">
-                                                    <span className={`text-[11px] font-bold truncate ${newSection.selectedItems.includes(p.id) ? 'text-white' : 'text-neutral-400'}`}>{p.title}</span>
-                                                    <span className="text-[9px] text-neutral-600 truncate">{p.category}</span>
-                                                </div>
-                                            </label>
-                                        ))}
-                                    </div>
+                                    {dataLibrary.products.length === 0 ? (
+                                        <p className="text-[10px] text-center text-neutral-500">لا توجد منتجات متاحة</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            {dataLibrary.products.map(p => (
+                                                <label key={p.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${newSection.selectedItems.includes(p.id) ? 'bg-amber-500/10 border-amber-500/50' : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'}`}>
+                                                    <input type="checkbox" checked={newSection.selectedItems.includes(p.id)} onChange={() => { toggleItem(p.id, 'selectedItems'); setNewSection(prev => ({...prev, selectionMode: 'manual'})); }} className="w-4 h-4 accent-amber-500 rounded bg-neutral-800 border-neutral-600" />
+                                                    <div className="flex flex-col overflow-hidden">
+                                                        <span className={`text-[11px] font-bold truncate ${newSection.selectedItems.includes(p.id) ? 'text-white' : 'text-neutral-400'}`}>{p.title}</span>
+                                                        <span className="text-[9px] text-neutral-600 truncate">{p.category}</span>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                              )}
 
                              {/* كارت الأقسام المرتبطة */}
                              {productSourceTab === 'related_collections' && (
                                 <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 max-h-60 overflow-y-auto custom-scrollbar">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {dataLibrary.categories.map(cat => (
-                                            <label key={cat} className={`relative p-3 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500 text-black border-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
-                                                {cat}
-                                                <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                            </label>
-                                        ))}
-                                    </div>
+                                    {dataLibrary.categories.length === 0 ? (
+                                        <p className="text-[10px] text-center text-neutral-500">لا توجد أقسام متاحة</p>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                            {dataLibrary.categories.map(cat => (
+                                                <label key={cat} className={`relative p-3 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500 text-black border-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
+                                                    {cat}
+                                                    <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                              )}
                         </div>
@@ -391,15 +421,19 @@ export default function AdminHomeManager() {
                     {contentTypeTab === 'categories' && (
                          <div className="mt-2 bg-neutral-950 p-4 rounded-xl border border-neutral-800 max-h-60 overflow-y-auto custom-scrollbar">
                              <p className="text-[10px] text-neutral-500 mb-3 font-bold">اختر الأقسام التي تود عرضها:</p>
-                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                {dataLibrary.categories.map(cat => (
-                                    <label key={cat} className={`relative p-4 rounded-xl border text-[11px] font-bold text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
-                                        <span className="text-lg">📂</span>
-                                        {cat}
-                                        <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                    </label>
-                                ))}
-                            </div>
+                             {dataLibrary.categories.length === 0 ? (
+                                <p className="text-[10px] text-center text-neutral-500">لا توجد أقسام متاحة</p>
+                             ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {dataLibrary.categories.map(cat => (
+                                        <label key={cat} className={`relative p-4 rounded-xl border text-[11px] font-bold text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
+                                            <span className="text-lg">📂</span>
+                                            {cat}
+                                            <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        </label>
+                                    ))}
+                                </div>
+                             )}
                         </div>
                     )}
 
@@ -421,7 +455,6 @@ export default function AdminHomeManager() {
                 </div>
 
                 {/* 3. التصميم والمعاينة */}
-                {/* إظهار خيارات التصميم فقط إذا كان النوع منتجات أو أقسام (المحتوى العام يتم اختياره تلقائياً بالأزرار) */}
                 {contentTypeTab !== 'general' && (
                     <div className="space-y-2 pt-4 border-t border-white/5">
                         <label className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mr-1">اختر شكل العرض (Layout)</label>
