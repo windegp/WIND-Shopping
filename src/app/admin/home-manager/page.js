@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { db, storage } from "@/lib/firebase"; 
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-// تأكد من تثبيت المكتبة: npm install @hello-pangea/dnd
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function AdminHomeManager() {
@@ -13,8 +12,8 @@ export default function AdminHomeManager() {
   const [categories, setCategories] = useState([]); 
   const [uploadingSectionId, setUploadingSectionId] = useState(null);
 
-  // --- 1. تعريف كتالوج التصميمات (Templates) ---
-  // هذه القائمة تشمل كل "أنواع" الأقسام الموجودة في صفحتك الحالية + الجديد
+  // --- 1. كتالوج التصميمات (Templates) ---
+  // هنا حددنا كل أنواع الأقسام الموجودة في صفحتك الحالية + الجديد (IMDb, Masonry)
   const availableTemplates = [
     // >> الأقسام الثابتة (Static) <<
     { id: 'hero_section', name: 'بانر الهيرو (Hero)', type: 'static', icon: '🚩', inputs: ['image', 'title', 'subtitle', 'button'] },
@@ -37,18 +36,19 @@ export default function AdminHomeManager() {
     { id: 'masonry', name: 'شبكة بنترست', type: 'dynamic', icon: '🧱' },
   ];
 
-  // --- 2. الهيكل الافتراضي (نسخة طبق الأصل من Page.js الحالي) ---
-  // 🔥 هذا الجزء هو المسؤول عن أنك تلاقي الصفحة "زي ما هي بالظبط"
+  // --- 2. النسخة طبق الأصل (Mirroring) ---
+  // 🔥 هذه المصفوفة تطابق كود صفحتك الحالية 100%
+  // سيتم حفظها في قاعدة البيانات لكي تظهر الصفحة كما هي تماماً
   const defaultSiteStructure = [
     { id: '1', title: "بانر الهيرو", template: "hero_section", data: { title: "", buttonText: "تسوق الآن" } },
     { id: '2', title: "أحدث صيحات WIND", subTitle: "تصاميم شتوية تلامس الروح", template: "carousel", collectionSlug: "new-arrivals" },
     { id: '3', title: "تسوق التشكيلة الجديدة", subTitle: "أناقة WIND في كل خطوة", template: "marquee", collectionSlug: "all" },
-    { id: '4', title: "الأكثر مبيعاً", template: "featured", collectionSlug: "all" }, // سنقوم بفلترتها في الصفحة الرئيسية
+    { id: '4', title: "الأكثر مبيعاً", template: "featured", collectionSlug: "all" }, 
     { id: '5', title: "شريط الثقة", template: "trust_bar" },
     { id: '6', title: "مجموعات مميزة", template: "collections_slider" },
-    { id: '7', title: "آراء عائلة WIND", template: "reviews_parallax" }, // تم تعديل الاسم ليتطابق
+    { id: '7', title: "آراء عائلة WIND", template: "reviews_parallax" }, 
     { id: '8', title: "WIND Magazine", subTitle: "مقالات في الأناقة", template: "magazine_grid" },
-    { id: '9', title: "الأعلى تقييماً", subTitle: "القطع التي نالت إعجاب الجميع", template: "grid", collectionSlug: "all" }, // سنقوم بفلترتها
+    { id: '9', title: "الأعلى تقييماً", subTitle: "القطع التي نالت إعجاب الجميع", template: "grid", collectionSlug: "all" }, 
     { id: '10', title: "قصة WIND", template: "story_section", data: { description: "نحن لا نصنع الملابس، نحن ننسج خيوط الدفء..." } },
     { id: '11', title: "تسوق حسب الفئة", template: "category_split" },
     { id: '12', title: "تخفيضات WIND الحصرية", template: "winter_discounts" }
@@ -59,7 +59,7 @@ export default function AdminHomeManager() {
     const initSystem = async () => {
       setInitialLoading(true);
       try {
-        // أ) جلب الكولكشنات
+        // أ) جلب الكولكشنات لملء القوائم
         const prodsSnap = await getDocs(collection(db, "products"));
         const catsSet = new Set(['all', 'new-arrivals']);
         prodsSnap.docs.forEach(doc => {
@@ -69,7 +69,7 @@ export default function AdminHomeManager() {
         });
         setCategories([...catsSet].sort());
 
-        // ب) جلب الهيكل المحفوظ
+        // ب) فحص قاعدة البيانات
         const docRef = doc(db, "settings", "homePage");
         const docSnap = await getDoc(docRef);
         
@@ -77,8 +77,8 @@ export default function AdminHomeManager() {
           // لو في داتا قديمة، هاتها
           setSections(docSnap.data().sections);
         } else {
-          // 🔥 لو مفيش داتا (أول مرة)، ازرع الهيكل الافتراضي اللي فوق
-          console.log("Seeding Default Structure...");
+          // 🔥 لو مفيش داتا (أول مرة)، احفظ الهيكل الافتراضي فوراً
+          console.log("Saving default structure to DB...");
           setSections(defaultSiteStructure);
           await setDoc(docRef, { sections: defaultSiteStructure }, { merge: true });
         }
@@ -88,7 +88,7 @@ export default function AdminHomeManager() {
     initSystem();
   }, []);
 
-  // --- 4. دوال التحكم (Images, Updates, Save) ---
+  // --- 4. دوال التحكم ---
 
   const handleImageUpload = async (file, sectionId) => {
     if (!file) return;
