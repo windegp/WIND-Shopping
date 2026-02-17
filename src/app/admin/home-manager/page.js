@@ -135,8 +135,19 @@ export default function AdminHomeManager() {
   const [editingId, setEditingId] = useState(null);
   const [dataLibrary, setDataLibrary] = useState({ products: [], categories: [] });
 
-  // إضافة حالة للتحكم في نوع اختيار المنتجات (كل المنتجات / أقسام)
-  const [productSource, setProductSource] = useState('all'); // 'all' or 'collections'
+  // 1. حالة للتحكم في نوع المحتوى الرئيسي (3 خيارات)
+  // 'products' | 'categories' | 'general'
+  // سنستخدم newSection.type لتخزين هذا، لكن سنحتاج لتعديل القيم لتعكس الـ 3 خيارات
+  // سنعتبر: 
+  // products -> products
+  // categories -> collections_list (مع سياق خاص)
+  // general -> collections_list (مع سياق خاص)
+  
+  // لتبسيط الأمر في الواجهة، سنستخدم state مساعد
+  const [contentTypeTab, setContentTypeTab] = useState('products'); // 'products', 'categories', 'general'
+
+  // 2. حالة للتحكم في مصدر المنتجات (داخل تبويب المنتجات)
+  const [productSourceTab, setProductSourceTab] = useState('all_products'); // 'all_products', 'related_collections'
 
   const [newSection, setNewSection] = useState({
     title: '', subTitle: '', type: 'products', selectionMode: 'automated',
@@ -175,6 +186,7 @@ export default function AdminHomeManager() {
     );
   };
 
+  // خيارات التصميم (تم التحديث لتعكس الـ 3 أنواع منطقياً)
   const layoutOptions = {
     products: [
       { id: 'grid_default', name: 'أحدث الصيحات (Grid)', icon: '▦' },
@@ -184,15 +196,27 @@ export default function AdminHomeManager() {
       { id: 'imdb_posters', name: 'بوسترات (Posters)', icon: '🎬' },
       { id: 'bento_modern', name: 'بنتو (Bento Grid)', icon: '🍱' },
     ],
-    collections_list: [
+    // خيارات الأقسام (Categories)
+    categories: [
         { id: 'circle_avatars', name: 'أقسام دائرية (Circles)', icon: '◯' },
         { id: 'rect_banners', name: 'بانرات عريضة (Banners)', icon: '▭' },
+    ],
+    // خيارات المحتوى العام (General)
+    general: [
         { id: 'trust_bar', name: 'شريط الثقة (Trust)', icon: '🛡️' },
         { id: 'review_marquee', name: 'آراء العملاء (Reviews)', icon: '💬' },
         { id: 'magazine_grid', name: 'المجلة (Magazine)', icon: '📖' },
         { id: 'story_banner', name: 'قصة البراند (Story)', icon: '📜' },
     ]
   };
+
+  // أنواع المحتوى العام الثابتة
+  const generalContentTypes = [
+      { id: 'trust_bar', label: 'شريط الثقة والضمان' },
+      { id: 'review_marquee', label: 'آراء العملاء' },
+      { id: 'magazine_grid', label: 'المجلة والمقالات' },
+      { id: 'story_banner', label: 'قصة البراند' },
+  ];
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -234,13 +258,23 @@ export default function AdminHomeManager() {
 
   const handleAddOrUpdate = () => {
     if (!newSection.title) return alert("يرجى إدخال العنوان الرئيسي");
-    const sectionData = { ...newSection, id: editingId || Date.now().toString() };
+    
+    // تصحيح النوع قبل الحفظ بناءً على التبويب المختار
+    let finalType = 'products';
+    if (contentTypeTab === 'categories' || contentTypeTab === 'general') {
+        finalType = 'collections_list';
+    }
+
+    const sectionData = { ...newSection, type: finalType, id: editingId || Date.now().toString() };
     if (editingId) {
         setSections(sections.map(s => s.id === editingId ? sectionData : s));
         setEditingId(null);
     } else { setSections([...sections, sectionData]); }
+    
+    // Reset
     setNewSection({ title: '', subTitle: '', type: 'products', selectionMode: 'automated', selectedCategory: '', selectedItems: [], selectedCollections: [], layout: 'grid_default' });
-    setProductSource('all');
+    setContentTypeTab('products');
+    setProductSourceTab('all_products');
   };
 
   return (
@@ -266,8 +300,8 @@ export default function AdminHomeManager() {
       {/* --- Main Layout --- */}
       <div className="max-w-[1920px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 items-start h-[calc(100vh-80px)]">
         
-        {/* === RIGHT PANEL (Inputs/Controls) - Expanded Width (col-span-6) === */}
-        <div className="lg:col-span-6 h-full overflow-y-auto pb-32 pr-2 custom-scrollbar">
+        {/* === RIGHT PANEL (Inputs) - Expanded Width (col-span-8) === */}
+        <div className="lg:col-span-8 h-full overflow-y-auto pb-32 pr-2 custom-scrollbar">
           <div className="bg-neutral-900/60 backdrop-blur-sm p-6 rounded-3xl border border-white/5 shadow-2xl relative">
             
             <div className="flex items-center justify-between mb-6">
@@ -291,63 +325,116 @@ export default function AdminHomeManager() {
                     </div>
                 </div>
 
-                {/* 2. نوع المحتوى واختياراته */}
+                {/* 2. نوع المحتوى (3 خيارات رئيسية) */}
                 <div className="space-y-4">
                      <label className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mr-1">نوع المحتوى</label>
                      <div className="bg-neutral-950 p-1.5 rounded-2xl border border-neutral-800 flex relative">
-                        <button onClick={() => { setNewSection({...newSection, type: 'products'}); setProductSource('all'); }} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${newSection.type === 'products' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>منتجات 👕</button>
-                        <button onClick={() => setNewSection({...newSection, type: 'collections_list'})} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${newSection.type === 'collections_list' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>محتوى عام 📚</button>
+                        <button onClick={() => { setContentTypeTab('products'); setNewSection({...newSection, type: 'products', layout: 'grid_default'}); }} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${contentTypeTab === 'products' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>منتجات 👕</button>
+                        <button onClick={() => { setContentTypeTab('categories'); setNewSection({...newSection, type: 'collections_list', layout: 'circle_avatars'}); }} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${contentTypeTab === 'categories' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>أقسام 📂</button>
+                        <button onClick={() => { setContentTypeTab('general'); setNewSection({...newSection, type: 'collections_list', layout: 'trust_bar'}); }} className={`flex-1 py-3 text-xs rounded-xl font-bold transition-all duration-300 ${contentTypeTab === 'general' ? 'text-black bg-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}>محتوى عام 📚</button>
                     </div>
 
-                    {/* خيارات المنتجات */}
-                    {newSection.type === 'products' && (
-                        <div className="space-y-3 px-2">
-                             <div className="flex gap-6">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="prodSource" checked={productSource === 'all'} onChange={() => { setProductSource('all'); setNewSection({...newSection, selectionMode: 'automated', selectedCategory: ''}) }} className="accent-amber-500" />
-                                    <span className="text-xs text-neutral-300 font-medium">كل المنتجات (آلي)</span>
+                    {/* خيارات: منتجات */}
+                    {contentTypeTab === 'products' && (
+                        <div className="space-y-3 px-2 border-r-2 border-white/5 pr-4">
+                             <div className="flex gap-6 mb-3">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${productSourceTab === 'all_products' ? 'border-amber-500' : 'border-neutral-600 group-hover:border-neutral-400'}`}>
+                                        {productSourceTab === 'all_products' && <div className="w-2 h-2 bg-amber-500 rounded-full"></div>}
+                                    </div>
+                                    <input type="radio" name="prodSource" checked={productSourceTab === 'all_products'} onChange={() => { setProductSourceTab('all_products'); setNewSection({...newSection, selectionMode: 'manual', selectedCategory: ''}); }} className="hidden" />
+                                    <span className={`text-xs font-medium ${productSourceTab === 'all_products' ? 'text-amber-500' : 'text-neutral-400'}`}>تحديد منتجات يدوياً</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="prodSource" checked={productSource === 'collections'} onChange={() => setProductSource('collections')} className="accent-amber-500" />
-                                    <span className="text-xs text-neutral-300 font-medium">أقسام مرتبطة</span>
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${productSourceTab === 'related_collections' ? 'border-amber-500' : 'border-neutral-600 group-hover:border-neutral-400'}`}>
+                                        {productSourceTab === 'related_collections' && <div className="w-2 h-2 bg-amber-500 rounded-full"></div>}
+                                    </div>
+                                    <input type="radio" name="prodSource" checked={productSourceTab === 'related_collections'} onChange={() => setProductSourceTab('related_collections')} className="hidden" />
+                                    <span className={`text-xs font-medium ${productSourceTab === 'related_collections' ? 'text-amber-500' : 'text-neutral-400'}`}>أقسام مرتبطة</span>
                                 </label>
                              </div>
 
-                             {/* قائمة الأقسام المرتبطة (تظهر فقط عند اختيارها) */}
-                             {productSource === 'collections' && (
-                                <div className="mt-2 bg-neutral-950 p-3 rounded-xl border border-neutral-800 max-h-40 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-2">
-                                    {dataLibrary.categories.map(cat => (
-                                        <label key={cat} className={`p-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
-                                            {cat} <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
-                                        </label>
-                                    ))}
+                             {/* كارت المنتجات */}
+                             {productSourceTab === 'all_products' && (
+                                <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {dataLibrary.products.map(p => (
+                                            <label key={p.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${newSection.selectedItems.includes(p.id) ? 'bg-amber-500/10 border-amber-500/50' : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'}`}>
+                                                <input type="checkbox" checked={newSection.selectedItems.includes(p.id)} onChange={() => { toggleItem(p.id, 'selectedItems'); setNewSection(prev => ({...prev, selectionMode: 'manual'})); }} className="w-4 h-4 accent-amber-500 rounded bg-neutral-800 border-neutral-600" />
+                                                <div className="flex flex-col overflow-hidden">
+                                                    <span className={`text-[11px] font-bold truncate ${newSection.selectedItems.includes(p.id) ? 'text-white' : 'text-neutral-400'}`}>{p.title}</span>
+                                                    <span className="text-[9px] text-neutral-600 truncate">{p.category}</span>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                             )}
+
+                             {/* كارت الأقسام المرتبطة */}
+                             {productSourceTab === 'related_collections' && (
+                                <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        {dataLibrary.categories.map(cat => (
+                                            <label key={cat} className={`relative p-3 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500 text-black border-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
+                                                {cat}
+                                                <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                              )}
                         </div>
                     )}
 
-                    {/* خيارات المحتوى العام (تظهر القائمة مباشرة) */}
-                    {newSection.type === 'collections_list' && (
-                         <div className="mt-2 bg-neutral-950 p-3 rounded-xl border border-neutral-800 max-h-40 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-2">
-                            {dataLibrary.categories.map(cat => (
-                                <label key={cat} className={`p-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500 text-black border-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
-                                    {cat} <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="sr-only" />
-                                </label>
-                            ))}
+                    {/* خيارات: أقسام (Categories) */}
+                    {contentTypeTab === 'categories' && (
+                         <div className="mt-2 bg-neutral-950 p-4 rounded-xl border border-neutral-800 max-h-60 overflow-y-auto custom-scrollbar">
+                             <p className="text-[10px] text-neutral-500 mb-3 font-bold">اختر الأقسام التي تود عرضها:</p>
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                {dataLibrary.categories.map(cat => (
+                                    <label key={cat} className={`relative p-4 rounded-xl border text-[11px] font-bold text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${newSection.selectedCollections.includes(cat) ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}>
+                                        <span className="text-lg">📂</span>
+                                        {cat}
+                                        <input type="checkbox" checked={newSection.selectedCollections.includes(cat)} onChange={() => toggleItem(cat, 'selectedCollections')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* خيارات: محتوى عام (General) */}
+                    {contentTypeTab === 'general' && (
+                         <div className="mt-2 bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+                             <p className="text-[10px] text-neutral-500 mb-3 font-bold">اختر نوع المحتوى الثابت:</p>
+                             <div className="grid grid-cols-2 gap-3">
+                                {generalContentTypes.map(type => (
+                                    <button key={type.id} onClick={() => setNewSection({...newSection, layout: type.id})} 
+                                        className={`p-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${newSection.layout === type.id ? 'bg-white text-black border-white shadow-lg' : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
+                                        {type.label}
+                                        {newSection.layout === type.id && <span className="text-amber-500">●</span>}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* 3. التصميم والمعاينة */}
-                <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mr-1">اختر التصميم</label>
-                    <div className="relative group">
-                        <select value={newSection.layout} onChange={e => setNewSection({...newSection, layout: e.target.value})} className="w-full bg-neutral-950 border border-neutral-800 p-4 rounded-xl text-sm font-medium text-white focus:border-amber-500 transition-all outline-none appearance-none cursor-pointer hover:bg-neutral-900">
-                            {(layoutOptions[newSection.type] || []).map(l => <option key={l.id} value={l.id} className="bg-neutral-900">{l.icon} &nbsp; {l.name}</option>)}
-                        </select>
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none group-hover:text-amber-500 transition-colors">▼</div>
+                {/* إظهار خيارات التصميم فقط إذا كان النوع منتجات أو أقسام (المحتوى العام يتم اختياره تلقائياً بالأزرار) */}
+                {contentTypeTab !== 'general' && (
+                    <div className="space-y-2 pt-4 border-t border-white/5">
+                        <label className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mr-1">اختر شكل العرض (Layout)</label>
+                        <div className="relative group">
+                            <select value={newSection.layout} onChange={e => setNewSection({...newSection, layout: e.target.value})} className="w-full bg-neutral-950 border border-neutral-800 p-4 rounded-xl text-sm font-medium text-white focus:border-amber-500 transition-all outline-none appearance-none cursor-pointer hover:bg-neutral-900">
+                                {(contentTypeTab === 'products' ? layoutOptions.products : layoutOptions.categories).map(l => (
+                                    <option key={l.id} value={l.id} className="bg-neutral-900">{l.icon} &nbsp; {l.name}</option>
+                                ))}
+                            </select>
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none group-hover:text-amber-500 transition-colors">▼</div>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="bg-neutral-950/50 p-4 rounded-2xl border border-neutral-800/50">
                      <WINDVisualMockup section={newSection} />
@@ -360,8 +447,8 @@ export default function AdminHomeManager() {
           </div>
         </div>
 
-        {/* === LEFT PANEL (Structure List) - Smaller Width (col-span-6) === */}
-        <div className="lg:col-span-6 h-full overflow-y-auto pb-32 custom-scrollbar pl-2">
+        {/* === LEFT PANEL (Structure List) - Smaller Width (col-span-4) === */}
+        <div className="lg:col-span-4 h-full overflow-y-auto pb-32 custom-scrollbar pl-2">
             <div className="sticky top-0 bg-neutral-950/80 backdrop-blur-md z-20 pb-4 mb-2 border-b border-white/5 flex justify-between items-end">
                  <h2 className="text-xs font-black text-neutral-500 uppercase tracking-[0.4em]">هيكل الصفحة ({sections.length})</h2>
             </div>
@@ -376,26 +463,25 @@ export default function AdminHomeManager() {
                         <div key={s.id} className="group relative bg-neutral-900/40 hover:bg-neutral-900/80 border border-white/5 hover:border-white/10 rounded-2xl p-1 transition-all duration-200">
                             <div className="flex items-stretch">
                                 {/* Order Number & Controls (Arrows) */}
-                                <div className="flex flex-col items-center justify-center w-12 border-l border-white/5 ml-2 gap-2">
-                                    <button onClick={() => moveSection(i, 'up')} disabled={i === 0} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors">▲</button>
-                                    <span className="text-[10px] font-mono text-neutral-400 font-bold">{(i+1).toString().padStart(2, '0')}</span>
-                                    <button onClick={() => moveSection(i, 'down')} disabled={i === sections.length - 1} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors">▼</button>
+                                <div className="flex flex-col items-center justify-center w-8 border-l border-white/5 ml-1 gap-1">
+                                    <button onClick={() => moveSection(i, 'up')} disabled={i === 0} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors text-[10px]">▲</button>
+                                    <span className="text-[9px] font-mono text-neutral-400 font-bold">{(i+1).toString().padStart(2, '0')}</span>
+                                    <button onClick={() => moveSection(i, 'down')} disabled={i === sections.length - 1} className="text-neutral-500 hover:text-amber-500 disabled:opacity-20 transition-colors text-[10px]">▼</button>
                                 </div>
 
                                 {/* Content Preview & Actions */}
-                                <div className="flex-1 py-2 pl-2">
-                                     <div className="flex justify-between items-center mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${s.type === 'products' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}>{s.type === 'products' ? 'PROD' : 'CONTENT'}</span>
-                                            <span className="text-[10px] text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded border border-white/5">{s.layout}</span>
-                                            {s.selectedCollections.length > 0 && <span className="text-[9px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">+ {s.selectedCollections.length} Coll</span>}
+                                <div className="flex-1 py-2 pl-2 overflow-hidden">
+                                     <div className="flex justify-between items-center mb-1">
+                                        <div className="flex items-center gap-1 overflow-hidden">
+                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border whitespace-nowrap ${s.type === 'products' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}>{s.type === 'products' ? 'PROD' : 'CNT'}</span>
+                                            <span className="text-[8px] text-neutral-400 bg-neutral-950 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">{s.layout}</span>
                                         </div>
-                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                             <button onClick={() => { setNewSection(s); setEditingId(s.id); }} className="w-6 h-6 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center">✎</button>
-                                             <button onClick={() => setSections(sections.filter(x => x.id !== s.id))} className="w-6 h-6 bg-red-500/10 text-red-400 rounded hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center">✕</button>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                             <button onClick={() => { setNewSection(s); setEditingId(s.id); }} className="w-5 h-5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center text-[10px]">✎</button>
+                                             <button onClick={() => setSections(sections.filter(x => x.id !== s.id))} className="w-5 h-5 bg-red-500/10 text-red-400 rounded hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center text-[10px]">✕</button>
                                         </div>
                                      </div>
-                                     <div className="opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                     <div className="opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none scale-90 origin-top-right">
                                          <WINDVisualMockup section={s} />
                                      </div>
                                 </div>
