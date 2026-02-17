@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
+// 👇 هذا هو السطر الذي كان ناقصاً وتسبب في الخطأ
+import HeroSection from "../components/sections/HeroSection"; 
 import CollectionsSection from "../components/sections/CollectionsSection";
 import ProductCard from "../components/products/ProductCard";
 import { products as staticProducts } from "../lib/products";
@@ -123,10 +125,18 @@ export default function Home() {
                 return (
                     <section key={section.id} className="relative h-screen max-h-[800px] flex items-center justify-center overflow-hidden">
                         {/* استخدام الصورة المرفوعة أو صورة افتراضية */}
-                        {contentData?.imageUrl && <img src={contentData.imageUrl} className="absolute inset-0 w-full h-full object-cover" style={styles.kenBurns} alt="Hero" />}
-                        {!contentData?.imageUrl && <HeroSection />} 
+                        {contentData?.imageUrl ? (
+                           <>
+                             <img src={contentData.imageUrl} className="absolute inset-0 w-full h-full object-cover" style={styles.kenBurns} alt="Hero" />
+                             <div className="absolute inset-0 bg-black/40 z-10"></div>
+                           </>
+                        ) : (
+                           /* إذا لم تكن هناك صورة جديدة، اعرض الهيرو القديم كما هو */
+                           <div className="absolute inset-0 w-full h-full"><HeroSection /></div>
+                        )}
+                        
                         {contentData?.imageUrl && (
-                             <div className="relative z-10 text-center px-4 max-w-4xl">
+                             <div className="relative z-20 text-center px-4 max-w-4xl">
                                 <h1 className="text-5xl md:text-7xl font-black mb-6 text-white drop-shadow-lg">{section.title}</h1>
                                 <p className="text-xl text-gray-200 mb-8 font-light">{contentData.description}</p>
                                 <Link href={contentData.link || "#"} className="bg-[#F5C518] text-black px-10 py-4 font-black uppercase hover:bg-white transition-all">{contentData.buttonText || "تسوق الآن"}</Link>
