@@ -11,7 +11,6 @@ export function CartProvider({ children }) {
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
-  // --- الإضافة الجديدة: دالة مسح السلة بعد إتمام الطلب ---
   const clearCart = () => {
     setCartItems([]);
     localStorage.removeItem('wind_cart');
@@ -20,11 +19,10 @@ export function CartProvider({ children }) {
   const addToCart = (product) => {
     setCartItems((prev) => {
       const exist = prev.find((item) => item.id === product.id && item.selectedSize === product.selectedSize);
-      
       if (exist) {
         return prev.map((item) =>
           (item.id === product.id && item.selectedSize === product.selectedSize) 
-          ? { ...exist, qty: exist.qty + 1 } 
+          ? { ...item, qty: item.qty + 1 } 
           : item
         );
       }
@@ -33,23 +31,32 @@ export function CartProvider({ children }) {
     openCart();
   };
 
+  // --- تحديث الكمية (جديد) ---
+  const updateQty = (id, selectedSize, delta) => {
+    setCartItems((prev) =>
+      prev.map((item) => {
+        if (item.id === id && item.selectedSize === selectedSize) {
+          const newQty = item.qty + delta;
+          return { ...item, qty: newQty > 0 ? newQty : 1 };
+        }
+        return item;
+      })
+    );
+  };
+
+  // --- حذف مع مراعاة المقاس (معدل) ---
   const removeFromCart = (id, selectedSize) => {
     setCartItems((prev) => prev.filter((item) => !(item.id === id && item.selectedSize === selectedSize)));
   };
 
-  // --- الإضافة الجديدة: حساب الإجمالي ليكون متاحاً في كل الموقع ---
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  const shipping = 50; 
-  const total = subtotal + shipping;
 
   useEffect(() => {
     const savedCart = localStorage.getItem('wind_cart');
     if (savedCart) {
       try {
         setCartItems(JSON.parse(savedCart));
-      } catch (e) {
-        console.error("Error loading cart");
-      }
+      } catch (e) { console.error("Error loading cart"); }
     }
   }, []);
 
@@ -62,14 +69,13 @@ export function CartProvider({ children }) {
       cartItems, 
       addToCart, 
       removeFromCart, 
-      clearCart, // تصدير الدالة
+      updateQty, // تم التصدير
+      clearCart, 
       isCartOpen, 
       toggleCart, 
       openCart, 
       closeCart,
-      subtotal, // تصدير الحسابات
-      total,
-      shipping
+      subtotal
     }}>
       {children}
     </CartContext.Provider>
