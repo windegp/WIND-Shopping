@@ -43,9 +43,9 @@ export async function POST(req) {
         );
       }
 
-      const path2 = `/?payment=${merchantId}.${orderId}.${amount}.${currency}`;
-      const hash = crypto.createHmac('sha256', hashSecret).update(path2).digest('hex');
-
+      const hashStr = `${merchantId}${orderId}${amount}${currency}`;
+      const hash = crypto.createHmac('sha256', hashSecret).update(hashStr).digest('hex');
+      
       const kashierUrl = new URL('https://checkout.kashier.io');
       kashierUrl.searchParams.set('merchantId', merchantId);
       kashierUrl.searchParams.set('orderId', orderId);
@@ -56,7 +56,7 @@ export async function POST(req) {
       kashierUrl.searchParams.set('merchantRedirect', `${baseUrl}/checkout/success`);
       kashierUrl.searchParams.set('failureRedirect', `${baseUrl}/checkout/failure`);
       kashierUrl.searchParams.set('display', 'ar');
-      kashierUrl.searchParams.set('brandColor', 'F5C518');
+      kashierUrl.searchParams.set('brandColor', '%23F5C518');
       kashierUrl.searchParams.set('allowedMethods', 'card,wallet');
       if (customerName) kashierUrl.searchParams.set('customerName', customerName);
       if (customerEmail) kashierUrl.searchParams.set('customerEmail', customerEmail);
