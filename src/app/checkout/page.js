@@ -21,9 +21,21 @@ const InputField = ({ label, error, children }) => (
 );
 
 export default function CheckoutPage() {
-  const { cartItems, clearCart, subtotal } = useCart();
-  const SHIPPING_COST = 70;
-  const finalTotal = subtotal + SHIPPING_COST;
+  // جلب القيم المطورة من الـ Context (شاملة نظام الخصم الجديد)
+  const { 
+    cartItems, 
+    clearCart, 
+    subtotal, 
+    shipping, 
+    total, 
+    applyPromoCode, 
+    discountError, 
+    appliedPromo 
+  } = useCart();
+
+  // الحسابات الآن تعتمد على الـ Context وليس قيماً ثابتة
+  const SHIPPING_COST = shipping;
+  const finalTotal = total;
 
   const [loading, setLoading] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
@@ -64,63 +76,63 @@ export default function CheckoutPage() {
     if (errors[name]) setErrors({ ...errors, [name]: false });
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validate()) return window.scrollTo(0, 0);
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return window.scrollTo(0, 0);
+    setLoading(true);
 
-  const orderId = `WIND-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const orderId = `WIND-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-  try {
-    if (paymentMethod === 'card') {
-      // ← كاشير
-      const res = await fetch('/api/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentMethod: 'card',
-          orderId,
-          amount: finalTotal.toFixed(2),
-          customerName: `${formData.firstName} ${formData.lastName}`,
-          customerEmail: formData.email,
-          phone: formData.phone,
-        }),
-      });
+    try {
+      if (paymentMethod === 'card') {
+        // ← كاشير (سيرسل القيمة النهائية المخصومة تلقائياً)
+        const res = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethod: 'card',
+            orderId,
+            amount: finalTotal.toFixed(2),
+            customerName: `${formData.firstName} ${formData.lastName}`,
+            customerEmail: formData.email,
+            phone: formData.phone,
+          }),
+        });
 
-      const data = await res.json();
-      if (!res.ok || !data.paymentUrl) {
-        throw new Error(data.error || 'حدث خطأ، حاول مرة أخرى');
+        const data = await res.json();
+        if (!res.ok || !data.paymentUrl) {
+          throw new Error(data.error || 'حدث خطأ، حاول مرة أخرى');
+        }
+        window.location.href = data.paymentUrl;
+
+      } else {
+        // ← COD أو InstaPay → إيميل + OneSignal
+        const res = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethod,
+            formData,
+            cartItems,
+            total: finalTotal,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error('حدث خطأ، حاول مرة أخرى');
+        }
+
+        setOrderCompleted(true);
+        clearCart();
+        setLoading(false);
       }
-      window.location.href = data.paymentUrl;
 
-    } else {
-      // ← COD أو InstaPay → إيميل + OneSignal
-      const res = await fetch('/api/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentMethod,
-          formData,
-          cartItems,
-          total: finalTotal,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error('حدث خطأ، حاول مرة أخرى');
-      }
-
-      setOrderCompleted(true);
-      clearCart();
+    } catch (err) {
+      alert(err.message);
       setLoading(false);
     }
-
-  } catch (err) {
-    alert(err.message);
-    setLoading(false);
-  }
-};
+  };
 
   if (orderCompleted) {
     return (
@@ -157,6 +169,7 @@ const handleSubmit = async (e) => {
         .payment-option.active { background-color: #fdfcf6; border-color: #F5C518 !important; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         .slide-down { animation: slideDown 0.25s ease forwards; }
+        .promo-success { color: #10b981; font-size: 11px; margin-top: 4px; font-weight: 600; }
         select { background-image: none !important; }
       `}</style>
 
@@ -306,7 +319,10 @@ const handleSubmit = async (e) => {
                     <p className="text-xs text-gray-500">٣ - ٥ أيام عمل</p>
                   </div>
                 </div>
-                <span className="font-black text-black text-base">ج.م {SHIPPING_COST}.00</span>
+                <span className={`font-black text-black text-base ${SHIPPING_COST === 0 ? 'line-through text-gray-400' : ''}`}>
+                   ج.م {SHIPPING_COST === 0 ? '70.00' : `${SHIPPING_COST}.00`}
+                </span>
+                {SHIPPING_COST === 0 && <span className="font-black text-green-600 mr-2">مجاناً</span>}
               </div>
             </section>
 
@@ -391,11 +407,8 @@ const handleSubmit = async (e) => {
               className="w-full bg-black text-[#F5C518] font-black py-4 rounded-xl text-base hover:bg-[#1A1A1A] active:scale-[0.99] transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-70">
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-[#F5C518]" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-              {paymentMethod === 'card' ? 'جارٍ التحويل لكاشير...' : 'جارٍ المعالجة...'}
+                  <span className="animate-spin h-5 w-5 border-2 border-[#F5C518] border-t-transparent rounded-full"></span>
+                  {paymentMethod === 'card' ? 'جارٍ التحويل لكاشير...' : 'جارٍ المعالجة...'}
                 </>
               ) : paymentMethod === 'card' ? (
                 <>ادفع الآن — ج.م {finalTotal}.00</>
@@ -438,18 +451,27 @@ const handleSubmit = async (e) => {
             </div>
 
             {/* Discount Code */}
-            <div className="flex gap-2 mb-6">
-              <div className="relative flex-1">
-                <Tag size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text" placeholder="كود الخصم"
-                  value={discountCode} onChange={e => setDiscountCode(e.target.value)}
-                  className="w-full pr-9 pl-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#F5C518]/30 focus:border-transparent placeholder-gray-400 bg-gray-50"
-                />
+            <div className="mb-6">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text" placeholder="كود الخصم"
+                    value={discountCode} onChange={e => setDiscountCode(e.target.value)}
+                    className="w-full pr-9 pl-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#F5C518]/30 focus:border-transparent placeholder-gray-400 bg-gray-50 uppercase"
+                  />
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => applyPromoCode(discountCode)}
+                  className="bg-black text-[#F5C518] px-4 py-2 rounded-xl font-bold text-xs hover:bg-[#1A1A1A] transition-colors"
+                >
+                  تطبيق
+                </button>
               </div>
-              <button className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-semibold text-xs cursor-not-allowed" disabled>
-                تطبيق
-              </button>
+              {/* رسائل النجاح أو الخطأ */}
+              {discountError && <p className="text-red-500 text-[10px] mt-1 pr-2">{discountError}</p>}
+              {appliedPromo && <p className="promo-success pr-2">✓ تم تطبيق كود: {appliedPromo}</p>}
             </div>
 
             {/* Totals */}
@@ -463,7 +485,9 @@ const handleSubmit = async (e) => {
                   <Truck size={13} />
                   <span>رسوم الشحن</span>
                 </div>
-                <span className="font-medium text-gray-800">ج.م {SHIPPING_COST}.00</span>
+                <span className={`font-medium ${SHIPPING_COST === 0 ? 'text-green-600' : 'text-gray-800'}`}>
+                  {SHIPPING_COST === 0 ? 'مجاناً' : `ج.م ${SHIPPING_COST}.00`}
+                </span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                 <span className="text-base font-bold text-gray-900">الإجمالي</span>

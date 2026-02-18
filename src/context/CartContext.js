@@ -6,6 +6,10 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  // --- الجزء الجديد: أكواد الخصم والشحن ---
+  const [appliedPromo, setAppliedPromo] = useState(""); // لحفظ الكود المفعل
+  const [discountError, setDiscountError] = useState(""); // لرسائل الخطأ
 
   const toggleCart = () => setIsCartOpen(!isCartOpen);
   const openCart = () => setIsCartOpen(true);
@@ -13,6 +17,7 @@ export function CartProvider({ children }) {
 
   const clearCart = () => {
     setCartItems([]);
+    setAppliedPromo(""); // مسح الكود عند تفريغ السلة
     localStorage.removeItem('wind_cart');
   };
 
@@ -31,7 +36,6 @@ export function CartProvider({ children }) {
     openCart();
   };
 
-  // --- تحديث الكمية (جديد) ---
   const updateQty = (id, selectedSize, delta) => {
     setCartItems((prev) =>
       prev.map((item) => {
@@ -44,12 +48,29 @@ export function CartProvider({ children }) {
     );
   };
 
-  // --- حذف مع مراعاة المقاس (معدل) ---
   const removeFromCart = (id, selectedSize) => {
     setCartItems((prev) => prev.filter((item) => !(item.id === id && item.selectedSize === selectedSize)));
   };
 
+  // --- الحسابات المالية (مطورة) ---
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  
+  // الشحن يكون 0 لو الكود "free" و 70 في الحالات العادية
+  const shipping = appliedPromo.toLowerCase() === "free" ? 0 : 70;
+  const total = subtotal + shipping;
+
+  // دالة تطبيق الكود
+  const applyPromoCode = (code) => {
+    if (code.toLowerCase() === "free") {
+      setAppliedPromo("free");
+      setDiscountError("");
+      return { success: true, message: "تم تفعيل الشحن المجاني بنجاح!" };
+    } else {
+      setAppliedPromo("");
+      setDiscountError("عذراً، هذا الكود غير صالح");
+      return { success: false, message: "كود خصم غير صحيح" };
+    }
+  };
 
   useEffect(() => {
     const savedCart = localStorage.getItem('wind_cart');
@@ -69,13 +90,19 @@ export function CartProvider({ children }) {
       cartItems, 
       addToCart, 
       removeFromCart, 
-      updateQty, // تم التصدير
+      updateQty,
       clearCart, 
       isCartOpen, 
       toggleCart, 
       openCart, 
       closeCart,
-      subtotal
+      subtotal,
+      // القيم الجديدة المصدرة للموقع
+      shipping,
+      total,
+      appliedPromo,
+      applyPromoCode,
+      discountError
     }}>
       {children}
     </CartContext.Provider>
