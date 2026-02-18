@@ -177,11 +177,3 @@ export async function POST(req) {
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
-```
-
----
-
-## الاكتشاف المهم
-```
-❌ كنا بنستخدم: KASHIER_HASH_SECRET  لحساب الـ Hash
-✅ الصح:        KASHIER_API_KEY      هو اللي بيتستخدم في الـ Hash
