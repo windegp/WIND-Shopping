@@ -24,10 +24,20 @@ function getNextOrderNumber() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { orderId, amount, customerName, customerEmail, phone, formData, cartItems, total, paymentMethod } = body;
+    const {
+      paymentMethod,
+      orderId,
+      amount,
+      customerName,
+      customerEmail,
+      phone,
+      formData,
+      cartItems,
+      total,
+    } = body;
 
     // ============================================
-    // لو الطلب جاي من كاشير (card)
+    // كاشير — بطاقة / محفظة
     // ============================================
     if (paymentMethod === 'card') {
       const merchantId = process.env.KASHIER_MERCHANT_ID;
@@ -38,40 +48,68 @@ export async function POST(req) {
 
       if (!merchantId || !hashSecret || !baseUrl) {
         return NextResponse.json(
-          { error: `متغير ناقص: merchantId=${!!merchantId} hashSecret=${!!hashSecret} baseUrl=${!!baseUrl}` },
+          { error: `متغير ناقص: MID=${!!merchantId} Secret=${!!hashSecret} URL=${!!baseUrl}` },
           { status: 500 }
         );
       }
 
-      const hashStr = `${merchantId}${orderId}${amount}${currency}`;
-      const hash = crypto.createHmac('sha256', hashSecret).update(hashStr).digest('hex');
-      
+      // ✅ المبلغ بالقروش (× 100)
+      const amountInPiastres = Math.round(parseFloat(amount) * 100).toString();
+
+      // ✅ Timestamp حالي
+      const timestamp = Date.now().toString();
+
+      // ✅ orderId فريد تماماً — بيضم timestamp + random
+      const uniqueOrderId = orderId + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      // ✅ الترتيب الصح من التقرير: MID + Amount + Currency + OrderID + Timestamp
+      const hashStr = `${merchantId}${amountInPiastres}${currency}${uniqueOrderId}${timestamp}`;
+      const hash = crypto
+        .createHmac('sha256', hashSecret)
+        .update(hashStr)
+        .digest('hex');
+
+      // ✅ بناء رابط كاشير
       const kashierUrl = new URL('https://checkout.kashier.io');
       kashierUrl.searchParams.set('merchantId', merchantId);
-      kashierUrl.searchParams.set('orderId', orderId);
-      kashierUrl.searchParams.set('amount', amount);
+      kashierUrl.searchParams.set('orderId', uniqueOrderId);
+      kashierUrl.searchParams.set('amount', amountInPiastres);         // بالقروش
       kashierUrl.searchParams.set('currency', currency);
       kashierUrl.searchParams.set('hash', hash);
+      kashierUrl.searchParams.set('timestamp', timestamp);             // إلزامي
       kashierUrl.searchParams.set('mode', mode);
       kashierUrl.searchParams.set('merchantRedirect', `${baseUrl}/checkout/success`);
       kashierUrl.searchParams.set('failureRedirect', `${baseUrl}/checkout/failure`);
       kashierUrl.searchParams.set('display', 'ar');
       kashierUrl.searchParams.set('brandColor', '%23F5C518');
-      kashierUrl.searchParams.set('allowedMethods', 'card,wallet');
+      kashierUrl.searchParams.set('allowedMethods', 'card,wallet,bank_installments'); // ✅ التقسيط
       if (customerName) kashierUrl.searchParams.set('customerName', customerName);
       if (customerEmail) kashierUrl.searchParams.set('customerEmail', customerEmail);
       if (phone) kashierUrl.searchParams.set('customerPhone', phone);
 
-      return NextResponse.json({ success: true, paymentUrl: kashierUrl.toString(), orderId });
+      // ✅ Log للتشخيص
+      console.log('Kashier Request:', {
+        orderId: uniqueOrderId,
+        amountInPiastres,
+        timestamp,
+        hashStr,
+        hash,
+      });
+
+      return NextResponse.json({
+        success: true,
+        paymentUrl: kashierUrl.toString(),
+        orderId: uniqueOrderId,
+      });
     }
 
     // ============================================
-    // لو الطلب COD أو InstaPay — بعت إيميل + OneSignal
+    // COD أو InstaPay — إيميل + OneSignal
     // ============================================
     const orderNumber = getNextOrderNumber();
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error("بيانات الإيميل غير موجودة في الـ .env");
+      throw new Error('بيانات الإيميل غير موجودة في الـ .env');
     }
 
     const transporter = nodemailer.createTransport({
@@ -126,7 +164,7 @@ export async function POST(req) {
 
     await transporter.sendMail({
       from: `"WIND Shopping" <${process.env.EMAIL_USER}>`,
-      to: "windegp@gmail.com",
+      to: 'windegp@gmail.com',
       subject: `💰 طلب جديد #${orderNumber} - ${formData.firstName}`,
       html: htmlContent,
     });
@@ -136,34 +174,34 @@ export async function POST(req) {
     const restKey = process.env.ONESIGNAL_REST_API_KEY;
     if (appId && restKey) {
       try {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://windshopping.com";
-        await fetch("https://onesignal.com/api/v1/notifications", {
-          method: "POST",
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://windshopping.com';
+        await fetch('https://onesignal.com/api/v1/notifications', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "Authorization": "Basic " + restKey.trim()
+            'Content-Type': 'application/json; charset=utf-8',
+            'Authorization': 'Basic ' + restKey.trim(),
           },
           body: JSON.stringify({
             app_id: appId,
-            included_segments: ["Subscribed Users"],
-            headings: { "ar": "💰 أوردر جديد لـ WIND!", "en": "New Order!" },
+            included_segments: ['Subscribed Users'],
+            headings: { ar: '💰 أوردر جديد لـ WIND!', en: 'New Order!' },
             contents: {
-              "ar": `العميل: ${formData.firstName} | الإجمالي: ${total} EGP`,
-              "en": `New Order from ${formData.firstName}`
+              ar: `العميل: ${formData.firstName} | الإجمالي: ${total} EGP`,
+              en: `New Order from ${formData.firstName}`,
             },
-            web_sound: siteUrl + "/sounds/cashier.mp3",
+            web_sound: siteUrl + '/sounds/cashier.mp3',
             priority: 10,
-          })
+          }),
         });
       } catch (e) {
-        console.error("OneSignal Error:", e.message);
+        console.error('OneSignal Error:', e.message);
       }
     }
 
     return NextResponse.json({ orderNumber }, { status: 200 });
 
   } catch (error) {
-    console.error("Server Error:", error.message);
+    console.error('Server Error:', error.message);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
