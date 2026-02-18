@@ -24,83 +24,56 @@ function getNextOrderNumber() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const {
-      paymentMethod,
-      orderId,
-      amount,
-      customerName,
-      customerEmail,
-      phone,
-      formData,
-      cartItems,
-      total,
-    } = body;
+    const { paymentMethod, orderId, amount, customerName, customerEmail, phone, formData, cartItems, total } = body;
 
     // ============================================
     // كاشير — بطاقة / محفظة
     // ============================================
     if (paymentMethod === 'card') {
       const merchantId = process.env.KASHIER_MERCHANT_ID;
-      const hashSecret = process.env.KASHIER_HASH_SECRET;
+      // ✅ بيستخدم API Key مش Secret Key — من الكود الرسمي
+      const paymentApiKey = process.env.KASHIER_API_KEY;
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       const mode = process.env.KASHIER_MODE || 'live';
       const currency = 'EGP';
 
-      if (!merchantId || !hashSecret || !baseUrl) {
+      if (!merchantId || !paymentApiKey || !baseUrl) {
         return NextResponse.json(
-          { error: `متغير ناقص: MID=${!!merchantId} Secret=${!!hashSecret} URL=${!!baseUrl}` },
+          { error: `متغير ناقص: MID=${!!merchantId} API_KEY=${!!paymentApiKey} URL=${!!baseUrl}` },
           { status: 500 }
         );
       }
 
-      // ✅ المبلغ بالقروش (× 100)
-      const amountInPiastres = Math.round(parseFloat(amount) * 100).toString();
+      // ✅ المبلغ كـ string بالجنيه مع خانتين عشريتين — زي الكود الرسمي '600.00'
+      const amountStr = parseFloat(amount).toFixed(2);
 
-      // ✅ Timestamp حالي
-      const timestamp = Date.now().toString();
-
-      // ✅ orderId فريد تماماً — بيضم timestamp + random
-      const uniqueOrderId = orderId + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      // ✅ الترتيب الصح من التقرير: MID + Amount + Currency + OrderID + Timestamp
-      const hashStr = `${merchantId}${amountInPiastres}${currency}${uniqueOrderId}${timestamp}`;
+      // ✅ الصيغة الرسمية من GitHub كاشير
+      const hashPath = `/?payment=${merchantId}.${orderId}.${amountStr}.${currency}`;
       const hash = crypto
-        .createHmac('sha256', hashSecret)
-        .update(hashStr)
+        .createHmac('sha256', paymentApiKey)
+        .update(hashPath)
         .digest('hex');
 
-      // ✅ بناء رابط كاشير
-      const kashierUrl = new URL('https://checkout.kashier.io');
-      kashierUrl.searchParams.set('merchantId', merchantId);
-      kashierUrl.searchParams.set('orderId', uniqueOrderId);
-      kashierUrl.searchParams.set('amount', amountInPiastres);         // بالقروش
-      kashierUrl.searchParams.set('currency', currency);
-      kashierUrl.searchParams.set('hash', hash);
-      kashierUrl.searchParams.set('timestamp', timestamp);             // إلزامي
-      kashierUrl.searchParams.set('mode', mode);
-      kashierUrl.searchParams.set('merchantRedirect', `${baseUrl}/checkout/success`);
-      kashierUrl.searchParams.set('failureRedirect', `${baseUrl}/checkout/failure`);
-      kashierUrl.searchParams.set('display', 'ar');
-      kashierUrl.searchParams.set('brandColor', '%23F5C518');
-      kashierUrl.searchParams.set('allowedMethods', 'card,wallet,bank_installments'); // ✅ التقسيط
-      if (customerName) kashierUrl.searchParams.set('customerName', customerName);
-      if (customerEmail) kashierUrl.searchParams.set('customerEmail', customerEmail);
-      if (phone) kashierUrl.searchParams.set('customerPhone', phone);
+      console.log('Kashier Hash Path:', hashPath);
+      console.log('Kashier Hash:', hash);
 
-      // ✅ Log للتشخيص
-      console.log('Kashier Request:', {
-        orderId: uniqueOrderId,
-        amountInPiastres,
-        timestamp,
-        hashStr,
-        hash,
-      });
+      // ✅ بناء الـ URL من الكود الرسمي بالظبط
+      const hppUrl =
+        `https://checkout.kashier.io?` +
+        `merchantId=${merchantId}` +
+        `&orderId=${orderId}` +
+        `&amount=${amountStr}` +
+        `&currency=${currency}` +
+        `&hash=${hash}` +
+        `&merchantRedirect=${baseUrl}/checkout/success` +
+        `&failureRedirect=${baseUrl}/checkout/failure` +
+        `&allowedMethods=bank_installments,card,wallet` +
+        `&redirectMethod=get` +
+        `&display=ar` +
+        `&brandColor=${encodeURIComponent('#F5C518')}` +
+        `&mode=${mode}`;
 
-      return NextResponse.json({
-        success: true,
-        paymentUrl: kashierUrl.toString(),
-        orderId: uniqueOrderId,
-      });
+      return NextResponse.json({ success: true, paymentUrl: hppUrl, orderId });
     }
 
     // ============================================
@@ -169,7 +142,6 @@ export async function POST(req) {
       html: htmlContent,
     });
 
-    // OneSignal
     const appId = process.env.ONESIGNAL_APP_ID;
     const restKey = process.env.ONESIGNAL_REST_API_KEY;
     if (appId && restKey) {
@@ -205,3 +177,11 @@ export async function POST(req) {
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
+```
+
+---
+
+## الاكتشاف المهم
+```
+❌ كنا بنستخدم: KASHIER_HASH_SECRET  لحساب الـ Hash
+✅ الصح:        KASHIER_API_KEY      هو اللي بيتستخدم في الـ Hash
