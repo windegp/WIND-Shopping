@@ -73,11 +73,12 @@ const handleSubmit = async (e) => {
 
   try {
     if (paymentMethod === 'card') {
-      // ← طلب رابط الدفع من كاشير
+      // ← كاشير
       const res = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          paymentMethod: 'card',
           orderId,
           amount: finalTotal.toFixed(2),
           customerName: `${formData.firstName} ${formData.lastName}`,
@@ -87,21 +88,32 @@ const handleSubmit = async (e) => {
       });
 
       const data = await res.json();
-
       if (!res.ok || !data.paymentUrl) {
         throw new Error(data.error || 'حدث خطأ، حاول مرة أخرى');
       }
-
-      // ← تحويل العميل لصفحة كاشير
       window.location.href = data.paymentUrl;
 
     } else {
-      // ← COD أو InstaPay
-      setTimeout(() => {
-        setOrderCompleted(true);
-        clearCart();
-        setLoading(false);
-      }, 2000);
+      // ← COD أو InstaPay → إيميل + OneSignal
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentMethod,
+          formData,
+          cartItems,
+          total: finalTotal,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error('حدث خطأ، حاول مرة أخرى');
+      }
+
+      setOrderCompleted(true);
+      clearCart();
+      setLoading(false);
     }
 
   } catch (err) {
