@@ -153,12 +153,19 @@ export async function POST(req) {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"WIND Shopping" <${process.env.EMAIL_USER.replace(/['"]/g, '').trim()}>`,
-      to: 'windegp@gmail.com',
-      subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
-      html: htmlContent,
-    });
+// وضعنا الإيميل في try-catch منفصل لكي لا يوقف الأوردر إذا فشل
+    try {
+      await transporter.sendMail({
+        from: `"WIND Shopping" <${process.env.EMAIL_USER.replace(/['"]/g, '').trim()}>`,
+        to: 'windegp@gmail.com',
+        subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
+        html: htmlContent,
+      });
+      console.log('✅ تم إرسال الإيميل بنجاح');
+    } catch (emailError) {
+      // لو الإيميل فشل، هيطبع الخطأ في اللوج بس الأوردر هيكمل عادي جداً للعميل!
+      console.error('⚠️ فشل إرسال الإيميل ولكن الأوردر سيكتمل:', emailError.message);
+    }
 
     return NextResponse.json({ orderNumber }, { status: 200 });
 
