@@ -24,7 +24,6 @@ function getNextOrderNumber() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    // أضفنا appliedPromo هنا عشان نعرف الكود المستخدم
     const { 
       paymentMethod, 
       orderId, 
@@ -39,7 +38,7 @@ export async function POST(req) {
     } = body;
 
     // ============================================
-    // كاشير — بطاقة / محفظة
+    // 1. كاشير — إنشاء رابط الدفع
     // ============================================
     if (paymentMethod === 'card') {
       const merchantId = process.env.KASHIER_MERCHANT_ID;
@@ -55,7 +54,6 @@ export async function POST(req) {
         );
       }
 
-      // السعر هنا جاي مخصوم جاهز من الـ Checkout
       const amountStr = parseFloat(amount).toFixed(2);
 
       const hashPath = `/?payment=${merchantId}.${orderId}.${amountStr}.${currency}`;
@@ -83,7 +81,7 @@ export async function POST(req) {
     }
 
     // ============================================
-    // COD أو InstaPay — إيميل + OneSignal
+    // 2. COD أو InstaPay أو Card_Success — إرسال الإيميل والإشعارات
     // ============================================
     const orderNumber = getNextOrderNumber();
 
@@ -91,13 +89,23 @@ export async function POST(req) {
       throw new Error('بيانات الإيميل ناقصة');
     }
 
+    // تم إضافة الإعدادات الرسمية لجوجل ودالة trim() لقص أي مسافات مخفية
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { 
+        user: process.env.EMAIL_USER.trim(), 
+        pass: process.env.EMAIL_PASS.trim() 
+      },
     });
 
-    // تحديد حالة الشحن لشكل الإيميل
     const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';
+    
+    // تحديد نوع الدفع للعرض في الإيميل
+    let displayPaymentMethod = 'دفع عند الاستلام';
+    if (paymentMethod === 'instapay') displayPaymentMethod = 'إنستا باي';
+    if (paymentMethod === 'card_success') displayPaymentMethod = 'بطاقة ائتمان (مدفوع بنجاح ✅)';
 
     const htmlContent = `
       <div dir="rtl" style="font-family: 'Arial', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #333;">
@@ -111,7 +119,7 @@ export async function POST(req) {
           <p style="margin: 5px 0; font-size: 14px;"><strong>الاسم:</strong> ${formData.firstName} ${formData.lastName}</p>
           <p style="margin: 5px 0; font-size: 14px;"><strong>الهاتف:</strong> ${formData.phone}</p>
           <p style="margin: 5px 0; font-size: 14px;"><strong>العنوان:</strong> ${formData.address}, ${formData.governorate}</p>
-          <p style="margin: 5px 0; font-size: 14px;"><strong>طريقة الدفع:</strong> ${paymentMethod === 'instapay' ? 'إنستا باي' : 'دفع عند الاستلام'}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>طريقة الدفع:</strong> <span style="color: #10b981; font-weight: bold;">${displayPaymentMethod}</span></p>
         </div>
 
         <h3 style="color: #F5C518; font-size: 16px; margin-bottom: 10px;">ملخص المشتريات:</h3>
@@ -153,7 +161,7 @@ export async function POST(req) {
     `;
 
     await transporter.sendMail({
-      from: `"WIND Shopping" <${process.env.EMAIL_USER}>`,
+      from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
       to: 'windegp@gmail.com',
       subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
       html: htmlContent,
@@ -175,7 +183,7 @@ export async function POST(req) {
             included_segments: ['Subscribed Users'],
             headings: { ar: '💰 أوردر جديد لـ WIND!', en: 'New Order!' },
             contents: {
-              ar: `العميل: ${formData.firstName} | الإجمالي: ${total} EGP ${appliedPromo === 'free' ? '(كود FREE)' : ''}`,
+              ar: `العميل: ${formData.firstName} | الإجمالي: ${total} EGP | الدفع: ${paymentMethod === 'card_success' ? 'كارت' : 'كاش'}`,
               en: `New Order from ${formData.firstName}`,
             },
             priority: 10,
@@ -190,6 +198,6 @@ export async function POST(req) {
 
   } catch (error) {
     console.error('Server Error:', error.message);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
