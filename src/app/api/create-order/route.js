@@ -1,24 +1,13 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
 
-const ORDER_NUMBER_FILE = path.join(process.cwd(), 'order_count.txt');
-
-function getNextOrderNumber() {
-  try {
-    if (!fs.existsSync(ORDER_NUMBER_FILE)) {
-      fs.writeFileSync(ORDER_NUMBER_FILE, '1001');
-      return '1001';
-    }
-    const currentNumber = fs.readFileSync(ORDER_NUMBER_FILE, 'utf8');
-    const nextNumber = parseInt(currentNumber) + 1;
-    fs.writeFileSync(ORDER_NUMBER_FILE, nextNumber.toString());
-    return nextNumber.toString();
-  } catch (error) {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-  }
+// دالة توليد رقم أوردر فريد (بديل لـ fs.writeFileSync الذي يسبب خطأ 500 في Vercel)
+function generateOrderNumber() {
+  const now = new Date();
+  const datePart = now.toISOString().split('T')[0].replace(/-/g, ''); // 20260219
+  const timePart = now.getTime().toString().slice(-4); // آخر 4 أرقام من الوقت
+  return `WND-${datePart}-${timePart}`;
 }
 
 export async function POST(req) {
@@ -81,19 +70,16 @@ export async function POST(req) {
     }
 
     // ============================================
-    // 2. COD أو InstaPay أو Card_Success — إرسال الإيميل والإشعارات
+    // 2. COD أو InstaPay أو Card_Success — إرسال الإيميل
     // ============================================
-    const orderNumber = getNextOrderNumber();
+    const orderNumber = generateOrderNumber(); // استخدام الدالة الجديدة بدلاً من getNextOrderNumber()
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       throw new Error('بيانات الإيميل ناقصة');
     }
 
-    // تم إضافة الإعدادات الرسمية لجوجل ودالة trim() لقص أي مسافات مخفية
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      service: 'gmail', // تم الاعتماد على service بدلاً من host لتوافق أفضل مع Vercel
       auth: { 
         user: process.env.EMAIL_USER.trim(), 
         pass: process.env.EMAIL_PASS.trim() 
@@ -166,33 +152,6 @@ export async function POST(req) {
       subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
       html: htmlContent,
     });
-
-    // OneSignal Notification
-    const appId = process.env.ONESIGNAL_APP_ID;
-    const restKey = process.env.ONESIGNAL_REST_API_KEY;
-    if (appId && restKey) {
-      try {
-        await fetch('https://onesignal.com/api/v1/notifications', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Authorization': 'Basic ' + restKey.trim(),
-          },
-          body: JSON.stringify({
-            app_id: appId,
-            included_segments: ['Subscribed Users'],
-            headings: { ar: '💰 أوردر جديد لـ WIND!', en: 'New Order!' },
-            contents: {
-              ar: `العميل: ${formData.firstName} | الإجمالي: ${total} EGP | الدفع: ${paymentMethod === 'card_success' ? 'كارت' : 'كاش'}`,
-              en: `New Order from ${formData.firstName}`,
-            },
-            priority: 10,
-          }),
-        });
-      } catch (e) {
-        console.error('OneSignal Error:', e.message);
-      }
-    }
 
     return NextResponse.json({ orderNumber }, { status: 200 });
 
