@@ -78,16 +78,35 @@ export async function POST(req) {
       throw new Error('بيانات الإيميل ناقصة');
     }
 
-    // التعديل هنا: استخدام host و port و secure لتجنب بلوك جوجل لسيرفرات Vercel
+    // 1. إعداد الترانسبورتر (Google SMTP)
     const transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false, // بريفو يعمل بشكل أفضل مع false على بورت 587
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { 
         user: process.env.EMAIL_USER.trim(), 
         pass: process.env.EMAIL_PASS.trim() 
       },
+      tls: {
+        rejectUnauthorized: false
+      }
     });
+
+    // 2. محاولة إرسال الإيميل (معزولة لضمان نجاح الأوردر)
+    try {
+      await transporter.sendMail({
+        from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
+        to: 'windegp@gmail.com',
+        subject: `💰 طلب جديد #${orderNumber} - ${formData.firstName}`,
+        html: htmlContent,
+      });
+      console.log('✅ تم إرسال الإشعار بنجاح');
+    } catch (emailError) {
+      console.error('❌ فشل إرسال الإيميل:', emailError.message);
+    }
+
+    // 3. الرد النهائي بنجاح العملية
+    return NextResponse.json({ orderNumber }, { status: 200 });
 
     const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';
     
