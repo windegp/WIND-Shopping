@@ -140,9 +140,9 @@ export async function POST(req) {
       </div>
     `;
 
-    // --- إعداد الترانسبورتر (Google SMTP) ---
+   // --- إعداد الترانسبورتر (Namecheap Private Email) ---
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host: 'mail.privateemail.com',
       port: 465,
       secure: true,
       auth: { 
@@ -154,26 +154,30 @@ export async function POST(req) {
       }
     });
 
-    // --- محاولة إرسال الإيميل ---
+    // --- محاولة إرسال الإيميل (معزولة لضمان نجاح الأوردر) ---
     try {
       await transporter.sendMail({
-        from: `"WIND Shopping" <${process.env.EMAIL_USER.replace(/['"]/g, '').trim()}>`,
-        to: 'windegp@gmail.com',
+        from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
+        to: 'windegp@gmail.com', // الإيميل اللي هيستلم إشعارات الأوردرات
         subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
         html: htmlContent,
       });
-      console.log('✅ تم إرسال الإيميل بنجاح');
+      console.log('✅ تم إرسال الإشعار بنجاح عبر Namecheap');
     } catch (emailError) {
-      console.error('❌ فشل إرسال الإيميل:', emailError.message);
+      console.error('⚠️ فشل إرسال الإيميل ولكن الأوردر سيكتمل:', emailError.message);
     }
 
     // ============================================
-    // 3. الرد النهائي بنجاح العملية (لازم يكون في الآخر تماماً)
+    // 3. الرد النهائي بنجاح العملية
     // ============================================
     return NextResponse.json({ orderNumber }, { status: 200 });
 
   } catch (error) {
+    // شبكة الأمان الأخيرة لأي خطأ غير متوقع في السيرفر
     console.error('Server Error:', error.message);
-    return NextResponse.json({ message: 'Internal Server Error', details: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Internal Server Error', details: error.message }, 
+      { status: 500 }
+    );
   }
 }
