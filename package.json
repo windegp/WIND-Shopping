@@ -21,7 +21,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-nestable": "^3.0.2",
-    "react-onesignal": "^3.4.6",
     "react-quill": "^2.0.0",
     "tailwind-merge": "^2.5.5",
     "uuid": "^13.0.0"

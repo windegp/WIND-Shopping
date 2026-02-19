@@ -96,6 +96,7 @@ export default function CheckoutPage() {
             customerName: `${formData.firstName} ${formData.lastName}`,
             customerEmail: formData.email,
             phone: formData.phone,
+            appliedPromo, // تم إضافة الكود هنا لضمان وصوله للسيرفر
           }),
         });
 
@@ -106,7 +107,7 @@ export default function CheckoutPage() {
         window.location.href = data.paymentUrl;
 
       } else {
-        // ← COD أو InstaPay → إيميل + OneSignal
+        // ← COD أو InstaPay → إيميل 
         const res = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -115,6 +116,7 @@ export default function CheckoutPage() {
             formData,
             cartItems,
             total: finalTotal,
+            appliedPromo, // التعديل الوحيد: تم إضافة الكود هنا لضمان ظهوره في الإيميل
           }),
         });
 
