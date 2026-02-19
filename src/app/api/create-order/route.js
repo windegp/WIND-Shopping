@@ -72,18 +72,25 @@ export async function POST(req) {
     // ============================================
     // 2. COD أو InstaPay أو Card_Success — إرسال الإيميل
     // ============================================
-    const orderNumber = generateOrderNumber(); // استخدام الدالة الجديدة بدلاً من getNextOrderNumber()
+    const orderNumber = generateOrderNumber(); 
 
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       throw new Error('بيانات الإيميل ناقصة');
     }
 
+    // التعديل هنا: استخدام host و port و secure لتجنب بلوك جوجل لسيرفرات Vercel
     const transporter = nodemailer.createTransport({
-      service: 'gmail', // تم الاعتماد على service بدلاً من host لتوافق أفضل مع Vercel
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, 
       auth: { 
-        user: process.env.EMAIL_USER.trim(), 
-        pass: process.env.EMAIL_PASS.trim() 
+        // استخدام replace لضمان إزالة أي علامات تنصيص قد يضيفها Vercel بالخطأ
+        user: process.env.EMAIL_USER.replace(/['"]/g, '').trim(), 
+        pass: process.env.EMAIL_PASS.replace(/['"]/g, '').trim() 
       },
+      tls: {
+        rejectUnauthorized: false // بيمنع جوجل من رفض الاتصال السحابي
+      }
     });
 
     const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';
@@ -147,7 +154,7 @@ export async function POST(req) {
     `;
 
     await transporter.sendMail({
-      from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
+      from: `"WIND Shopping" <${process.env.EMAIL_USER.replace(/['"]/g, '').trim()}>`,
       to: 'windegp@gmail.com',
       subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
       html: htmlContent,
