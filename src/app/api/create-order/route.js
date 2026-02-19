@@ -78,36 +78,7 @@ export async function POST(req) {
       throw new Error('بيانات الإيميل ناقصة');
     }
 
-    // 1. إعداد الترانسبورتر (Google SMTP)
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: { 
-        user: process.env.EMAIL_USER.trim(), 
-        pass: process.env.EMAIL_PASS.trim() 
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-
-    // 2. محاولة إرسال الإيميل (معزولة لضمان نجاح الأوردر)
-    try {
-      await transporter.sendMail({
-        from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
-        to: 'windegp@gmail.com',
-        subject: `💰 طلب جديد #${orderNumber} - ${formData.firstName}`,
-        html: htmlContent,
-      });
-      console.log('✅ تم إرسال الإشعار بنجاح');
-    } catch (emailError) {
-      console.error('❌ فشل إرسال الإيميل:', emailError.message);
-    }
-
-    // 3. الرد النهائي بنجاح العملية
-    return NextResponse.json({ orderNumber }, { status: 200 });
-
+    // --- تجهيز بيانات الإيميل (لازم تتعرف قبل htmlContent) ---
     const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';
     
     // تحديد نوع الدفع للعرض في الإيميل
@@ -115,6 +86,7 @@ export async function POST(req) {
     if (paymentMethod === 'instapay') displayPaymentMethod = 'إنستا باي';
     if (paymentMethod === 'card_success') displayPaymentMethod = 'بطاقة ائتمان (مدفوع بنجاح ✅)';
 
+    // --- بناء محتوى الإيميل (htmlContent) ---
     const htmlContent = `
       <div dir="rtl" style="font-family: 'Arial', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #333;">
         <div style="text-align: center; border-bottom: 2px solid #F5C518; padding-bottom: 20px; margin-bottom: 20px;">
@@ -168,7 +140,21 @@ export async function POST(req) {
       </div>
     `;
 
-// وضعنا الإيميل في try-catch منفصل لكي لا يوقف الأوردر إذا فشل
+    // --- إعداد الترانسبورتر (Google SMTP) ---
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { 
+        user: process.env.EMAIL_USER.trim(), 
+        pass: process.env.EMAIL_PASS.trim() 
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+
+    // --- محاولة إرسال الإيميل ---
     try {
       await transporter.sendMail({
         from: `"WIND Shopping" <${process.env.EMAIL_USER.replace(/['"]/g, '').trim()}>`,
@@ -178,10 +164,12 @@ export async function POST(req) {
       });
       console.log('✅ تم إرسال الإيميل بنجاح');
     } catch (emailError) {
-      // لو الإيميل فشل، هيطبع الخطأ في اللوج بس الأوردر هيكمل عادي جداً للعميل!
-      console.error('⚠️ فشل إرسال الإيميل ولكن الأوردر سيكتمل:', emailError.message);
+      console.error('❌ فشل إرسال الإيميل:', emailError.message);
     }
 
+    // ============================================
+    // 3. الرد النهائي بنجاح العملية (لازم يكون في الآخر تماماً)
+    // ============================================
     return NextResponse.json({ orderNumber }, { status: 200 });
 
   } catch (error) {
