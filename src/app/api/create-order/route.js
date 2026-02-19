@@ -80,17 +80,13 @@ export async function POST(req) {
 
     // التعديل هنا: استخدام host و port و secure لتجنب بلوك جوجل لسيرفرات Vercel
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, 
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false, // بريفو يعمل بشكل أفضل مع false على بورت 587
       auth: { 
-        // استخدام replace لضمان إزالة أي علامات تنصيص قد يضيفها Vercel بالخطأ
-        user: process.env.EMAIL_USER.replace(/['"]/g, '').trim(), 
-        pass: process.env.EMAIL_PASS.replace(/['"]/g, '').trim() 
+        user: process.env.EMAIL_USER.trim(), 
+        pass: process.env.EMAIL_PASS.trim() 
       },
-      tls: {
-        rejectUnauthorized: false // بيمنع جوجل من رفض الاتصال السحابي
-      }
     });
 
     const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';

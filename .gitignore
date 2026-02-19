@@ -2,3 +2,4 @@
 node_modules/
 .next/
 scripts/serviceAccountKey.json
+node_modules
