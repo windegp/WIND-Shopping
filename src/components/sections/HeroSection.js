@@ -94,8 +94,8 @@ export default function HeroSection() {
                 alt={slide.title}
                 className={`w-full h-full object-cover ${index === current ? 'zoom-animation' : ''}`} 
                 />
-                {/* التدرج اللوني الكثيف من الأسفل */}
-                <div className="absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t from-[#121212] via-[#121212]/90 to-transparent pointer-events-none"></div>
+                {/* تم تعديل التدرج هنا: إضافة from-20% ليصبح أسوداً صلباً تماماً في الأسفل ليلتحم مع القسم الذي يليه */}
+                <div className="absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t from-[#121212] from-20% via-[#121212]/90 to-transparent pointer-events-none"></div>
             </div>
             ))}
         </div>
@@ -165,8 +165,8 @@ export default function HeroSection() {
           <span className="text-white text-xl mb-1 font-bold">›</span>
         </div>
         
-        {/* حاوية سحب الأقسام مع الخطوط الرمادية (border-[#333]) */}
-        <div className="relative w-full border-t border-b border-[#333] py-4 flex items-center">
+        {/* حاوية سحب الأقسام مع الخط الرمادي العلوي فقط (إزالة border-b) */}
+        <div className="relative w-full border-t border-[#333] py-4 flex items-center">
           
           {/* شريط السحب */}
           <div 
@@ -177,7 +177,6 @@ export default function HeroSection() {
               <a 
                 key={idx} 
                 href={category.link} 
-                /* لون الإطارات هنا أصبح border-[#333] ليتطابق مع خطوط الموقع */
                 className="whitespace-nowrap flex items-center gap-1.5 bg-[#121212] border border-[#333] text-gray-300 px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2C2C2C] hover:text-white hover:border-gray-400 transition-colors shadow-sm"
               >
                 {category.title}
