@@ -1,3 +1,4 @@
+export const runtime = 'nodejs'; // إجبار فيرسيل على استخدام بيئة نود الكاملة
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
