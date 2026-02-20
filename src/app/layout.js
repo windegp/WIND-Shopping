@@ -1,10 +1,9 @@
 import "./globals.css"; 
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
-import { CartProvider } from "../context/CartContext";
-import CartDrawer from "../components/layout/CartDrawer";
-import NotificationHandler from "../components/NotificationHandler"; 
-import GlobalLoader from "../components/layout/GlobalLoader"; // سنقوم بإنشائه الآن
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { CartProvider } from "@/context/CartContext";
+import CartDrawer from "@/components/layout/CartDrawer";
+import GlobalLoader from "@/components/layout/GlobalLoader"; 
 import Script from 'next/script';
 import { Cairo } from 'next/font/google';
 
@@ -29,14 +28,12 @@ export default function RootLayout({ children }) {
           strategy="afterInteractive" 
         />
       </head>
-      {/* 1. أضفنا GlobalLoader هنا ليغطي الشاشة بالكامل فوراً.
-          2. حافظنا على ترتيب الـ Providers والناف بار.
-      */}
       <body className={`${cairo.className} bg-[#121212] text-white antialiased overflow-x-hidden`}>
+        {/* شاشة التحميل العامة */}
         <GlobalLoader />
         
         <CartProvider>
-          <NotificationHandler />
+          {/* تم حذف NotificationHandler من هنا */}
           <Navbar />
           <CartDrawer /> 
 
