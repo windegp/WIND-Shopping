@@ -1,3 +1,8 @@
+/* في بداية ملف globals.css */
+html {
+  background-color: #121212; /* يضمن أن أي فراغ قبل التحميل يكون أسوداً بنفس درجة الموقع */
+}
+
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
