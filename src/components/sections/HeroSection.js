@@ -1,38 +1,41 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase"; // تأكد أن هذا المسار يتطابق مع ملفك
 
 export default function HeroSection() {
-  const slides = [
-    {
-      image: "/images/banners/1.webp",
-      tag: "وصل حديثاً",
-      title: "مجموعة الشتاء",
-      desc: "تصاميم كلاسيكية بلمسة عصرية",
-      thumbnail: "/images/posters/1.webp",
-      productLink: "#"
-    },
-    {
-      image: "/images/banners/2.webp",
-      tag: "الأكثر طلباً",
-      title: "شيلان فاخرة",
-      desc: "دفء وأناقة لكل المناسبات",
-      thumbnail: "/images/posters/2.webp",
-      productLink: "#"
-    }
-  ];
-
-  const categories = [
-    { title: "تشكيلة العيد", link: "#" },
-    { title: "أفضل المبيعات", link: "#" },
-    { title: "العروض الحصرية", link: "#" },
-    { title: "الملابس الشتوية", link: "#" },
-    { title: "أحدث الإصدارات", link: "#" }
-  ];
-
+  const [slides, setSlides] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const scrollContainerRef = useRef(null);
 
+  // جلب البيانات من Firebase
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const docRef = doc(db, "homepage", "main-hero");
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setSlides(docSnap.data().slides || []);
+          setCategories(docSnap.data().categories || []);
+        } else {
+          console.log("لا توجد بيانات محفوظة بعد.");
+        }
+      } catch (error) {
+        console.error("خطأ في جلب البيانات:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // مؤقت تقليب الصور
+  useEffect(() => {
+    if (slides.length === 0) return;
     const timer = setInterval(() => {
       setCurrent((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
     }, 5000);
@@ -44,6 +47,16 @@ export default function HeroSection() {
       scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
     }
   };
+
+  // شاشة تحميل بسيطة أثناء جلب البيانات
+  if (loading) {
+    return <div className="w-full aspect-[21/9] bg-[#121212] flex items-center justify-center text-gray-400 font-sans">جاري تجهيز أحدث التشكيلات...</div>;
+  }
+
+  // رسالة في حال عدم وجود عروض
+  if (slides.length === 0) {
+    return <div className="w-full aspect-[21/9] bg-[#121212] flex items-center justify-center text-gray-500 font-sans">لم يتم إضافة عروض بعد. يرجى إضافتها من لوحة التحكم.</div>;
+  }
 
   return (
     <div className="relative w-full bg-[#121212] font-sans" dir="rtl">

@@ -1,23 +1,38 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase"; // نفس مسار الربط السابق
 
 export default function HomeManagerPage() {
-  // حالة مبدئية لشرائح الهيرو
-  const [slides, setSlides] = useState([
-    {
-      image: "/images/banners/1.webp",
-      tag: "وصل حديثاً",
-      title: "مجموعة الشتاء",
-      desc: "تصاميم كلاسيكية بلمسة عصرية",
-      thumbnail: "/images/posters/1.webp",
-      productLink: "#"
-    }
-  ]);
+  const [slides, setSlides] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // حالة مبدئية للأقسام
-  const [categories, setCategories] = useState([
-    { title: "تشكيلة العيد", link: "#" }
-  ]);
+  // جلب البيانات الحالية عند فتح لوحة التحكم
+  useEffect(() => {
+    const fetchCurrentData = async () => {
+      try {
+        const docRef = doc(db, "homepage", "main-hero");
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setSlides(docSnap.data().slides || []);
+          setCategories(docSnap.data().categories || []);
+        } else {
+          // في حال كانت القاعدة فارغة تماماً يتم وضع قالب أولي
+          setSlides([{ image: "", tag: "", title: "", desc: "", thumbnail: "", productLink: "" }]);
+          setCategories([{ title: "", link: "" }]);
+        }
+      } catch (error) {
+        console.error("خطأ في جلب البيانات:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCurrentData();
+  }, []);
 
   // --- دوال التحكم في شرائح الهيرو ---
   const handleSlideChange = (index, field, value) => {
@@ -51,15 +66,30 @@ export default function HomeManagerPage() {
     setCategories(updatedCategories);
   };
 
-  // --- دالة الحفظ ---
-  const handleSave = () => {
-    const dataToSave = {
-      slides: slides,
-      categories: categories
-    };
-    console.log("البيانات الجاهزة للحفظ:", dataToSave);
-    alert("تم حفظ إعدادات القسم الرئيسي والأقسام الفرعية بنجاح وبكل أناقة!");
+  // --- دالة الحفظ المباشر لـ Firebase ---
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const dataToSave = {
+        slides: slides,
+        categories: categories
+      };
+      
+      const docRef = doc(db, "homepage", "main-hero");
+      await setDoc(docRef, dataToSave);
+      
+      alert("تم حفظ التحديثات بنجاح! الواجهة الآن تعرض أحدث بياناتك.");
+    } catch (error) {
+      console.error("حدث خطأ أثناء الحفظ: ", error);
+      alert("عذراً، حدث خطأ أثناء الحفظ. تأكد من إعدادات قاعدة البيانات.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return <div className="max-w-5xl mx-auto p-10 text-center text-gray-600 font-sans text-xl">جاري تحميل بيانات لوحة التحكم...</div>;
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-sm font-sans" dir="rtl">
@@ -67,9 +97,10 @@ export default function HomeManagerPage() {
         <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">إدارة واجهة الموقع</h1>
         <button 
           onClick={handleSave}
-          className="bg-[#2C2C2C] hover:bg-black text-white font-semibold py-2.5 px-8 rounded shadow transition-all duration-300 ease-in-out"
+          disabled={saving}
+          className={`font-semibold py-2.5 px-8 rounded shadow transition-all duration-300 ease-in-out ${saving ? 'bg-gray-400 text-gray-800 cursor-not-allowed' : 'bg-[#2C2C2C] hover:bg-black text-white'}`}
         >
-          حفظ التحديثات
+          {saving ? 'جاري الحفظ...' : 'حفظ التحديثات'}
         </button>
       </div>
 
