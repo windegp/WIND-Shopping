@@ -154,11 +154,12 @@ export async function POST(req) {
       }
     });
 
-    // --- محاولة إرسال الإيميل (معزولة لضمان نجاح الأوردر) ---
+ // --- محاولة إرسال الإيميل ---
     try {
       await transporter.sendMail({
         from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
-        to: 'windegp@gmail.com', // الإيميل اللي هيستلم إشعارات الأوردرات
+        // التعديل هنا: خليه يبعت لنفس الإيميل الرسمي بتاعك (info@windeg.com)
+        to: process.env.EMAIL_USER.trim(), 
         subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
         html: htmlContent,
       });
