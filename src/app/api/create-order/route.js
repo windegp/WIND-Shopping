@@ -147,7 +147,7 @@ export async function POST(req) {
         // إذا لم يتم تفعيل الدومين بعد، استخدم 'onboarding@resend.dev'
         // إذا تم التفعيل بنجاح، استخدم 'Wind Website <info@windeg.com>'
         from: 'Wind Website <info@windeg.com>', 
-        to: 'windegp@gmail.com',
+        to: 'nfo@windeg.com',
         subject: `طلب جديد من ${formData.firstName} #${orderNumber}`,
         html: htmlContent,
       });
