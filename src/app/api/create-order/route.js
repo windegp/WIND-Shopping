@@ -143,8 +143,8 @@ export async function POST(req) {
    // --- إعداد الترانسبورتر (Namecheap Private Email) ---
     const transporter = nodemailer.createTransport({
       host: 'mail.privateemail.com',
-      port: 465,
-      secure: true,
+      port: 587,
+      secure: false,
       auth: { 
         user: process.env.EMAIL_USER.trim(), 
         pass: process.env.EMAIL_PASS.trim() 
@@ -154,19 +154,7 @@ export async function POST(req) {
       }
     });
 
- // --- محاولة إرسال الإيميل ---
-    try {
-      await transporter.sendMail({
-        from: `"WIND Shopping" <${process.env.EMAIL_USER.trim()}>`,
-        // التعديل هنا: خليه يبعت لنفس الإيميل الرسمي بتاعك (info@windeg.com)
-        to: process.env.EMAIL_USER.trim(), 
-        subject: `💰 ${appliedPromo === 'free' ? '[PROMO] ' : ''}طلب جديد #${orderNumber} - ${formData.firstName}`,
-        html: htmlContent,
-      });
-      console.log('✅ تم إرسال الإشعار بنجاح عبر Namecheap');
-    } catch (emailError) {
-      console.error('⚠️ فشل إرسال الإيميل ولكن الأوردر سيكتمل:', emailError.message);
-    }
+ 
 
     // ============================================
     // 3. الرد النهائي بنجاح العملية
