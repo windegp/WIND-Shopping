@@ -59,7 +59,8 @@ export default function HeroSection() {
   }
 
   return (
-    <div className="relative w-full bg-[#121212] font-sans" dir="rtl">
+    {/* إضافة overflow-x-hidden هنا تمنع تمدد الشاشة والرعشة عند أول تحميل */}
+    <div className="relative w-full bg-[#121212] font-sans overflow-x-hidden" dir="rtl">
       <style jsx>{`
         @keyframes kenBurnsZoomOut {
           from { transform: scale(1.15); }
@@ -77,13 +78,12 @@ export default function HeroSection() {
         }
       `}</style>
 
-      {/* حاوية الهيرو الرئيسية 
-        (z-20 لضمان أن أي شيء يخرج منها يغطي الأقسام السفلية)
-      */}
+      {/* حاوية الهيرو الرئيسية */}
       <div className="relative w-full aspect-[3/4] md:aspect-[21/9] z-20">
         
         {/* خلفية الصور والأنيميشن والتدرج */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden bg-[#121212]">
+            {/* 1. الصور تتغير وتختفي هنا */}
             {slides.map((slide, index) => (
             <div 
                 key={index}
@@ -94,10 +94,11 @@ export default function HeroSection() {
                 alt={slide.title}
                 className={`w-full h-full object-cover ${index === current ? 'zoom-animation' : ''}`} 
                 />
-                {/* التدرج اللوني: تم التأكيد على درجة #121212 وزيادة مساحة اللون الصلب (from-30%) ليغطي أسفل الزر بقوة */}
-                <div className="absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-[#121212] from-30% via-[#121212]/90 to-transparent pointer-events-none"></div>
             </div>
             ))}
+            
+            {/* 2. التدرج اللوني ثابت هنا بالخارج! لن يختفي أو يرعش أبداً، وسيعطي أسوداً مطابقاً للناف بار */}
+            <div className="absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-[#121212] from-25% via-[#121212]/95 to-transparent pointer-events-none z-20"></div>
         </div>
 
         {/* المحتوى النصي والبوستر */}
@@ -106,7 +107,7 @@ export default function HeroSection() {
             key={`content-${index}`}
             className={`absolute -bottom-8 md:-bottom-12 right-2 md:right-4 left-4 flex items-start gap-4 md:gap-5 transition-opacity duration-700 ease-in-out ${index === current ? 'opacity-100 z-40' : 'opacity-0 z-0 pointer-events-none'}`}
           >
-            {/* 1. البوستر المصغر (أقصى اليمين) */}
+            {/* البوستر المصغر (أقصى اليمين) */}
             <div className="w-28 md:w-36 flex-shrink-0 rounded-md overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative transition-transform hover:scale-105 bg-[#121212]">
               <a href={slide.productLink} className="block w-full h-full">
                 <img 
@@ -118,7 +119,7 @@ export default function HeroSection() {
               <div className="absolute top-1 right-2 text-white text-2xl font-light leading-none drop-shadow-lg opacity-80">+</div>
             </div>
 
-            {/* 2. النص (على اليسار وموازٍ للبوستر من الأعلى) */}
+            {/* النص والزر (على اليسار) */}
             <div className="text-right flex-1 pt-1 md:pt-2">
               <span className="bg-[#F5C518] text-black text-[10px] md:text-xs font-bold px-2 py-1 rounded-sm mb-2 inline-block">
                 {slide.tag}
@@ -150,7 +151,7 @@ export default function HeroSection() {
 
       {/* ----------------------------------------------------------------- */}
       {/* قسم تصفح الأقسام 
-          استخدام نفس درجة الناف بار #121212 كخلفية صلبة
+          تم التأكد من أن خلفيته #121212 لتتحد تماماً مع الهيرو والناف بار
       */}
       <div className="w-full bg-[#121212] pt-14 md:pt-16 pb-6 relative z-10 pl-0 pr-5">
         
@@ -182,7 +183,7 @@ export default function HeroSection() {
             <div className="w-16 flex-shrink-0"></div>
           </div>
 
-          {/* تأثير التدرج الأسود والسهم الأيسر (مطابق للناف بار #121212) */}
+          {/* تأثير التدرج الأسود والسهم الأيسر */}
           <div 
             className="absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#121212] via-[#121212]/90 to-transparent flex items-center justify-start pointer-events-none z-20"
           >
