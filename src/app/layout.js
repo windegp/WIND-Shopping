@@ -14,6 +14,23 @@ const cairo = Cairo({
   variable: '--font-cairo', 
 });
 
+// استيراد المكون الجديد
+import GlobalLoader from "./components/GlobalLoader"; 
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="ar" dir="rtl">
+      <body className="font-cairo bg-[#121212]">
+        {/* شاشة التحميل العامة */}
+        <GlobalLoader />
+        
+        {/* باقي محتويات الموقع (الناف بار، الصفحات، الفوتر) */}
+        {children}
+      </body>
+    </html>
+  );
+}
+
 // البيانات الوصفية (محفوظة كما هي للـ SEO)
 export const metadata = {
   title: 'WIND | الأناقة والدفء في مكان واحد',
