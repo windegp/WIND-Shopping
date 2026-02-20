@@ -59,8 +59,8 @@ export default function HeroSection() {
   }
 
   return (
-    {/* إضافة overflow-x-hidden هنا تمنع تمدد الشاشة والرعشة عند أول تحميل */}
     <div className="relative w-full bg-[#121212] font-sans overflow-x-hidden" dir="rtl">
+      {/* تم إدخال التعليق هنا لمنع خطأ Vercel */}
       <style jsx>{`
         @keyframes kenBurnsZoomOut {
           from { transform: scale(1.15); }
