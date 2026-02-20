@@ -4,8 +4,21 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase"; // تأكد أن هذا المسار يتطابق مع ملفك
 
 export default function HeroSection() {
-  const [slides, setSlides] = useState([]);
-  const [categories, setCategories] = useState([]);
+  // 1. استخدام بيانات افتراضية (Fallback) لمنع شاشة التحميل المزعجة
+  const [slides, setSlides] = useState([
+    {
+      image: "/images/banners/1.webp", // تأكد من وجود صورة احتياطية هنا أو اتركها فارغة
+      tag: "جاري التحميل...",
+      title: "أحدث التشكيلات",
+      desc: "نستعد لعرض أحدث المجموعات...",
+      thumbnail: "/images/posters/1.webp",
+      productLink: "#",
+      buttonText: "تصفح"
+    }
+  ]);
+  const [categories, setCategories] = useState([
+    { title: "جاري التحميل...", link: "#" }
+  ]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const scrollContainerRef = useRef(null);
@@ -48,15 +61,8 @@ export default function HeroSection() {
     }
   };
 
-  // شاشة تحميل بسيطة أثناء جلب البيانات
-  if (loading) {
-    return <div className="w-full aspect-[21/9] bg-[#121212] flex items-center justify-center text-gray-400 font-sans">جاري تجهيز أحدث التشكيلات...</div>;
-  }
-
-  // رسالة في حال عدم وجود عروض
-  if (slides.length === 0) {
-    return <div className="w-full aspect-[21/9] bg-[#121212] flex items-center justify-center text-gray-500 font-sans">لم يتم إضافة عروض بعد. يرجى إضافتها من لوحة التحكم.</div>;
-  }
+  // تمت إزالة شاشة الـ loading المزعجة (if loading return ...) لمنع القفزات في الواجهة
+  // وتم ترك الاعتماد على الـ Fallback Data حتى تأتي بيانات فايربيز.
 
   return (
     <div className="relative w-full bg-[#121212] font-sans overflow-x-hidden" dir="rtl">
@@ -87,7 +93,8 @@ export default function HeroSection() {
             {slides.map((slide, index) => (
             <div 
                 key={index}
-                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                // إضافة will-change-transform و backface-visibility-hidden لمنع الرعشة
+                className={`absolute inset-0 transition-opacity duration-700 ease-in-out will-change-transform [backface-visibility:hidden] ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
             >
                 <img 
                 src={slide.image} 
