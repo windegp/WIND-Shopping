@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export default function HeroSection() {
   const slides = [
@@ -22,13 +22,15 @@ export default function HeroSection() {
   ];
 
   const categories = [
-    { title: "Casting Directors Guild Awards", link: "#" },
-    { title: "Anime Trends", link: "#" },
-    { title: "Most Popular", link: "#" },
-    { title: "Winter Collection", link: "#" }
+    { title: "تشكيلة العيد", link: "#" },
+    { title: "أفضل المبيعات", link: "#" },
+    { title: "العروض الحصرية", link: "#" },
+    { title: "الملابس الشتوية", link: "#" },
+    { title: "أحدث الإصدارات", link: "#" } // قسم إضافي لإظهار تأثير السحب
   ];
 
   const [current, setCurrent] = useState(0);
+  const scrollContainerRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -37,8 +39,15 @@ export default function HeroSection() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
+  // دالة لتمرير الأقسام عند الضغط على السهم الجانبي
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="relative w-full bg-[#121212] font-sans overflow-visible" dir="rtl">
+    <div className="relative w-full bg-[#121212] font-sans overflow-hidden" dir="rtl">
       <style jsx>{`
         @keyframes kenBurnsZoomOut {
           from { transform: scale(1.15); }
@@ -47,6 +56,7 @@ export default function HeroSection() {
         .zoom-animation {
           animation: kenBurnsZoomOut 6s ease-out forwards;
         }
+        /* إخفاء شريط التمرير الافتراضي */
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
@@ -71,30 +81,17 @@ export default function HeroSection() {
                 alt={slide.title}
                 className={`w-full h-full object-cover ${index === current ? 'zoom-animation' : ''}`} 
                 />
-                {/* تدرج لوني كثيف وطويل من الأسفل لعمل خلفية للبوستر المتداخل */}
+                {/* تدرج لوني كثيف ومرتفع قليلاً لإبراز النصوص والبوستر */}
                 <div className="absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t from-[#121212] via-[#121212]/80 to-transparent"></div>
             </div>
             ))}
         </div>
 
-        {/* المحتوى النصي والبوستر - تم الترتيب: البوستر يمين، النص يسار */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 z-30 flex items-end">
+        {/* المحتوى النصي والبوستر متوازيان من الأعلى (items-start) */}
+        <div className="absolute bottom-0 left-0 right-0 px-5 z-30 flex items-start justify-between">
           
-          {/* 1. بوستر المنتج (على اليمين) متداخل للخارج */}
-          <div className="w-28 md:w-40 flex-shrink-0 ml-4 rounded-lg overflow-hidden border-2 border-white/20 shadow-2xl relative z-40 transition-transform hover:scale-105 -mb-12 md:-mb-16">
-            <a href={slides[current].productLink}>
-              <img 
-                src={slides[current].thumbnail} 
-                alt="Product Thumbnail" 
-                className="w-full aspect-[2/3] object-cover"
-              />
-            </a>
-            {/* أيقونة الإضافة الوهمية للمطابقة مع الصورة */}
-            <div className="absolute top-2 right-2 text-white text-3xl font-light leading-none drop-shadow-lg">+</div>
-          </div>
-
-          {/* 2. النص (على اليسار) */}
-          <div className="text-right flex-1 pb-4 md:pb-8">
+          {/* 1. النص (على اليمين في تصميم الـ RTL) */}
+          <div className="text-right flex-1 pb-6 md:pb-10 pt-2">
             <span className="bg-[#F5C518] text-black text-[10px] md:text-xs font-bold px-2 py-1 rounded-sm mb-2 inline-block">
               {slides[current].tag}
             </span>
@@ -109,11 +106,24 @@ export default function HeroSection() {
               تصفح المنتج
             </a>
           </div>
+
+          {/* 2. بوستر المنتج (على اليسار) متداخل للأسفل بفضل translate-y */}
+          <div className="w-28 md:w-36 flex-shrink-0 mr-4 rounded-lg overflow-hidden border-2 border-white/20 shadow-2xl relative z-40 transition-transform hover:scale-105 transform translate-y-10 md:translate-y-14">
+            <a href={slides[current].productLink}>
+              <img 
+                src={slides[current].thumbnail} 
+                alt="Product Thumbnail" 
+                className="w-full aspect-[2/3] object-cover"
+              />
+            </a>
+            <div className="absolute top-2 left-2 text-white text-3xl font-light leading-none drop-shadow-lg opacity-80">+</div>
+          </div>
+
         </div>
       </div>
       
-      {/* نقاط التنقل */}
-      <div className="absolute top-4 right-4 flex gap-1.5 z-30">
+      {/* نقاط التنقل الخاصة بالهيرو */}
+      <div className="absolute top-4 left-4 flex gap-1.5 z-30">
         {slides.map((_, i) => (
           <div 
             key={i} 
@@ -122,24 +132,56 @@ export default function HeroSection() {
         ))}
       </div>
 
-      {/* قسم تصفح الأقسام (بتصميم مطابق للصورة السوداء) */}
-      <div className="w-full bg-[#121212] px-5 pt-16 pb-8 relative z-10">
-        <div className="flex items-center gap-2 mb-5">
-          <h2 className="text-white text-lg md:text-xl font-bold">Browse trailers</h2>
+      {/* ----------------------------------------------------------------- */}
+      {/* قسم تصفح الأقسام (تم رفع القسم ليقترب من الهيرو وإضافة الخط والسهم) */}
+      <div className="w-full bg-[#121212] pl-0 pr-5 pt-12 md:pt-16 pb-6 relative z-10">
+        
+        {/* عنوان القسم */}
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-white text-lg md:text-xl font-bold">تصفح الأقسام</h2>
           <span className="text-white text-xl mb-1 font-bold">›</span>
         </div>
         
-        <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
-          {categories.map((category, idx) => (
-            <a 
-              key={idx} 
-              href={category.link} 
-              /* تنسيق الأزرار مطابق للمرجع: خلفية شفافة، حدود بيضاء رفيعة، نص أبيض، شكل بيضاوي */
-              className="whitespace-nowrap bg-transparent border border-white/30 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-white/10 transition-colors"
+        {/* حاوية أزرار الأقسام مع تأثير التدرج الجانبي */}
+        <div className="relative w-full flex items-center">
+          
+          {/* شريط السحب */}
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full"
+          >
+            {categories.map((category, idx) => (
+              <a 
+                key={idx} 
+                href={category.link} 
+                className="whitespace-nowrap bg-transparent border border-white/30 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-white/10 transition-colors"
+              >
+                {category.title}
+              </a>
+            ))}
+            {/* عنصر فارغ لإعطاء مساحة إضافية في نهاية السحب حتى لا يختفي آخر زر تحت التدرج */}
+            <div className="w-12 flex-shrink-0"></div>
+          </div>
+
+          {/* تأثير التدرج الأسود، الخط الطولي، والسهم على اليسار */}
+          <div 
+            className="absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#121212] via-[#121212]/90 to-transparent flex items-center justify-start pointer-events-none z-20"
+          >
+            {/* الخط الطولي */}
+            <div className="h-[60%] border-l border-white/40 ml-3"></div>
+            
+            {/* السهم (زر مخفي التفعيل لتمرير الشاشة لمن يستخدم الماوس) */}
+            <button 
+                onClick={scrollLeft}
+                className="pointer-events-auto ml-1 p-2 text-white hover:text-[#F5C518] transition-colors"
+                aria-label="تمرير للمزيد"
             >
-              {category.title}
-            </a>
-          ))}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+
         </div>
       </div>
 
