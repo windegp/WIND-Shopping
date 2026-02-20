@@ -94,25 +94,20 @@ export default function HeroSection() {
                 alt={slide.title}
                 className={`w-full h-full object-cover ${index === current ? 'zoom-animation' : ''}`} 
                 />
-                {/* تم تعديل التدرج هنا: إضافة from-20% ليصبح أسوداً صلباً تماماً في الأسفل ليلتحم مع القسم الذي يليه */}
-                <div className="absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t from-[#121212] from-20% via-[#121212]/90 to-transparent pointer-events-none"></div>
+                {/* التدرج اللوني: تم التأكيد على درجة #121212 وزيادة مساحة اللون الصلب (from-30%) ليغطي أسفل الزر بقوة */}
+                <div className="absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-[#121212] from-30% via-[#121212]/90 to-transparent pointer-events-none"></div>
             </div>
             ))}
         </div>
 
-        {/* المحتوى النصي والبوستر (تم التعديل ليتغيروا بنعومة مع الصورة) 
-          وضعناهم بداخل map لعمل تأثير fade in/out
-        */}
+        {/* المحتوى النصي والبوستر */}
         {slides.map((slide, index) => (
           <div 
             key={`content-${index}`}
-            /* -bottom-8 أو -bottom-10 هي التي ستسحب المحتوى للخارج ليحدث التداخل الجميل.
-              right-2 تقربه أقصى اليمين ليكون مع بداية الصورة.
-            */
             className={`absolute -bottom-8 md:-bottom-12 right-2 md:right-4 left-4 flex items-start gap-4 md:gap-5 transition-opacity duration-700 ease-in-out ${index === current ? 'opacity-100 z-40' : 'opacity-0 z-0 pointer-events-none'}`}
           >
             {/* 1. البوستر المصغر (أقصى اليمين) */}
-            <div className="w-28 md:w-36 flex-shrink-0 rounded-md overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative transition-transform hover:scale-105 bg-[#1a1a1a]">
+            <div className="w-28 md:w-36 flex-shrink-0 rounded-md overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative transition-transform hover:scale-105 bg-[#121212]">
               <a href={slide.productLink} className="block w-full h-full">
                 <img 
                   src={slide.thumbnail} 
@@ -154,8 +149,8 @@ export default function HeroSection() {
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* قسم تصفح الأقسام (z-10 ليكون تحت الهيرو وتظهر فوقه الصورة المتداخلة)
-        تم زيادة pt-14 لاستيعاب الجزء المتداخل من البوستر
+      {/* قسم تصفح الأقسام 
+          استخدام نفس درجة الناف بار #121212 كخلفية صلبة
       */}
       <div className="w-full bg-[#121212] pt-14 md:pt-16 pb-6 relative z-10 pl-0 pr-5">
         
@@ -165,7 +160,7 @@ export default function HeroSection() {
           <span className="text-white text-xl mb-1 font-bold">›</span>
         </div>
         
-        {/* حاوية سحب الأقسام مع الخط الرمادي العلوي فقط (إزالة border-b) */}
+        {/* حاوية سحب الأقسام مع الخط الرمادي العلوي فقط */}
         <div className="relative w-full border-t border-[#333] py-4 flex items-center">
           
           {/* شريط السحب */}
@@ -187,7 +182,7 @@ export default function HeroSection() {
             <div className="w-16 flex-shrink-0"></div>
           </div>
 
-          {/* تأثير التدرج الأسود والسهم الأيسر */}
+          {/* تأثير التدرج الأسود والسهم الأيسر (مطابق للناف بار #121212) */}
           <div 
             className="absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#121212] via-[#121212]/90 to-transparent flex items-center justify-start pointer-events-none z-20"
           >
