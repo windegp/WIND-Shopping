@@ -1,24 +1,11 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase"; // تأكد أن هذا المسار يتطابق مع ملفك
+import { db } from "@/lib/firebase"; 
 
 export default function HeroSection() {
-  // 1. استخدام بيانات افتراضية (Fallback) لمنع شاشة التحميل المزعجة
-  const [slides, setSlides] = useState([
-    {
-      image: "/images/banners/1.webp", // تأكد من وجود صورة احتياطية هنا أو اتركها فارغة
-      tag: "جاري التحميل...",
-      title: "أحدث التشكيلات",
-      desc: "نستعد لعرض أحدث المجموعات...",
-      thumbnail: "/images/posters/1.webp",
-      productLink: "#",
-      buttonText: "تصفح"
-    }
-  ]);
-  const [categories, setCategories] = useState([
-    { title: "جاري التحميل...", link: "#" }
-  ]);
+  const [slides, setSlides] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const scrollContainerRef = useRef(null);
@@ -33,8 +20,6 @@ export default function HeroSection() {
         if (docSnap.exists()) {
           setSlides(docSnap.data().slides || []);
           setCategories(docSnap.data().categories || []);
-        } else {
-          console.log("لا توجد بيانات محفوظة بعد.");
         }
       } catch (error) {
         console.error("خطأ في جلب البيانات:", error);
@@ -61,19 +46,27 @@ export default function HeroSection() {
     }
   };
 
-  // تمت إزالة شاشة الـ loading المزعجة (if loading return ...) لمنع القفزات في الواجهة
-  // وتم ترك الاعتماد على الـ Fallback Data حتى تأتي بيانات فايربيز.
+  // الحل الجذري لمنع التمدد وظهور نصوص التحميل:
+  // نُرجع حاوية فارغة بنفس مقاس الهيرو تماماً وبنفس لون الناف بار
+  if (loading || slides.length === 0) {
+    return (
+      <div className="w-full bg-[#121212]">
+        <div className="w-full aspect-[3/4] md:aspect-[21/9] bg-[#121212]"></div>
+        <div className="w-full h-32 bg-[#121212]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative w-full bg-[#121212] font-sans overflow-x-hidden" dir="rtl">
-      {/* تم إدخال التعليق هنا لمنع خطأ Vercel */}
+    <div className="relative w-full bg-[#121212] font-sans overflow-hidden" dir="rtl">
       <style jsx>{`
-        @keyframes kenBurnsZoomOut {
-          from { transform: scale(1.15); }
-          to { transform: scale(1); }
+        @keyframes kenBurnsZoom {
+          from { transform: scale(1.15) translateZ(0); }
+          to { transform: scale(1) translateZ(0); }
         }
         .zoom-animation {
-          animation: kenBurnsZoomOut 6s ease-out forwards;
+          animation: kenBurnsZoom 6s ease-out forwards;
+          will-change: transform;
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
@@ -85,48 +78,46 @@ export default function HeroSection() {
       `}</style>
 
       {/* حاوية الهيرو الرئيسية */}
-      <div className="relative w-full aspect-[3/4] md:aspect-[21/9] z-20">
+      <div className="relative w-full aspect-[3/4] md:aspect-[21/9] z-20 overflow-hidden">
         
-        {/* خلفية الصور والأنيميشن والتدرج */}
-        <div className="absolute inset-0 overflow-hidden bg-[#121212]">
-            {/* 1. الصور تتغير وتختفي هنا */}
+        {/* خلفية الصور */}
+        <div className="absolute inset-0 bg-[#121212]">
             {slides.map((slide, index) => (
             <div 
-                key={index}
-                // إضافة will-change-transform و backface-visibility-hidden لمنع الرعشة
-                className={`absolute inset-0 transition-opacity duration-700 ease-in-out will-change-transform [backface-visibility:hidden] ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                key={`slide-bg-${index}`}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
             >
                 <img 
                 src={slide.image} 
-                alt={slide.title}
-                className={`w-full h-full object-cover ${index === current ? 'zoom-animation' : ''}`} 
+                alt=""
+                className={`w-full h-full object-cover transform-gpu ${index === current ? 'zoom-animation' : ''}`} 
                 />
             </div>
             ))}
             
-            {/* 2. التدرج اللوني ثابت هنا بالخارج! لن يختفي أو يرعش أبداً، وسيعطي أسوداً مطابقاً للناف بار */}
-            <div className="absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-[#121212] from-25% via-[#121212]/95 to-transparent pointer-events-none z-20"></div>
+            {/* التدرج اللوني الثابت - لا يتحرك مع الصور لمنع الرعشة */}
+            <div className="absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-[#121212] from-25% via-[#121212]/90 to-transparent pointer-events-none z-20"></div>
         </div>
 
-        {/* المحتوى النصي والبوستر */}
+        {/* المحتوى النصي والبوستر المتداخل */}
         {slides.map((slide, index) => (
           <div 
             key={`content-${index}`}
-            className={`absolute -bottom-8 md:-bottom-12 right-2 md:right-4 left-4 flex items-start gap-4 md:gap-5 transition-opacity duration-700 ease-in-out ${index === current ? 'opacity-100 z-40' : 'opacity-0 z-0 pointer-events-none'}`}
+            className={`absolute -bottom-8 md:-bottom-12 right-2 md:right-4 left-4 flex items-start gap-4 md:gap-5 transition-all duration-700 ease-in-out ${index === current ? 'opacity-100 z-40 translate-y-0' : 'opacity-0 z-0 pointer-events-none translate-y-4'}`}
           >
-            {/* البوستر المصغر (أقصى اليمين) */}
-            <div className="w-28 md:w-36 flex-shrink-0 rounded-md overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative transition-transform hover:scale-105 bg-[#121212]">
+            {/* 1. البوستر المصغر */}
+            <div className="w-28 md:w-36 flex-shrink-0 rounded-md overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative transition-transform hover:scale-105 bg-[#1a1a1a]">
               <a href={slide.productLink} className="block w-full h-full">
                 <img 
                   src={slide.thumbnail} 
-                  alt={slide.title} 
+                  alt="" 
                   className="w-full aspect-[2/3] object-cover"
                 />
               </a>
               <div className="absolute top-1 right-2 text-white text-2xl font-light leading-none drop-shadow-lg opacity-80">+</div>
             </div>
 
-            {/* النص والزر (على اليسار) */}
+            {/* 2. النصوص والزر */}
             <div className="text-right flex-1 pt-1 md:pt-2">
               <span className="bg-[#F5C518] text-black text-[10px] md:text-xs font-bold px-2 py-1 rounded-sm mb-2 inline-block">
                 {slide.tag}
@@ -145,11 +136,11 @@ export default function HeroSection() {
           </div>
         ))}
 
-        {/* نقاط التنقل الخاصة بالهيرو */}
+        {/* نقاط التنقل */}
         <div className="absolute top-4 left-4 flex gap-1.5 z-50">
           {slides.map((_, i) => (
             <div 
-              key={i} 
+              key={`dot-${i}`} 
               className={`h-1 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-[#F5C518]' : 'w-2 bg-white/40'}`}
             />
           ))}
@@ -157,28 +148,23 @@ export default function HeroSection() {
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* قسم تصفح الأقسام 
-          تم التأكد من أن خلفيته #121212 لتتحد تماماً مع الهيرو والناف بار
-      */}
+      {/* قسم تصفح الأقسام السفلية */}
       <div className="w-full bg-[#121212] pt-14 md:pt-16 pb-6 relative z-10 pl-0 pr-5">
         
-        {/* عنوان القسم */}
         <div className="flex items-center gap-2 mb-3">
           <h2 className="text-white text-lg md:text-xl font-bold">تصفح الأقسام</h2>
           <span className="text-white text-xl mb-1 font-bold">›</span>
         </div>
         
-        {/* حاوية سحب الأقسام مع الخط الرمادي العلوي فقط */}
         <div className="relative w-full border-t border-[#333] py-4 flex items-center">
           
-          {/* شريط السحب */}
           <div 
             ref={scrollContainerRef}
-            className="flex gap-3 overflow-x-auto hide-scrollbar w-full items-center"
+            className="flex gap-3 overflow-x-auto hide-scrollbar w-full items-center scroll-smooth"
           >
             {categories.map((category, idx) => (
               <a 
-                key={idx} 
+                key={`cat-${idx}`} 
                 href={category.link} 
                 className="whitespace-nowrap flex items-center gap-1.5 bg-[#121212] border border-[#333] text-gray-300 px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2C2C2C] hover:text-white hover:border-gray-400 transition-colors shadow-sm"
               >
@@ -186,18 +172,15 @@ export default function HeroSection() {
                 <span className="text-gray-500 text-lg leading-none font-bold mt-0.5">›</span>
               </a>
             ))}
-            {/* مسافة فارغة في النهاية */}
             <div className="w-16 flex-shrink-0"></div>
           </div>
 
-          {/* تأثير التدرج الأسود والسهم الأيسر */}
           <div 
             className="absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#121212] via-[#121212]/90 to-transparent flex items-center justify-start pointer-events-none z-20"
           >
             <button 
                 onClick={scrollLeft}
                 className="pointer-events-auto ml-2 p-2 text-gray-300 hover:text-[#F5C518] transition-colors"
-                aria-label="تمرير للمزيد"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
