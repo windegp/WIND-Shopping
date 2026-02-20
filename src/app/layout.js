@@ -3,7 +3,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CartProvider } from "../context/CartContext";
 import CartDrawer from "../components/layout/CartDrawer";
-import GlobalLoader from "../components/layout/GlobalLoader"; // المسار ده هو اللي كان فيه المشكلة
+import GlobalLoader from "../components/GlobalLoader"; // تم تصحيح المسار هنا (شيلنا كلمة layout)
 import Script from 'next/script';
 import { Cairo } from 'next/font/google';
 
@@ -29,6 +29,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className={`${cairo.className} bg-[#121212] text-white antialiased overflow-x-hidden`}>
+        {/* شاشة التحميل (اللوجو) */}
         <GlobalLoader />
         
         <CartProvider>
