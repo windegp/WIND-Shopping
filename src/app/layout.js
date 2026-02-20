@@ -3,35 +3,18 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CartProvider } from "../context/CartContext";
 import CartDrawer from "../components/layout/CartDrawer";
-// تم حذف سطر الـ NotificationHandler من هنا
+import NotificationHandler from "../components/NotificationHandler"; 
+import GlobalLoader from "../components/layout/GlobalLoader"; // سنقوم بإنشائه الآن
+import Script from 'next/script';
 import { Cairo } from 'next/font/google';
 
-// 1. إعداد الخط (محفوظ كما هو تماماً لضمان الشكل)
 const cairo = Cairo({
   subsets: ['arabic'],
   weight: ['400', '700', '900'],
   display: 'swap',
-  variable: '--font-cairo', 
+  variable: '--font-cairo',
 });
 
-// استيراد المكون الجديد
-import GlobalLoader from "./components/GlobalLoader"; 
-
-export default function RootLayout({ children }) {
-  return (
-    <html lang="ar" dir="rtl">
-      <body className="font-cairo bg-[#121212]">
-        {/* شاشة التحميل العامة */}
-        <GlobalLoader />
-        
-        {/* باقي محتويات الموقع (الناف بار، الصفحات، الفوتر) */}
-        {children}
-      </body>
-    </html>
-  );
-}
-
-// البيانات الوصفية (محفوظة كما هي للـ SEO)
 export const metadata = {
   title: 'WIND | الأناقة والدفء في مكان واحد',
   description: 'اكتشف مجموعات WIND الفريدة من الشيلان والملابس الراقية المصممة بعناية.',
@@ -41,12 +24,19 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}> 
       <head>
-        {/* تم حذف سكريبت OneSignal لإنهاء تعارضه مع الدومين اللايف */}
+        <Script 
+          src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" 
+          strategy="afterInteractive" 
+        />
       </head>
-      
-      <body className={`${cairo.className} bg-[#121212] text-white antialiased`}>
+      {/* 1. أضفنا GlobalLoader هنا ليغطي الشاشة بالكامل فوراً.
+          2. حافظنا على ترتيب الـ Providers والناف بار.
+      */}
+      <body className={`${cairo.className} bg-[#121212] text-white antialiased overflow-x-hidden`}>
+        <GlobalLoader />
+        
         <CartProvider>
-          {/* تم حذف NotificationHandler لتعطيل الإشعارات التي تسبب أخطاء */}
+          <NotificationHandler />
           <Navbar />
           <CartDrawer /> 
 
