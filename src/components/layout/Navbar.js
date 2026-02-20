@@ -1,21 +1,19 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useCart } from "../../context/CartContext"; // تأكد أن المسار صحيح عندك
+import { useCart } from "../../context/CartContext"; 
 import { db } from "../../lib/firebase"; 
 import { doc, onSnapshot } from "firebase/firestore";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [openSubMenus, setOpenSubMenus] = useState({}); // حالة للتحكم في فتح القوائم الفرعية
+  const [openSubMenus, setOpenSubMenus] = useState({});
   const { cartItems = [], toggleCart } = useCart() || {};
   
-  // الحالة الافتراضية (تظهر لحظياً حتى يتم تحميل البيانات من الأدمن)
   const [categories, setCategories] = useState([
     { name: "الرئيسية", link: "/", children: [] },
   ]);
 
-  // دالة لفتح/إغلاق القوائم الفرعية
   const toggleSubMenu = (index) => {
     setOpenSubMenus(prev => ({
       ...prev,
@@ -24,23 +22,18 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    // --- الاستماع لإعدادات المنيو من لوحة التحكم فقط ---
     const unsubSettings = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
       if (docSnap.exists() && docSnap.data().menuItems) {
-        // تحويل البيانات لتناسب النافبار
-        // ملاحظة: الأدمن يحفظ الاسم في 'title' والنافبار يتوقع 'name' في المستوى الأول
         const menuItemsFromSettings = docSnap.data().menuItems.map(item => ({
           name: item.title, 
-          title: item.title, // نحتفظ بالاثنين للأمان
+          title: item.title,
           link: item.link.startsWith('/') || item.link.startsWith('http') ? item.link : `/${item.link}`,
           highlight: item.highlight || false,
           children: item.children || []
         }));
-
         setCategories(menuItemsFromSettings);
       }
     });
-
     return () => unsubSettings();
   }, []);
 
@@ -52,9 +45,10 @@ export default function Navbar() {
           100% { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 20s linear infinite;
+          animation: marquee 25s linear infinite;
           white-space: nowrap;
           display: inline-block;
+          will-change: transform; /* لتحسين الأداء ومنع الرعشة */
         }
         .marquee-container:hover .animate-marquee {
           animation-play-state: paused;
@@ -63,10 +57,12 @@ export default function Navbar() {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
         }
+        /* منع التمدد الأفقي تماماً في المتصفح */
+        body { overflow-x: hidden; }
       `}</style>
 
-      {/* 1. الشريط العلوي المتحرك */}
-      <div className="bg-[#F5C518] text-black text-xs md:text-sm font-black py-2 overflow-hidden relative z-[50] marquee-container border-b border-black">
+      {/* 1. الشريط العلوي - أضفنا max-w-full و overflow-hidden لمنع التمدد */}
+      <div className="bg-[#F5C518] text-black text-xs md:text-sm font-black py-2 overflow-hidden relative z-[50] marquee-container border-b border-black w-full max-w-full">
         <div className="animate-marquee w-full text-center tracking-widest">
           <span className="mx-8">🚚 توصيل سريع لجميع محافظات مصر</span>
           <span className="mx-8">•</span>
@@ -76,26 +72,30 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 2. النافبار الرئيسية */}
-      <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-2xl">
+      {/* 2. النافبار الرئيسية - ثابتة الأبعاد */}
+      <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-2xl overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between relative">
           
           <button 
             onClick={() => setIsMenuOpen(true)} 
             className="text-white p-2 hover:bg-[#222] rounded-full transition-colors z-20"
+            aria-label="القائمة"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
 
-          {/* اللوجو */}
+          {/* اللوجو - تم تحديد أبعاد الصورة لضمان استقرار التحميل (Layout Stability) */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
             <Link href="/" className="block">
               <img 
                 src="/logo.jpg" 
                 alt="WIND" 
+                width={150} // حدد عرضاً تقريبياً
+                height={64} // حدد طولاً تقريبياً
                 className="h-16 md:h-17 w-auto object-contain hover:scale-105 transition-transform duration-300" 
+                // الحفاظ على w-auto ممتاز لكن width الثابت يخبر المتصفح بالمساحة المحجوزة
               />
             </Link>
           </div>
@@ -120,13 +120,11 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* المنيو الجانبية (Mobile Menu) */}
+        {/* المنيو الجانبية */}
         {isMenuOpen && (
           <div className="fixed inset-0 z-[200] flex" dir="rtl">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
-            
             <div className="relative bg-[#1a1a1a] w-[85%] max-w-[320px] h-full shadow-2xl flex flex-col border-l border-[#333] animate-[slideInRight_0.3s_ease-out]">
-              
               <div className="p-6 pt-10 bg-[#222] border-b border-[#333] flex justify-between items-center">
                 <h3 className="text-[#F5C518] font-black text-xl tracking-tighter">القائمة</h3>
                 <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-white p-1">
@@ -148,10 +146,8 @@ export default function Navbar() {
                               : 'text-gray-200 hover:bg-[#252525] hover:text-[#F5C518] font-bold border-b border-[#333]/30'
                             }`}
                         >
-                          {/* هنا نستخدم cat.name لأننا قمنا بتعيينه في useEffect */}
                           <span className="text-base">{cat.name || cat.title}</span>
                         </Link>
-
                         {cat.children && cat.children.length > 0 && (
                           <button 
                             onClick={() => toggleSubMenu(i)}
@@ -163,8 +159,6 @@ export default function Navbar() {
                           </button>
                         )}
                       </div>
-
-                      {/* عرض القوائم الفرعية (Level 2) */}
                       {cat.children && cat.children.length > 0 && openSubMenus[i] && (
                         <ul className="bg-[#121212] border-r-2 border-[#F5C518] mr-2 transition-all">
                           {cat.children.map((sub, j) => (
@@ -175,10 +169,8 @@ export default function Navbar() {
                                         onClick={() => !sub.children?.length && setIsMenuOpen(false)}
                                         className="flex-1 p-3 text-sm text-gray-400 hover:text-white transition-colors border-b border-[#333]/10"
                                     >
-                                        {/* هنا نستخدم sub.title لأن الأطفال يأتون مباشرة من الأدمن */}
                                         {sub.title || sub.name}
                                     </Link>
-                                    
                                     {sub.children && sub.children.length > 0 && (
                                         <button 
                                             onClick={() => toggleSubMenu(`${i}-${j}`)}
@@ -190,8 +182,6 @@ export default function Navbar() {
                                         </button>
                                     )}
                                 </div>
-
-                                {/* عرض المستوى الثالث */}
                                 {sub.children && sub.children.length > 0 && openSubMenus[`${i}-${j}`] && (
                                     <ul className="bg-[#0a0a0a] pr-4 border-r border-gray-700">
                                         {sub.children.map((grandChild, k) => (
@@ -215,7 +205,6 @@ export default function Navbar() {
                   ))}
                 </ul>
               </div>
-
               <div className="p-6 border-t border-[#333] bg-[#222]">
                   <p className="text-gray-500 text-[10px] text-center uppercase tracking-widest font-bold">WIND © 2026</p>
               </div>
