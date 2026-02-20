@@ -4,14 +4,22 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase"; 
 
 export default function HomeManagerPage() {
+  // --- 1. حالات قسم الهيرو والأقسام السفلية ---
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
+  
+  // --- 2. حالة قسم Featured الجديد ---
+  const [featuredData, setFeaturedData] = useState({ title: "Featured today", cards: [] });
+
+  // حالات التحميل والحفظ
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // جلب جميع البيانات عند فتح الصفحة
   useEffect(() => {
     const fetchCurrentData = async () => {
       try {
+        // جلب بيانات الهيرو
         const docRef = doc(db, "homepage", "main-hero");
         const docSnap = await getDoc(docRef);
         
@@ -22,6 +30,16 @@ export default function HomeManagerPage() {
           setSlides([{ image: "", tag: "", title: "", desc: "", thumbnail: "", productLink: "", buttonText: "" }]);
           setCategories([{ title: "", link: "" }]);
         }
+
+        // جلب بيانات Featured
+        const featRef = doc(db, "homepage", "featured-section");
+        const featSnap = await getDoc(featRef);
+        if (featSnap.exists()) {
+          setFeaturedData(featSnap.data());
+        } else {
+          setFeaturedData({ title: "Featured today", cards: [] });
+        }
+
       } catch (error) {
         console.error("خطأ في جلب البيانات:", error);
       } finally {
@@ -32,46 +50,64 @@ export default function HomeManagerPage() {
     fetchCurrentData();
   }, []);
 
+  // --- دوال قسم الهيرو ---
   const handleSlideChange = (index, field, value) => {
     const updatedSlides = [...slides];
     updatedSlides[index][field] = value;
     setSlides(updatedSlides);
   };
-
   const addNewSlide = () => {
     setSlides([...slides, { image: "", tag: "", title: "", desc: "", thumbnail: "", productLink: "", buttonText: "" }]);
   };
-
   const removeSlide = (index) => {
     const updatedSlides = slides.filter((_, i) => i !== index);
     setSlides(updatedSlides);
   };
 
+  // --- دوال قسم الأقسام السفلية ---
   const handleCategoryChange = (index, field, value) => {
     const updatedCategories = [...categories];
     updatedCategories[index][field] = value;
     setCategories(updatedCategories);
   };
-
   const addNewCategory = () => {
     setCategories([...categories, { title: "", link: "" }]);
   };
-
   const removeCategory = (index) => {
     const updatedCategories = categories.filter((_, i) => i !== index);
     setCategories(updatedCategories);
   };
 
+  // --- دوال قسم Featured الجديد ---
+  const handleFeaturedTitleChange = (e) => {
+    setFeaturedData({ ...featuredData, title: e.target.value });
+  };
+  const handleFeaturedCardChange = (index, field, value) => {
+    const updatedCards = [...featuredData.cards];
+    updatedCards[index][field] = value;
+    setFeaturedData({ ...featuredData, cards: updatedCards });
+  };
+  const addNewFeaturedCard = () => {
+    setFeaturedData({ 
+      ...featuredData, 
+      cards: [...featuredData.cards, { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "" }] 
+    });
+  };
+  const removeFeaturedCard = (index) => {
+    const updatedCards = featuredData.cards.filter((_, i) => i !== index);
+    setFeaturedData({ ...featuredData, cards: updatedCards });
+  };
+
+  // --- دالة الحفظ الشاملة ---
   const handleSave = async () => {
     setSaving(true);
     try {
-      const dataToSave = {
-        slides: slides,
-        categories: categories
-      };
+      // حفظ بيانات الهيرو والأقسام
+      const dataToSaveHero = { slides: slides, categories: categories };
+      await setDoc(doc(db, "homepage", "main-hero"), dataToSaveHero);
       
-      const docRef = doc(db, "homepage", "main-hero");
-      await setDoc(docRef, dataToSave);
+      // حفظ بيانات Featured
+      await setDoc(doc(db, "homepage", "featured-section"), featuredData);
       
       alert("تم حفظ التحديثات بنجاح! الواجهة الآن تعرض أحدث بياناتك.");
     } catch (error) {
@@ -89,7 +125,9 @@ export default function HomeManagerPage() {
   return (
     <div className="min-h-screen bg-[#121212] py-8">
       <div className="max-w-5xl mx-auto p-6 bg-[#1a1a1a] rounded-lg shadow-xl font-sans text-white border border-[#333]" dir="rtl">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-[#333] pb-4">
+        
+        {/* هيدر اللوحة */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-[#333] pb-4 sticky top-0 bg-[#1a1a1a] z-50 pt-2">
           <h1 className="text-3xl font-bold text-white mb-4 md:mb-0">إدارة واجهة الموقع</h1>
           <button 
             onClick={handleSave}
@@ -100,9 +138,15 @@ export default function HomeManagerPage() {
           </button>
         </div>
 
-        {/* --- قسم إدارة شرائح الهيرو --- */}
+        {/* ========================================= */}
+        {/* --- 1. قسم إدارة شرائح الهيرو الرئيسي --- */}
+        {/* ========================================= */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-200 mb-6">إدارة شرائح العرض (Hero Slides)</h2>
+          <div className="flex items-center gap-3 mb-6">
+             <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
+             <h2 className="text-2xl font-bold text-gray-200">إدارة شرائح العرض (Hero Slides)</h2>
+          </div>
+          
           <div className="space-y-8">
             {slides.map((slide, index) => (
               <div key={index} className="p-6 border border-[#333] rounded-xl bg-[#242424] relative shadow-md">
@@ -157,7 +201,7 @@ export default function HomeManagerPage() {
                     />
                   </div>
 
-                  {/* الحقول الجديدة للصورة المصغرة، الرابط، ونص الزر */}
+                  {/* الحقول الجديدة للصورة المصغرة والرابط ونص الزر */}
                   <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#333] col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5 mt-2">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1.5">رابط البوستر المصغر</label>
@@ -179,14 +223,13 @@ export default function HomeManagerPage() {
                         className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white placeholder-gray-500"
                       />
                     </div>
-                    {/* الحقل الجديد لنص الزر */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1.5">نص الزر (مثال: تسوق الآن)</label>
+                      <label className="block text-sm font-medium text-gray-300 mb-1.5">نص الزر</label>
                       <input 
                         type="text" 
                         value={slide.buttonText || ""}
                         onChange={(e) => handleSlideChange(index, 'buttonText', e.target.value)}
-                        placeholder="تصفح المنتج"
+                        placeholder="مثال: تسوق الآن"
                         className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white placeholder-gray-500"
                       />
                     </div>
@@ -203,9 +246,15 @@ export default function HomeManagerPage() {
           </button>
         </div>
 
-        {/* --- قسم إدارة الأقسام السفلية --- */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-200 mb-6 border-t border-[#333] pt-8">إدارة شريط الأقسام (تصفح الأقسام)</h2>
+        {/* ========================================= */}
+        {/* --- 2. قسم إدارة شريط الأقسام السفلية --- */}
+        {/* ========================================= */}
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6 border-t border-[#333] pt-8">
+             <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
+             <h2 className="text-2xl font-bold text-gray-200">إدارة شريط الأقسام (تصفح الأقسام)</h2>
+          </div>
+          
           <div className="space-y-4">
             {categories.map((category, index) => (
               <div key={index} className="flex flex-col md:flex-row gap-4 items-end p-4 border border-[#333] rounded-lg bg-[#242424]">
@@ -243,6 +292,97 @@ export default function HomeManagerPage() {
             className="mt-4 w-full md:w-auto px-6 py-2.5 border border-[#444] text-gray-300 font-semibold rounded-lg hover:border-[#F5C518] hover:text-[#F5C518] transition-all duration-300"
           >
             + إضافة قسم جديد
+          </button>
+        </div>
+
+        {/* ========================================= */}
+        {/* --- 3. إدارة قسم Featured Today الجديد --- */}
+        {/* ========================================= */}
+        <div className="mb-12 border-t border-[#333] pt-8">
+          <div className="flex items-center gap-3 mb-6">
+             <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
+             <h2 className="text-2xl font-bold text-gray-200">إدارة قسم (Featured Today)</h2>
+          </div>
+
+          <div className="mb-8 bg-[#242424] p-5 rounded-lg border border-[#333]">
+            <label className="block text-sm font-bold text-[#F5C518] mb-2">عنوان القسم الرئيسي</label>
+            <input 
+              type="text" 
+              value={featuredData.title}
+              onChange={handleFeaturedTitleChange}
+              placeholder="مثال: Featured today"
+              className="w-full md:w-1/2 p-3 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white"
+              dir="ltr"
+            />
+          </div>
+
+          <div className="space-y-6">
+            {featuredData.cards.map((card, index) => (
+              <div key={index} className="p-5 border border-[#444] rounded-xl bg-[#2a2a2a] relative">
+                <div className="flex justify-between items-center mb-4 border-b border-[#444] pb-2">
+                  <h3 className="font-semibold text-lg text-white">بطاقة (Card) رقم {index + 1}</h3>
+                  <button onClick={() => removeFeaturedCard(index)} className="text-red-400 hover:text-red-300 text-sm font-medium">حذف البطاقة</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">رابط الصورة (Image URL)</label>
+                    <input 
+                      type="text" value={card.image} onChange={(e) => handleFeaturedCardChange(index, 'image', e.target.value)}
+                      className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">نوع الشارة (Badge Type)</label>
+                    <select 
+                      value={card.badgeType} 
+                      onChange={(e) => handleFeaturedCardChange(index, 'badgeType', e.target.value)}
+                      className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white"
+                    >
+                      <option value="none">بدون شارة (صورة فقط)</option>
+                      <option value="list">قائمة (List)</option>
+                      <option value="photos">صور (Photos)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">العنوان أسفل الصورة (Main Title)</label>
+                    <input 
+                      type="text" value={card.mainTitle} onChange={(e) => handleFeaturedCardChange(index, 'mainTitle', e.target.value)}
+                      placeholder="Staff Picks: What to Watch..."
+                      className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">نص الرابط الملوّن (Link Text)</label>
+                    <input 
+                      type="text" value={card.linkText} onChange={(e) => handleFeaturedCardChange(index, 'linkText', e.target.value)}
+                      placeholder="See our picks"
+                      className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">رابط التوجيه (URL)</label>
+                    <input 
+                      type="text" value={card.linkUrl} onChange={(e) => handleFeaturedCardChange(index, 'linkUrl', e.target.value)}
+                      placeholder="/category/staff-picks"
+                      className="w-full p-2.5 border border-[#444] rounded-md focus:ring-1 focus:ring-[#F5C518] outline-none bg-[#121212] text-white"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <button 
+            onClick={addNewFeaturedCard}
+            className="mt-6 w-full py-3.5 border border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all duration-300"
+          >
+            + إضافة بطاقة (Card) جديدة
           </button>
         </div>
 

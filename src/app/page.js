@@ -49,6 +49,8 @@ export default function Home() {
   
   // حالة لحفظ الأقسام الديناميكية من لوحة التحكم
   const [dynamicSections, setDynamicSections] = useState([]);
+  // حالة لحفظ بيانات قسم Featured الجديد
+  const [featuredData, setFeaturedData] = useState({ title: "Featured today", cards: [] });
 
   // --- تصنيف المنتجات بناءً على البيانات ---
   const bestSellers = allProducts.slice(0, 8); 
@@ -108,6 +110,19 @@ export default function Home() {
       }
     };
     fetchPageSettings();
+    // جلب بيانات قسم Featured الجديد
+    const fetchFeaturedData = async () => {
+      try {
+        const docRef = doc(db, "homepage", "featured-section");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFeaturedData(docSnap.data());
+        }
+      } catch (e) {
+        console.error("Error fetching featured data:", e);
+      }
+    };
+    fetchFeaturedData();
 
     // 2. جلب التقييمات من Firebase
     const qReviews = query(collection(db, "reviews"), orderBy("timestamp", "desc"));
@@ -222,48 +237,45 @@ export default function Home() {
 
       <HeroSection />
 
-      {/* --- 1. الأقسام الديناميكية (المصلحة) --- */}
-      {dynamicSections.length > 0 ? (
-        dynamicSections.map((section, index) => {
-          // فلترة ذكية: تحويل slug القسم والمنتجات لـ lowercase لضمان التطابق
-          const sectionSlug = section.slug?.toLowerCase().trim();
+{/* --- 1. قسم Featured (المستوحى من التصميم الجديد) --- */}
+      {featuredData.cards && featuredData.cards.length > 0 && (
+        <section className="my-10 px-4 max-w-[1400px] mx-auto border-t border-[#222] pt-8">
+          {/* عنوان القسم باللون الأصفر (موجود على اليسار ليتناسب مع اتجاه LTR في الكروت) */}
+          <h2 className="text-[#F5C518] text-2xl md:text-3xl font-bold mb-6" dir="ltr">
+            {featuredData.title || "Featured today"}
+          </h2>
           
-          const displayProducts = allProducts.filter(p => {
-             const hasCategory = p.searchCategories?.includes(sectionSlug) || 
-                                p.category?.toLowerCase().trim() === sectionSlug;
-             const isNotExcluded = !section.excludedIds?.includes(p.id);
-             return hasCategory && isNotExcluded;
-          }).slice(0, 10);
-
-          // الحل الجذري: إذا كان القسم فارغاً، لا ترسمه نهائياً (Return null)
-          if (displayProducts.length === 0) return null;
-
-          const sectionLink = section.type === 'collection' 
-            ? `/collections/${section.slug}` 
-            : `/${section.slug}`;
-
-          return (
-            <section key={section.id || index} className="my-10">
-              <SectionHeader title={section.title} subTitle={section.subTitle} link={sectionLink} />
-              <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-                  {displayProducts.map((product) => (
-                    <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
-                      <ProductCard {...product} image={product.images?.[0] || product.image} />
+          {/* حاوية الكروت مع التمرير الأفقي */}
+          <div className="flex overflow-x-auto pb-6 gap-4 scrollbar-hide snap-x" dir="ltr">
+            {featuredData.cards.map((card, index) => (
+              <Link key={index} href={card.linkUrl || "#"} className="min-w-[280px] md:min-w-[360px] flex flex-col gap-2 snap-start group cursor-pointer">
+                
+                {/* حاوية الصورة والشارة */}
+                <div className="relative aspect-[16/10] rounded-md overflow-hidden bg-[#222]">
+                  <img src={card.image} alt={card.mainTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  
+                  {/* تدرج لوني أسود من الأسفل لإبراز الشارة */}
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                  
+                  {/* الشارة (Badge) بناءً على الاختيار من لوحة التحكم */}
+                  {card.badgeType === 'list' && (
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                      List
                     </div>
-                  ))}
-              </div>
-            </section>
-          );
-        })
-      ) : (
-        /* القسم الافتراضي يظهر فقط إذا كانت المصفوفة فارغة تماماً */
-        <section className="my-10">
-          <SectionHeader title="أحدث صيحات WIND" subTitle="تصاميم شتوية تلامس الروح" />
-          <div className="flex overflow-x-auto pb-6 px-4 gap-4 scrollbar-hide snap-x">
-            {newArrivals.map((product) => (
-              <div key={product.id} className="min-w-[170px] md:min-w-[220px] snap-start transform hover:scale-[1.02] transition-transform duration-300">
-                <ProductCard {...product} />
-              </div>
+                  )}
+                  {card.badgeType === 'photos' && (
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      Photos
+                    </div>
+                  )}
+                </div>
+                
+                {/* النصوص أسفل الصورة (العنوان والنص الأزرق) */}
+                <h3 className="text-white text-base md:text-lg font-normal line-clamp-2 mt-1 px-1">{card.mainTitle}</h3>
+                <span className="text-[#5799ef] text-sm md:text-base font-semibold px-1">{card.linkText}</span>
+              </Link>
             ))}
           </div>
         </section>
