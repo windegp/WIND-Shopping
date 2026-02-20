@@ -136,7 +136,7 @@ export default function HeroSection() {
               </p>
               
               <a href={slide.productLink} className="bg-[#2C2C2C] hover:bg-white hover:text-black text-white text-xs md:text-sm font-bold py-2.5 px-6 rounded border border-[#333] transition-all inline-block shadow-lg">
-                تصفح المنتج
+                {slide.buttonText || "تصفح المنتج"}
               </a>
             </div>
           </div>
