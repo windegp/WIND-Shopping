@@ -1,9 +1,12 @@
 export const runtime = 'nodejs'; // إجبار فيرسيل على استخدام بيئة نود الكاملة
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend'; // استيراد Resend بدلاً من nodemailer
 
-// دالة توليد رقم أوردر فريد (بديل لـ fs.writeFileSync الذي يسبب خطأ 500 في Vercel)
+// تهيئة Resend باستخدام مفتاح الـ API الخاص بك
+const resend = new Resend('re_iNyysf4J_BD7FfZgwCsvBUW7vuY3o3SBw');
+
+// دالة توليد رقم أوردر فريد
 function generateOrderNumber() {
   const now = new Date();
   const datePart = now.toISOString().split('T')[0].replace(/-/g, ''); // 20260219
@@ -75,14 +78,9 @@ export async function POST(req) {
     // ============================================
     const orderNumber = generateOrderNumber(); 
 
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error('بيانات الإيميل ناقصة');
-    }
-
-    // --- تجهيز بيانات الإيميل (لازم تتعرف قبل htmlContent) ---
+    // --- تجهيز بيانات الإيميل ---
     const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';
     
-    // تحديد نوع الدفع للعرض في الإيميل
     let displayPaymentMethod = 'دفع عند الاستلام';
     if (paymentMethod === 'instapay') displayPaymentMethod = 'إنستا باي';
     if (paymentMethod === 'card_success') displayPaymentMethod = 'بطاقة ائتمان (مدفوع بنجاح ✅)';
@@ -141,29 +139,28 @@ export async function POST(req) {
       </div>
     `;
 
-   // --- إعداد الترانسبورتر (Namecheap Private Email) ---
-    const transporter = nodemailer.createTransport({
-      host: 'mail.privateemail.com',
-      port: 465,
-      secure: true,
-      auth: { 
-        user: process.env.EMAIL_USER.trim(), 
-        pass: process.env.EMAIL_PASS.trim() 
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-
- 
-
     // ============================================
-    // 3. الرد النهائي بنجاح العملية
+    // 3. إرسال الإيميل عبر Resend
     // ============================================
+    try {
+      await resend.emails.send({
+        // إذا لم يتم تفعيل الدومين بعد، استخدم 'onboarding@resend.dev'
+        // إذا تم التفعيل بنجاح، استخدم 'Wind Website <info@windeg.com>'
+        from: 'Wind Website <info@windeg.com>', 
+        to: 'windegp@gmail.com',
+        subject: `طلب جديد من ${formData.firstName} #${orderNumber}`,
+        html: htmlContent,
+      });
+      console.log('✅ Email sent successfully via Resend');
+    } catch (emailError) {
+      console.error('❌ Resend Email Error:', emailError.message);
+      // لا نعطل العملية بالكامل إذا فشل الإيميل، لكن نسجل الخطأ
+    }
+
+    // الرد النهائي بنجاح العملية
     return NextResponse.json({ orderNumber }, { status: 200 });
 
   } catch (error) {
-    // شبكة الأمان الأخيرة لأي خطأ غير متوقع في السيرفر
     console.error('Server Error:', error.message);
     return NextResponse.json(
       { message: 'Internal Server Error', details: error.message }, 
