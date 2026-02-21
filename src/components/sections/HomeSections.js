@@ -119,26 +119,25 @@ export const FeaturedToday = ({ data }) => {
                   <img src={card.image} alt={card.mainTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
                   
-                  {/* شارة القائمة (List) */}
-                  {card.badgeType === 'قائمة' && (
-                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">dir="rtl"
+{/* شارة القائمة (List) */}
+                  {card.badgeType === 'list' && (
+                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10" dir="rtl">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                       </svg>
-                      List
+                      قائمة
                     </div>
                   )}
                   
                   {/* شارة الصور (Photos) */}
-                  {card.badgeType === 'صور' && (
-                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">dir="rtl"
+                  {card.badgeType === 'photos' && (
+                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10" dir="rtl">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      Photos
+                      صور
                     </div>
                   )}
-                </div>
                 
                 {/* العناوين والروابط - اتجاه LTR للحفاظ على شكل النص الإنجليزي */}
                 <div dir="ltr" className="px-1 text-left mt-1">
