@@ -46,16 +46,15 @@ export const SectionHeader = ({ title, subTitle, link = "#" }) => (
   </div>
 );
 
-// --- 3. قسم Featured Today (المميز اليوم) ---
+// --- 3. قسم Featured Today (المميز اليوم) المطور بنظام المجموعات ---
 export const FeaturedToday = ({ data }) => {
   const scrollRef = useRef(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(true); // السهم الأيسر لعرض المزيد
-  const [showRightArrow, setShowRightArrow] = useState(false); // السهم الأيمن للرجوع
+  const [showLeftArrow, setShowLeftArrow] = useState(true);
+  const [showRightArrow, setShowRightArrow] = useState(false);
 
   const handleScroll = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      // في وضع RTL، قيمة scrollLeft تكون بالسالب
       const currentScroll = Math.abs(scrollLeft);
       setShowRightArrow(currentScroll > 5);
       setShowLeftArrow(currentScroll < scrollWidth - clientWidth - 5);
@@ -80,19 +79,24 @@ export const FeaturedToday = ({ data }) => {
       <GlobalStyles />
       <div className="max-w-[1400px] mx-auto relative px-4 text-right">
         
-        {/* العنوان الرئيسي للقسم */}
-        <h2 className="text-[#F5C518] text-2xl md:text-3xl font-black mb-6" dir="ltr">
-          {data.title || "Featured today"}
-        </h2>
+        {/* العناوين المحدثة */}
+        <div className="mb-8">
+          <h2 className="text-[#F5C518] text-lg md:text-xl font-black uppercase tracking-wider">
+            {data.title || "Featured today"}
+          </h2>
+          {data.subTitle && (
+            <p className="text-gray-400 text-sm md:text-base mt-1 font-medium">
+              {data.subTitle}
+            </p>
+          )}
+        </div>
 
-        {/* حاوية الأسهم والبطاقات */}
         <div className="relative group/slider">
           
           {/* سهم الرجوع (يمين) */}
           <button 
             onClick={() => scroll('right')}
-            className={`absolute top-1/2 -translate-y-1/2 right-2 z-20 bg-black/40 hover:bg-black/60 border border-white/20 text-white w-10 h-14 flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${showRightArrow ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-            aria-label="السابق"
+            className={`absolute top-1/2 -translate-y-1/2 right-2 z-20 bg-black/40 hover:bg-black/60 border border-white/20 text-white w-10 h-14 flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
           </button>
@@ -100,52 +104,54 @@ export const FeaturedToday = ({ data }) => {
           {/* سهم التقدم (يسار) */}
           <button 
             onClick={() => scroll('left')}
-            className={`absolute top-1/2 -translate-y-1/2 left-2 z-20 bg-black/40 hover:bg-black/60 border border-white/20 text-white w-10 h-14 flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${showLeftArrow ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-            aria-label="التالي"
+            className={`absolute top-1/2 -translate-y-1/2 left-2 z-20 bg-black/40 hover:bg-black/60 border border-white/20 text-white w-10 h-14 flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
           </button>
 
-          {/* شريط التمرير (البطاقات) */}
+          {/* شريط التمرير (المجموعات والكروت) */}
           <div 
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex overflow-x-auto gap-4 scrollbar-hide snap-x relative z-10" 
+            className="flex overflow-x-auto gap-1 scrollbar-hide snap-x relative z-10" 
             dir="rtl"
           >
-            {data.cards.map((card, index) => (
-              <Link key={index} href={card.linkUrl || "#"} className="min-w-[280px] md:min-w-[360px] flex flex-col gap-2 snap-start group cursor-pointer pb-2">
-                <div className="relative aspect-[16/10] rounded-sm overflow-hidden bg-[#222]">
-                  <img src={card.image} alt={card.mainTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
-                  
-                  {/* شارة القائمة (قائمة) */}
-                  {card.badgeType === 'list' && (
-                    <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-                      </svg>
-                      قائمة
-                    </div>
-                  )}
-                  
-                  {/* شارة الصور (صور) */}
-                  {card.badgeType === 'photos' && (
-                    <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      صور
-                    </div>
-                  )}
-                </div>
+            {data.cards.map((mainCard, mIndex) => (
+              <React.Fragment key={mIndex}>
                 
-                {/* العناوين والروابط - اتجاه LTR للحفاظ على شكل النص الإنجليزي */}
-                <div dir="rtl" className="px-1 text-right mt-1">
-                  <h3 className="text-white text-base md:text-lg font-normal line-clamp-2">{card.mainTitle}</h3>
-                  <span className="text-[#5799ef] text-sm md:text-base font-semibold">{card.linkText}</span>
-                </div>
-              </Link>
+                {/* 1. الكارت الرئيسي (بداية المجموعة - حواف دائرية يمين) */}
+                <Link href={mainCard.linkUrl || "#"} className="min-w-[220px] md:min-w-[280px] flex flex-col gap-2 snap-start group cursor-pointer pb-2">
+                  <div className="relative aspect-[2/3] rounded-r-2xl overflow-hidden bg-[#222]">
+                    <img src={mainCard.image} alt={mainCard.mainTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                    
+                    {mainCard.badgeType && mainCard.badgeType !== 'none' && (
+                      <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1.5 text-white font-bold text-xs drop-shadow-md z-10 bg-black/20 px-2 py-1 rounded backdrop-blur-[2px]">
+                        {mainCard.badgeType === 'list' ? 'قائمة' : 'صور'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-2 text-right mt-1">
+                    <h3 className="text-white text-sm md:text-base font-bold line-clamp-2">{mainCard.mainTitle}</h3>
+                    <span className="text-[#5799ef] text-xs md:text-sm font-semibold">{mainCard.linkText}</span>
+                  </div>
+                </Link>
+
+                {/* 2. الكروت الفرعية التابعة (حواف حادة - ملتصقة) */}
+                {mainCard.subCards?.map((subCard, sIndex) => (
+                  <Link key={`${mIndex}-${sIndex}`} href={subCard.linkUrl || "#"} className="min-w-[220px] md:min-w-[280px] flex flex-col gap-2 snap-start group cursor-pointer pb-2">
+                    <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#222] border-r border-[#181818]">
+                      <img src={subCard.image} alt={subCard.mainTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                    </div>
+                    <div className="px-2 text-right mt-1">
+                      <h3 className="text-white text-sm md:text-base font-bold line-clamp-2">{subCard.mainTitle}</h3>
+                      <span className="text-[#5799ef] text-xs md:text-sm font-semibold">{subCard.linkText}</span>
+                    </div>
+                  </Link>
+                ))}
+
+              </React.Fragment>
             ))}
           </div>
         </div>
