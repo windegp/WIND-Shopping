@@ -3,29 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase"; 
 
-// --- خريطة الأقسام (مُحدثة لتدعم المنتجات والأقسام) ---
+// --- خريطة الأقسام الشاملة (كل قسم له احتياجاته الخاصة) ---
 const SECTION_TYPES = {
-  HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER", hasTitle: false, hasCards: false },
-  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasCards: true },
-  PRODUCTS_MARQUEE: { label: "شريط المنتجات (Marquee)", designId: "INFINITE_SCROLL", hasTitle: true, hasSubtitle: true, hasProducts: true },
-  BEST_SELLERS: { label: "الأكثر مبيعاً", designId: "GRID_WITH_FEATURED", hasTitle: true, hasProducts: true },
-  TRUST_BAR: { label: "شريط الثقة والإحصائيات", designId: "STATS_STRIP", hasTitle: false },
+  HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
+  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasFeaturedCards: true },
+  PRODUCTS_MARQUEE: { label: "شريط المنتجات (Marquee)", designId: "INFINITE_SCROLL", hasTitle: true, hasSubtitle: true, hasProducts: true, hasTopLink: true },
+  BEST_SELLERS: { label: "الأكثر مبيعاً", designId: "GRID_WITH_FEATURED", hasTitle: true, hasProducts: true, hasTopLink: true },
+  TRUST_BAR: { label: "شريط الثقة والإحصائيات", designId: "STATS_STRIP", isTrustBar: true },
   COLLECTIONS: { label: "مجموعات مميزة", designId: "MAIN_GRID", hasTitle: true, hasCategories: true },
-  REVIEWS: { label: "آراء العملاء", designId: "MARQUEE_REVIEWS", hasTitle: true },
-  MAGAZINE: { label: "مجلة WIND", designId: "BENTO_STYLE", hasTitle: true, hasSubtitle: true },
-  STORY: { label: "قصة WIND", designId: "KEN_BURNS_FULL", hasTitle: false },
+  REVIEWS: { label: "آراء العملاء", designId: "MARQUEE_REVIEWS", hasTitle: true, hasReviews: true, hasTopLink: true },
+  MAGAZINE: { label: "مجلة WIND", designId: "BENTO_STYLE", hasTitle: true, hasSubtitle: true, hasArticles: true, hasTopLink: true },
+  STORY: { label: "قصة WIND", designId: "KEN_BURNS_FULL", isStory: true },
   CATEGORIES_GRID: { label: "تسوق بالفئة", designId: "SPLIT_GRID", hasTitle: true, hasCategories: true },
-  DISCOUNTS: { label: "تخفيضات", designId: "PROMO_GRID", hasTitle: true, hasProducts: true }
+  DISCOUNTS: { label: "تخفيضات", designId: "PROMO_GRID", hasTitle: true, hasProducts: true, hasBottomBtn: true }
 };
-
-// --- بيانات الموقع الأساسية (عينة وهمية تظهر في نافذة الاختيار، يمكنك جلبها من قاعدة بياناتك لاحقاً) ---
-const SITE_DATABASE = [
-  { id: 'prod_1', title: 'هودي شتوي WIND', image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=150', type: 'product', url: '/product/1' },
-  { id: 'prod_2', title: 'جاكيت جلد أسود', image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=150', type: 'product', url: '/product/2' },
-  { id: 'prod_3', title: 'بلوفر خريفي أنيق', image: 'https://images.unsplash.com/photo-1574201635302-388dd92a4c3f?w=150', type: 'product', url: '/product/3' },
-  { id: 'cat_1', title: 'تشكيلة الشتاء', image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=150', type: 'category', url: '/category/winter' },
-  { id: 'cat_2', title: 'أكثر المنتجات مبيعاً', image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=150', type: 'category', url: '/category/best-sellers' }
-];
 
 export default function HomeManagerPage() {
   // --- 1. التبويب النشط ---
@@ -35,12 +26,11 @@ export default function HomeManagerPage() {
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // --- 3. حالة محرك الترتيب الديناميكي (هو الأساس الآن لكل الأقسام) ---
+  // --- 3. حالة محرك الترتيب الديناميكي ---
   const [layoutSections, setLayoutSections] = useState([]);
 
-  // --- 4. حالات واجهة المستخدم الجديدة (الأكورديون ونافذة الاختيار) ---
-  const [expandedSections, setExpandedSections] = useState({}); // حالة الأقسام المفتوحة/المغلقة
-  const [selectorModal, setSelectorModal] = useState({ isOpen: false, sectionIndex: null, itemType: '' }); // حالة نافذة الاختيار
+  // --- 4. حالة واجهة المستخدم (الأكورديون) ---
+  const [expandedSections, setExpandedSections] = useState({});
 
   // حالات التحميل والحفظ
   const [loading, setLoading] = useState(true);
@@ -50,7 +40,6 @@ export default function HomeManagerPage() {
   useEffect(() => {
     const fetchCurrentData = async () => {
       try {
-        // أ. جلب ترتيب الأقسام والمحتوى الديناميكي من الخريطة الرئيسية
         const layoutRef = doc(db, "homepage", "layout_config");
         const layoutSnap = await getDoc(layoutRef);
         let currentLayout = [];
@@ -59,7 +48,6 @@ export default function HomeManagerPage() {
           setLayoutSections(currentLayout);
         }
 
-        // ب. جلب بيانات الهيرو
         const heroRef = doc(db, "homepage", "main-hero");
         const heroSnap = await getDoc(heroRef);
         if (heroSnap.exists()) {
@@ -70,7 +58,6 @@ export default function HomeManagerPage() {
           setCategories([{ title: "", link: "" }]);
         }
 
-        // ج. ترحيل بيانات Featured القديمة إلى المحرك الديناميكي إذا لم تكن موجودة
         const featRef = doc(db, "homepage", "featured-section");
         const featSnap = await getDoc(featRef);
         if (featSnap.exists() && currentLayout.length === 0) {
@@ -86,12 +73,11 @@ export default function HomeManagerPage() {
         setLoading(false);
       }
     };
-
     fetchCurrentData();
   }, []);
 
   // ==========================================
-  // --- دوال محرك الترتيب والمحتوى الديناميكي ---
+  // --- دوال محرك الترتيب والتأسيس الذكي للمحتوى ---
   // ==========================================
   
   const handleLayoutCategoryChange = (index, newCategory) => {
@@ -99,12 +85,27 @@ export default function HomeManagerPage() {
     updated[index].category = newCategory;
     updated[index].designId = SECTION_TYPES[newCategory]?.designId || "";
     
-    // تهيئة البيانات الافتراضية للقسم الجديد والمصفوفات الجديدة
-    updated[index].data = { title: SECTION_TYPES[newCategory]?.label || "" };
-    if (SECTION_TYPES[newCategory]?.hasCards) updated[index].data.cards = [];
-    if (SECTION_TYPES[newCategory]?.hasProducts) updated[index].data.products = [];
-    if (SECTION_TYPES[newCategory]?.hasCategories) updated[index].data.categories = [];
+    const config = SECTION_TYPES[newCategory];
+    let initialData = {};
     
+    if (config.hasTitle) initialData.title = config.label || "";
+    if (config.hasSubtitle) initialData.subTitle = "";
+    if (config.hasTopLink) initialData.topLink = { text: "عرض الكل", url: "#" };
+    if (config.hasBottomBtn) initialData.bottomBtn = { text: "تصفح المجموعة", url: "#" };
+    
+    if (config.hasFeaturedCards) initialData.cards = [];
+    if (config.hasProducts) initialData.products = [];
+    if (config.hasCategories) initialData.categories = [];
+    if (config.hasArticles) initialData.articles = [];
+    if (config.hasReviews) initialData.reviews = [];
+    if (config.isStory) initialData.story = { bgImage: "", title: "قصة WIND", desc: "", btnText: "اكتشف المزيد", btnUrl: "#" };
+    if (config.isTrustBar) initialData.trustStats = [
+      { value: "4.9/5", label: "تقييم العملاء" },
+      { value: "+10k", label: "قطعة بيعت" },
+      { value: "100%", label: "ضمان الجودة" }
+    ];
+
+    updated[index].data = initialData;
     setLayoutSections(updated);
   };
 
@@ -115,13 +116,20 @@ export default function HomeManagerPage() {
     setLayoutSections(updated);
   };
 
+  const handleNestedObjectChange = (sectionIndex, objectName, field, value) => {
+    const updated = [...layoutSections];
+    if (!updated[sectionIndex].data[objectName]) updated[sectionIndex].data[objectName] = {};
+    updated[sectionIndex].data[objectName][field] = value;
+    setLayoutSections(updated);
+  };
+
   const addNewSection = () => {
+    const defaultCategory = "FEATURED_SECTION";
     setLayoutSections([...layoutSections, { 
-      category: "FEATURED_SECTION", 
-      designId: "IMDB_STYLE", 
+      category: defaultCategory, 
+      designId: SECTION_TYPES[defaultCategory].designId, 
       data: { title: "المميز اليوم", cards: [] } 
     }]);
-    // فتح القسم الجديد تلقائياً في التبويب الثالث
     setExpandedSections(prev => ({ ...prev, [layoutSections.length]: true }));
   };
 
@@ -136,7 +144,6 @@ export default function HomeManagerPage() {
       [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
       setLayoutSections(updated);
       
-      // مزامنة حالة الأكورديون مع الحركة لكي لا يتلخبط الترتيب
       const newExpanded = {...expandedSections};
       const temp = newExpanded[index];
       newExpanded[index] = newExpanded[newIndex];
@@ -145,67 +152,32 @@ export default function HomeManagerPage() {
     }
   };
 
-  // --- دوال البطاقات (Cards) ---
-  const addDynamicCard = (sectionIndex) => {
+  // --- دوال التحكم في المصفوفات (البطاقات، المنتجات، الآراء، الخ) ---
+  const addArrayItem = (sectionIndex, arrayName, emptyTemplate) => {
     const updated = [...layoutSections];
-    if (!updated[sectionIndex].data) updated[sectionIndex].data = {};
-    if (!updated[sectionIndex].data.cards) updated[sectionIndex].data.cards = [];
-    
-    updated[sectionIndex].data.cards.push({ 
-      image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "" 
-    });
+    if (!updated[sectionIndex].data[arrayName]) updated[sectionIndex].data[arrayName] = [];
+    updated[sectionIndex].data[arrayName].push(emptyTemplate);
     setLayoutSections(updated);
   };
 
-  const updateDynamicCard = (sectionIndex, cardIndex, field, value) => {
+  const updateArrayItem = (sectionIndex, arrayName, itemIndex, field, value) => {
     const updated = [...layoutSections];
-    updated[sectionIndex].data.cards[cardIndex][field] = value;
+    updated[sectionIndex].data[arrayName][itemIndex][field] = value;
     setLayoutSections(updated);
   };
 
-  const removeDynamicCard = (sectionIndex, cardIndex) => {
+  const removeArrayItem = (sectionIndex, arrayName, itemIndex) => {
     const updated = [...layoutSections];
-    updated[sectionIndex].data.cards = updated[sectionIndex].data.cards.filter((_, i) => i !== cardIndex);
+    updated[sectionIndex].data[arrayName].splice(itemIndex, 1);
     setLayoutSections(updated);
   };
 
-  // --- دوال الأكورديون (فتح وإغلاق الأقسام) ---
   const toggleAccordion = (index) => {
     setExpandedSections(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // --- دوال نافذة اختيار المنتجات/الأقسام بالـ Checkbox ---
-  const openSelector = (sectionIndex, itemType) => {
-    setSelectorModal({ isOpen: true, sectionIndex, itemType });
-  };
-
-  const closeSelector = () => {
-    setSelectorModal({ isOpen: false, sectionIndex: null, itemType: '' });
-  };
-
-  const handleCheckboxToggle = (item) => {
-    const { sectionIndex, itemType } = selectorModal;
-    const arrayName = itemType === 'product' ? 'products' : 'categories';
-    const updated = [...layoutSections];
-    
-    if (!updated[sectionIndex].data[arrayName]) {
-      updated[sectionIndex].data[arrayName] = [];
-    }
-
-    const itemExistsIndex = updated[sectionIndex].data[arrayName].findIndex(i => i.id === item.id);
-    
-    if (itemExistsIndex > -1) {
-      // إزالة العنصر إذا كان موجوداً
-      updated[sectionIndex].data[arrayName].splice(itemExistsIndex, 1);
-    } else {
-      // إضافة العنصر
-      updated[sectionIndex].data[arrayName].push(item);
-    }
-    setLayoutSections(updated);
-  };
-
   // ==========================================
-  // --- دوال قسم الهيرو (من كودك الأصلي) ---
+  // --- دوال قسم الهيرو ---
   // ==========================================
   const handleSlideChange = (index, field, value) => {
     const updatedSlides = [...slides];
@@ -419,7 +391,7 @@ export default function HomeManagerPage() {
           )}
 
           {/* ========================================= */}
-          {/* === التبويب الثالث: محرر الأقسام بالأكورديون والاختيار === */}
+          {/* === التبويب الثالث: محرر الأقسام بالأكورديون الشامل === */}
           {/* ========================================= */}
           {activeTab === 'featured' && (
             <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
@@ -427,17 +399,15 @@ export default function HomeManagerPage() {
                 <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
                 <div>
                   <h2 className="text-2xl font-black">محتوى الأقسام الإضافية</h2>
-                  <p className="text-gray-400 text-sm mt-1">اضغط على أي قسم لفتحه وتعديل بياناته واختيار منتجاته.</p>
+                  <p className="text-gray-400 text-sm mt-1">اضغط على أي قسم لفتحه وتعديل محتواه بالكامل حسب نوعه واحتياجاته.</p>
                 </div>
               </div>
 
               {layoutSections.map((section, sectionIndex) => {
                 const config = SECTION_TYPES[section.category];
-                if (section.category === 'HERO_SECTION' || (!config?.hasTitle && !config?.hasCards && !config?.hasProducts && !config?.hasCategories)) return null;
+                if (section.category === 'HERO_SECTION') return null; // الهيرو له تبويب خاص
 
                 const isExpanded = expandedSections[sectionIndex];
-                const arrayName = config?.hasProducts ? 'products' : (config?.hasCategories ? 'categories' : null);
-                const selectedItemsCount = arrayName && section.data?.[arrayName] ? section.data[arrayName].length : 0;
 
                 return (
                   <div key={sectionIndex} className="bg-[#1a1a1a] border border-[#444] rounded-xl shadow-md transition-all overflow-hidden mb-4">
@@ -453,32 +423,27 @@ export default function HomeManagerPage() {
                            {config?.label}
                          </span>
                          <span className="font-bold text-white text-lg">
-                           {section.data?.title || "بدون عنوان"}
+                           {section.data?.title || (config?.isStory ? "محتوى القصة" : (config?.isTrustBar ? "محتوى الثقة" : "بدون عنوان"))}
                          </span>
-                         {arrayName && (
-                            <span className="text-xs text-gray-400 font-bold bg-[#121212] px-2 py-1 rounded">
-                              محدد: {selectedItemsCount} {config.hasProducts ? 'منتج' : 'قسم'}
-                            </span>
-                         )}
                       </div>
                       <div className={`text-[#F5C518] font-black text-xl transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
                         ▼
                       </div>
                     </div>
                     
-                    {/* المحتوى المختفي (يظهر عند الضغط) */}
+                    {/* المحتوى المختفي (المحرر الشامل يظهر هنا) */}
                     {isExpanded && (
                       <div className="p-6 bg-[#242424] animate-[fadeIn_0.2s_ease-out]">
                         
-                        {/* تعديل العناوين */}
+                        {/* 1. تعديل العناوين الرئيسية (إذا كان القسم يدعمها) */}
                         {config?.hasTitle && (
-                          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-5 bg-[#121212] p-4 rounded-lg border border-[#333]">
                             <div>
                               <label className="block text-xs font-bold text-[#F5C518] mb-2">العنوان الرئيسي للقسم</label>
                               <input 
                                 type="text" value={section.data?.title || ""} 
                                 onChange={(e) => handleLayoutDataChange(sectionIndex, 'title', e.target.value)} 
-                                className="w-full p-3 border border-[#555] rounded bg-[#121212] text-white font-bold focus:border-[#F5C518] outline-none"
+                                className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white font-bold focus:border-[#F5C518] outline-none"
                               />
                             </div>
                             {config?.hasSubtitle && (
@@ -487,62 +452,239 @@ export default function HomeManagerPage() {
                                 <input 
                                   type="text" value={section.data?.subTitle || ""} 
                                   onChange={(e) => handleLayoutDataChange(sectionIndex, 'subTitle', e.target.value)} 
-                                  className="w-full p-3 border border-[#555] rounded bg-[#121212] text-white focus:border-[#F5C518] outline-none"
+                                  className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white focus:border-[#F5C518] outline-none"
                                 />
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* زر اختيار المنتجات أو الأقسام المرتبط بـ Modal */}
-                        {(config?.hasProducts || config?.hasCategories) && (
-                           <div className="mb-8 p-5 border border-dashed border-[#555] rounded-xl bg-[#1a1a1a] flex flex-col items-center justify-center text-center">
-                              <p className="text-gray-400 text-sm mb-4">هذا القسم يعتمد على عرض محتوى من الموقع. اختر العناصر التي تريد ظهورها هنا.</p>
-                              <button 
-                                onClick={() => openSelector(sectionIndex, config.hasProducts ? 'product' : 'category')}
-                                className="bg-transparent border-2 border-[#F5C518] text-[#F5C518] px-8 py-3 font-black rounded-lg hover:bg-[#F5C518] hover:text-black transition-colors flex items-center gap-2"
-                              >
-                                <span>+</span> إضافة وحذف الـ {config.hasProducts ? 'منتجات' : 'أقسام'}
-                              </button>
-                              
-                              {/* عرض مصغر للعناصر المختارة */}
-                              {selectedItemsCount > 0 && (
-                                <div className="mt-4 flex gap-2 overflow-x-auto max-w-full p-2" dir="ltr">
-                                  {section.data[arrayName].map(item => (
-                                    <div key={item.id} className="relative w-12 h-12 rounded-md overflow-hidden border border-[#444] group">
-                                      <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onClick={() => handleCheckboxToggle(item)}>
-                                        <span className="text-red-500 font-bold text-xs">✕</span>
-                                      </div>
-                                    </div>
-                                  ))}
+                        {/* 2. الروابط والأزرار الجانبية والسفلية */}
+                        {(config?.hasTopLink || config?.hasBottomBtn) && (
+                          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-5 bg-[#121212] p-4 rounded-lg border border-[#333]">
+                            {config?.hasTopLink && (
+                              <div className="border border-[#444] p-3 rounded bg-[#1a1a1a]">
+                                <label className="block text-[11px] font-bold text-gray-400 mb-2">رابط أعلى القسم (مثال: عرض الكل)</label>
+                                <div className="flex gap-2">
+                                  <input type="text" placeholder="النص" value={section.data?.topLink?.text || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'topLink', 'text', e.target.value)} className="w-1/3 p-2 bg-[#121212] border border-[#555] rounded text-sm text-white outline-none"/>
+                                  <input type="text" placeholder="الرابط" value={section.data?.topLink?.url || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'topLink', 'url', e.target.value)} className="w-2/3 p-2 bg-[#121212] border border-[#555] rounded text-sm text-white outline-none" dir="ltr"/>
                                 </div>
-                              )}
-                           </div>
+                              </div>
+                            )}
+                            {config?.hasBottomBtn && (
+                              <div className="border border-[#444] p-3 rounded bg-[#1a1a1a]">
+                                <label className="block text-[11px] font-bold text-gray-400 mb-2">زر أسفل القسم (مثال: تصفح المجموعة)</label>
+                                <div className="flex gap-2">
+                                  <input type="text" placeholder="النص" value={section.data?.bottomBtn?.text || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'bottomBtn', 'text', e.target.value)} className="w-1/3 p-2 bg-[#121212] border border-[#555] rounded text-sm text-white outline-none"/>
+                                  <input type="text" placeholder="الرابط" value={section.data?.bottomBtn?.url || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'bottomBtn', 'url', e.target.value)} className="w-2/3 p-2 bg-[#121212] border border-[#555] rounded text-sm text-white outline-none" dir="ltr"/>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
 
-                        {/* محرر البطاقات (Featured Cards) */}
-                        {config?.hasCards && (
-                          <div className="border-t border-[#444] pt-6">
+                        {/* ========================================================= */}
+                        {/* 3. المحررات المخصصة لكل نوع محتوى */}
+                        {/* ========================================================= */}
+
+                        {/* أ. محرر القصة (Story) */}
+                        {config?.isStory && (
+                          <div className="border-t border-[#444] pt-4">
+                            <h4 className="text-[#F5C518] font-bold mb-4">تفاصيل القصة:</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#1a1a1a] p-5 rounded-lg border border-[#444]">
+                               <div className="col-span-1 md:col-span-2">
+                                 <label className="block text-[11px] text-gray-400 mb-1 font-bold">الصورة الخلفية (Background URL)</label>
+                                 <input type="text" value={section.data?.story?.bgImage || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'story', 'bgImage', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr"/>
+                               </div>
+                               <div>
+                                 <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">العنوان العريض للقصة</label>
+                                 <input type="text" value={section.data?.story?.title || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'story', 'title', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                               </div>
+                               <div>
+                                 <label className="block text-[11px] text-gray-400 mb-1 font-bold">نص الزرار</label>
+                                 <input type="text" value={section.data?.story?.btnText || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'story', 'btnText', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                               </div>
+                               <div className="col-span-1 md:col-span-2">
+                                 <label className="block text-[11px] text-gray-400 mb-1 font-bold">رابط الزرار (URL)</label>
+                                 <input type="text" value={section.data?.story?.btnUrl || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'story', 'btnUrl', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr"/>
+                               </div>
+                               <div className="col-span-1 md:col-span-2">
+                                 <label className="block text-[11px] text-gray-400 mb-1 font-bold">الوصف أو الاقتباس</label>
+                                 <textarea value={section.data?.story?.desc || ""} onChange={(e) => handleNestedObjectChange(sectionIndex, 'story', 'desc', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none resize-none" rows="2"/>
+                               </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ب. محرر شريط الثقة (Trust Bar) */}
+                        {config?.isTrustBar && (
+                          <div className="border-t border-[#444] pt-4">
+                            <h4 className="text-[#F5C518] font-bold mb-4">إحصائيات الثقة:</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {(section.data?.trustStats || []).map((stat, i) => (
+                                <div key={i} className="bg-[#1a1a1a] p-4 rounded-lg border border-[#444] shadow-inner">
+                                   <label className="block text-[11px] text-gray-400 mb-1 font-bold">الإحصائية رقم {i+1}</label>
+                                   <input type="text" placeholder="الرقم (مثال: +10k)" value={stat.value} onChange={(e) => updateArrayItem(sectionIndex, 'trustStats', i, 'value', e.target.value)} className="w-full p-2 mb-2 bg-[#121212] border border-[#555] rounded text-white text-sm text-center font-bold outline-none"/>
+                                   <input type="text" placeholder="الوصف (مثال: عميل سعيد)" value={stat.label} onChange={(e) => updateArrayItem(sectionIndex, 'trustStats', i, 'label', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-gray-400 text-xs text-center outline-none"/>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ج. محرر آراء العملاء (Reviews) */}
+                        {config?.hasReviews && (
+                          <div className="border-t border-[#444] pt-4">
+                            <h4 className="text-[#F5C518] font-bold mb-4">آراء وتجارب العملاء:</h4>
+                            <div className="space-y-4">
+                              {(section.data?.reviews || []).map((rev, i) => (
+                                <div key={i} className="bg-[#1a1a1a] p-4 rounded-lg border border-[#444] relative shadow-inner">
+                                  <button onClick={() => removeArrayItem(sectionIndex, 'reviews', i)} className="absolute top-3 left-4 text-red-500 hover:text-red-400 font-bold text-xs">حذف</button>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="col-span-1 md:col-span-3 flex gap-3">
+                                      <div className="flex-1">
+                                        <label className="block text-[10px] text-gray-400 mb-1">اسم العميل</label>
+                                        <input type="text" value={rev.userName} onChange={(e) => updateArrayItem(sectionIndex, 'reviews', i, 'userName', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none"/>
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] text-gray-400 mb-1">التقييم (من 5)</label>
+                                        <input type="number" min="1" max="5" value={rev.rating} onChange={(e) => updateArrayItem(sectionIndex, 'reviews', i, 'rating', Number(e.target.value))} className="w-20 p-2 bg-[#121212] border border-[#555] rounded text-[#F5C518] font-bold text-sm outline-none text-center"/>
+                                      </div>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-3">
+                                      <label className="block text-[10px] text-gray-400 mb-1">رابط صورة العميل (اختياري)</label>
+                                      <input type="text" value={rev.userImage} onChange={(e) => updateArrayItem(sectionIndex, 'reviews', i, 'userImage', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-3">
+                                      <label className="block text-[10px] text-[#F5C518] mb-1">التعليق</label>
+                                      <textarea value={rev.userComment} onChange={(e) => updateArrayItem(sectionIndex, 'reviews', i, 'userComment', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none resize-none" rows="2"/>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => addArrayItem(sectionIndex, 'reviews', {userName:'', userImage:'', rating:5, userComment:''})} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-lg hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة تقييم جديد</button>
+                          </div>
+                        )}
+
+                        {/* د. محرر المنتجات (Products) - للأكثر مبيعاً، شريط المنتجات، التخفيضات */}
+                        {config?.hasProducts && (
+                          <div className="border-t border-[#444] pt-4">
+                            <h4 className="text-[#F5C518] font-bold mb-4">المنتجات المرتبطة بهذا القسم:</h4>
+                            <div className="space-y-4">
+                              {(section.data?.products || []).map((prod, i) => (
+                                <div key={i} className="bg-[#1a1a1a] p-4 rounded-lg border border-[#444] relative shadow-inner">
+                                  <button onClick={() => removeArrayItem(sectionIndex, 'products', i)} className="absolute top-3 left-4 text-red-500 hover:text-red-400 font-bold text-xs">حذف</button>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                                    <div className="col-span-1 md:col-span-2">
+                                      <label className="block text-[10px] text-[#F5C518] mb-1">رابط صورة المنتج</label>
+                                      <input type="text" value={prod.image || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', i, 'image', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-gray-400 mb-1">اسم المنتج</label>
+                                      <input type="text" value={prod.title || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', i, 'title', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none"/>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <div className="flex-1">
+                                        <label className="block text-[10px] text-gray-400 mb-1">السعر (اختياري)</label>
+                                        <input type="text" value={prod.price || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', i, 'price', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none"/>
+                                      </div>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                      <label className="block text-[10px] text-gray-400 mb-1">رابط صفحة المنتج (URL)</label>
+                                      <input type="text" value={prod.url || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', i, 'url', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => addArrayItem(sectionIndex, 'products', {image:'', title:'', price:'', url:''})} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-lg hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة منتج</button>
+                          </div>
+                        )}
+
+                        {/* هـ. محرر التصنيفات/المجموعات (Categories) */}
+                        {config?.hasCategories && (
+                          <div className="border-t border-[#444] pt-4">
+                            <h4 className="text-[#F5C518] font-bold mb-4">الأقسام/المجموعات المرتبطة:</h4>
+                            <div className="space-y-4">
+                              {(section.data?.categories || []).map((cat, i) => (
+                                <div key={i} className="bg-[#1a1a1a] p-4 rounded-lg border border-[#444] relative shadow-inner">
+                                  <button onClick={() => removeArrayItem(sectionIndex, 'categories', i)} className="absolute top-3 left-4 text-red-500 hover:text-red-400 font-bold text-xs">حذف</button>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                                    <div className="col-span-1 md:col-span-2">
+                                      <label className="block text-[10px] text-[#F5C518] mb-1">رابط صورة القسم</label>
+                                      <input type="text" value={cat.image || ""} onChange={(e) => updateArrayItem(sectionIndex, 'categories', i, 'image', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-gray-400 mb-1">اسم القسم/المجموعة</label>
+                                      <input type="text" value={cat.title || ""} onChange={(e) => updateArrayItem(sectionIndex, 'categories', i, 'title', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none"/>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-gray-400 mb-1">رابط توجيه القسم (URL)</label>
+                                      <input type="text" value={cat.url || ""} onChange={(e) => updateArrayItem(sectionIndex, 'categories', i, 'url', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => addArrayItem(sectionIndex, 'categories', {image:'', title:'', url:''})} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-lg hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة قسم للمجموعة</button>
+                          </div>
+                        )}
+
+                        {/* و. محرر المقالات (Magazine) */}
+                        {config?.hasArticles && (
+                          <div className="border-t border-[#444] pt-4">
+                            <h4 className="text-[#F5C518] font-bold mb-4">مقالات المجلة:</h4>
+                            <div className="space-y-4">
+                              {(section.data?.articles || []).map((art, i) => (
+                                <div key={i} className="bg-[#1a1a1a] p-4 rounded-lg border border-[#444] relative shadow-inner">
+                                  <button onClick={() => removeArrayItem(sectionIndex, 'articles', i)} className="absolute top-3 left-4 text-red-500 hover:text-red-400 font-bold text-xs">حذف</button>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                                    <div className="col-span-1 md:col-span-2">
+                                      <label className="block text-[10px] text-[#F5C518] mb-1">رابط صورة المقال</label>
+                                      <input type="text" value={art.image || ""} onChange={(e) => updateArrayItem(sectionIndex, 'articles', i, 'image', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-gray-400 mb-1">عنوان المقال</label>
+                                      <input type="text" value={art.title || ""} onChange={(e) => updateArrayItem(sectionIndex, 'articles', i, 'title', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none"/>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-gray-400 mb-1">الوسم (Tag) مثال: نصائح</label>
+                                      <input type="text" value={art.tag || ""} onChange={(e) => updateArrayItem(sectionIndex, 'articles', i, 'tag', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none"/>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                      <label className="block text-[10px] text-gray-400 mb-1">رابط قراءة المقال</label>
+                                      <input type="text" value={art.url || ""} onChange={(e) => updateArrayItem(sectionIndex, 'articles', i, 'url', e.target.value)} className="w-full p-2 bg-[#121212] border border-[#555] rounded text-white text-sm outline-none" dir="ltr"/>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => addArrayItem(sectionIndex, 'articles', {image:'', title:'', tag:'', url:''})} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-lg hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة مقال</button>
+                          </div>
+                        )}
+
+                        {/* ي. محرر البطاقات المعقدة (Featured Cards) */}
+                        {config?.hasFeaturedCards && (
+                          <div className="border-t border-[#444] pt-4">
                             <h4 className="text-[#F5C518] font-bold mb-4">البطاقات المخصصة (Cards):</h4>
                             <div className="space-y-6">
                               {(section.data?.cards || []).map((card, cardIndex) => (
                                 <div key={cardIndex} className="p-5 border border-[#555] rounded-xl bg-[#1a1a1a] relative shadow-inner">
                                   <div className="flex justify-between items-center mb-4 border-b border-[#333] pb-2">
                                     <span className="font-bold text-gray-300 text-sm">بطاقة #{cardIndex + 1}</span>
-                                    <button onClick={() => removeDynamicCard(sectionIndex, cardIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف</button>
+                                    <button onClick={() => removeArrayItem(sectionIndex, 'cards', cardIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف</button>
                                   </div>
-
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="col-span-1 md:col-span-2 flex gap-2">
                                       <div className="flex-1">
                                         <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">رابط الصورة (Image URL)</label>
-                                        <input type="text" value={card.image} onChange={(e) => updateDynamicCard(sectionIndex, cardIndex, 'image', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                        <input type="text" value={card.image} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'image', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr"/>
                                       </div>
                                     </div>
                                     <div>
                                       <label className="block text-[11px] text-gray-400 mb-1 font-bold">نوع الشارة (Badge Type)</label>
-                                      <select value={card.badgeType} onChange={(e) => updateDynamicCard(sectionIndex, cardIndex, 'badgeType', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none">
+                                      <select value={card.badgeType} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'badgeType', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none">
                                         <option value="none">بدون شارة</option>
                                         <option value="list">قائمة (List)</option>
                                         <option value="photos">صور (Photos)</option>
@@ -550,21 +692,21 @@ export default function HomeManagerPage() {
                                     </div>
                                     <div>
                                       <label className="block text-[11px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
-                                      <input type="text" value={card.mainTitle} onChange={(e) => updateDynamicCard(sectionIndex, cardIndex, 'mainTitle', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                      <input type="text" value={card.mainTitle} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'mainTitle', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
                                     </div>
                                     <div>
                                       <label className="block text-[11px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
-                                      <input type="text" value={card.linkText} onChange={(e) => updateDynamicCard(sectionIndex, cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                      <input type="text" value={card.linkText} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
                                     </div>
                                     <div>
                                       <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">رابط التوجيه (URL)</label>
-                                      <input type="text" value={card.linkUrl} onChange={(e) => updateDynamicCard(sectionIndex, cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا"/>
+                                      <input type="text" value={card.linkUrl} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا"/>
                                     </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                            <button onClick={() => addDynamicCard(sectionIndex)} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة بطاقة (Card) جديدة</button>
+                            <button onClick={() => addArrayItem(sectionIndex, 'cards', { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "" })} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة بطاقة (Card) جديدة</button>
                           </div>
                         )}
                         
@@ -575,9 +717,9 @@ export default function HomeManagerPage() {
               })}
 
               {/* رسالة توضيحية */}
-              {layoutSections.filter(s => s.category !== 'HERO_SECTION' && (SECTION_TYPES[s.category]?.hasTitle || SECTION_TYPES[s.category]?.hasCards || SECTION_TYPES[s.category]?.hasProducts || SECTION_TYPES[s.category]?.hasCategories)).length === 0 && (
+              {layoutSections.length <= 1 && (
                 <div className="p-10 border border-[#444] rounded-xl text-center text-gray-400 bg-[#1a1a1a]">
-                  لا توجد أقسام حالياً تتطلب إدخال بيانات. أضف أقساماً من تبويب التخطيط أولاً.
+                  لا توجد أقسام حالياً. أضف أقساماً من التبويب الأول للبدء في تعديل محتواها هنا.
                 </div>
               )}
             </div>
@@ -585,57 +727,6 @@ export default function HomeManagerPage() {
         </div>
       </div>
       
-      {/* ========================================= */}
-      {/* === Modal نافذة اختيار المنتجات والأقسام === */}
-      {/* ========================================= */}
-      {selectorModal.isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" dir="rtl">
-          <div className="bg-[#1a1a1a] w-full max-w-2xl rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            
-            <div className="p-5 border-b border-[#333] flex justify-between items-center bg-[#222]">
-              <h3 className="text-xl font-black text-[#F5C518]">
-                اختر الـ {selectorModal.itemType === 'product' ? 'منتجات' : 'أقسام'}
-              </h3>
-              <button onClick={closeSelector} className="text-gray-400 hover:text-white font-bold text-xl px-2">✕</button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 bg-[#121212]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {SITE_DATABASE.filter(item => item.type === selectorModal.itemType).map((item) => {
-                  const arrayName = selectorModal.itemType === 'product' ? 'products' : 'categories';
-                  const isSelected = layoutSections[selectorModal.sectionIndex]?.data[arrayName]?.some(i => i.id === item.id);
-                  
-                  return (
-                    <div 
-                      key={item.id} 
-                      onClick={() => handleCheckboxToggle(item)}
-                      className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${isSelected ? 'border-[#F5C518] shadow-[0_0_15px_rgba(245,197,24,0.2)]' : 'border-[#333] hover:border-[#555]'}`}
-                    >
-                      <img src={item.image} alt={item.title} className={`w-full h-32 object-cover transition-opacity ${isSelected ? 'opacity-100' : 'opacity-70'}`} />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#000] to-transparent p-3 pt-8">
-                        <p className="text-white text-xs font-bold truncate">{item.title}</p>
-                      </div>
-                      
-                      {/* Checkbox مخصص */}
-                      <div className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-[#F5C518] border-[#F5C518]' : 'bg-black/50 border-white/50'}`}>
-                        {isSelected && <span className="text-black font-black text-sm">✓</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="p-5 border-t border-[#333] bg-[#222]">
-              <button onClick={closeSelector} className="w-full bg-[#F5C518] text-black font-black py-3 rounded-lg hover:bg-yellow-500 transition-colors">
-                تأكيد وحفظ الاختيارات
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
       <style jsx global>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
