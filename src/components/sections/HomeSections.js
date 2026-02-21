@@ -90,8 +90,8 @@ export const FeaturedToday = ({ data }) => {
       <GlobalStyles />
       <div className="max-w-[1400px] mx-auto relative px-4 text-right">
         
-        {/* العناوين المحدثة */}
-        <div className="mb-3 mr-2 md:mr-4" dir="rtl">
+        {/* العناوين المحدثة - إزالة المارجن اليمين لتتطابق مع الكروت */}
+        <div className="mb-3" dir="rtl">
           <h2 className="text-[#F5C518] text-lg md:text-xl font-black uppercase tracking-wider">
             {data.title || "Featured today"}
           </h2>
@@ -121,7 +121,6 @@ export const FeaturedToday = ({ data }) => {
           </button>
 
           {/* شريط التمرير (المجموعات والكروت) */}
-          {/* تقليل المسافة بين المجموعات لـ gap-4 md:gap-6 */}
           <div 
             ref={scrollRef}
             onScroll={handleScroll}
