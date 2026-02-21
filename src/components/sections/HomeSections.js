@@ -51,6 +51,9 @@ export const FeaturedToday = ({ data }) => {
   const scrollRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(true);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  
+  // حالة جديدة للتحكم في المجموعات المفتوحة (يفتح واحدة فقط في كل مرة)
+  const [expandedDeck, setExpandedDeck] = useState(null);
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -68,6 +71,12 @@ export const FeaturedToday = ({ data }) => {
     }
   };
 
+  // دالة الفتح والإغلاق
+  const toggleDeck = (index, e) => {
+    e.preventDefault(); // لمنع الانتقال للرابط عند الضغط على زر الفتح
+    setExpandedDeck(expandedDeck === index ? null : index);
+  };
+
   useEffect(() => {
     handleScroll();
   }, [data]);
@@ -75,12 +84,13 @@ export const FeaturedToday = ({ data }) => {
   if (!data || !data.cards) return null;
 
   return (
-    <section className="bg-[#181818] pt-6 pb-10 mt-0 border-t border-[#333]">
+    // تقليل المسافة العلوية (pt-2) والسفلية (pb-4)
+    <section className="bg-[#181818] pt-2 pb-4 mt-0 border-t border-[#333]">
       <GlobalStyles />
       <div className="max-w-[1400px] mx-auto relative px-4 text-right">
         
-        {/* العناوين المحدثة - مع إزاحة ضئيلة لليسار (mr-2 md:mr-4) لتتطابق مع أول كارت */}
-        <div className="mb-6 mr-2 md:mr-4" dir="rtl">
+        {/* العناوين المحدثة - تقليل mb-6 إلى mb-3 لإنزال العنوان */}
+        <div className="mb-3 mr-2 md:mr-4" dir="rtl">
           <h2 className="text-[#F5C518] text-lg md:text-xl font-black uppercase tracking-wider">
             {data.title || "Featured today"}
           </h2>
@@ -110,77 +120,93 @@ export const FeaturedToday = ({ data }) => {
           </button>
 
           {/* شريط التمرير (المجموعات والكروت) */}
-          {/* تم إضافة gap-6 md:gap-10 كمسافة فاصلة واضحة بين كل مجموعة والمجموعة التي تليها */}
           <div 
             ref={scrollRef}
             onScroll={handleScroll}
             className="flex overflow-x-auto gap-6 md:gap-10 scrollbar-hide snap-x relative z-10 py-4" 
             dir="rtl"
           >
-            {data.cards.map((mainCard, mIndex) => (
-              // تم إضافة حاوية للمجموعة (Group) لتفعيل حركة الكوتشينة عند التمرير
-              <div key={mIndex} className="flex group/deck items-stretch snap-start">
-                
-                {/* 1. الكارت الرئيسي (بداية المجموعة - حواف دائرية يمين) */}
-                <Link href={mainCard.linkUrl || "#"} className="min-w-[150px] md:min-w-[190px] flex flex-col gap-2 cursor-pointer pb-2 relative z-50">
-                  <div className="relative aspect-[2/3] rounded-r-2xl overflow-hidden bg-[#222] shadow-[0_0_15px_rgba(0,0,0,0.4)]">
-                    <img src={mainCard.image} alt={mainCard.mainTitle} className="w-full h-full object-cover group-hover/deck:scale-105 transition-transform duration-700 ease-out" />
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
-                    
-                    {/* استرجاع الشارات بالأيقونات حسب طلبك */}
-                    {mainCard.badgeType && mainCard.badgeType !== 'none' && (
-                      <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1 text-white font-bold text-[10px] md:text-xs drop-shadow-md z-10 bg-black/40 px-2 py-1 rounded backdrop-blur-[2px]">
-                        {mainCard.badgeType === 'list' ? (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                            قائمة
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            صور
-                          </>
+            {data.cards.map((mainCard, mIndex) => {
+              const isExpanded = expandedDeck === mIndex;
+              const hasSubCards = mainCard.subCards && mainCard.subCards.length > 0;
+
+              return (
+                <div key={mIndex} className="flex items-stretch snap-start">
+                  
+                  {/* 1. الكارت الرئيسي */}
+                  <div className="relative z-50 flex flex-col gap-2 pb-2">
+                    <Link href={mainCard.linkUrl || "#"} className="min-w-[150px] md:min-w-[190px] block relative">
+                      {/* لو الكارت له كروت فرعية، نخليه بدون دوران عند الفتح */}
+                      <div className={`relative aspect-[2/3] overflow-hidden bg-[#222] shadow-[0_0_15px_rgba(0,0,0,0.4)] transition-all duration-500 ${isExpanded && hasSubCards ? 'rounded-none border-l border-[#333]' : 'rounded-r-2xl'}`}>
+                        <img src={mainCard.image} alt={mainCard.mainTitle} className="w-full h-full object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                        
+                        {/* الشارات (قائمة / صور) */}
+                        {mainCard.badgeType && mainCard.badgeType !== 'none' && (
+                          <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1 text-white font-bold text-[10px] md:text-xs drop-shadow-md z-10 bg-black/40 px-2 py-1 rounded backdrop-blur-[2px]">
+                            {mainCard.badgeType === 'list' ? (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                                قائمة
+                              </>
+                            ) : (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                صور
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                  <div className="px-1 text-right mt-1">
-                    <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{mainCard.mainTitle}</h3>
-                    <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{mainCard.linkText}</span>
-                  </div>
-                </Link>
+                    </Link>
 
-                {/* 2. الكروت الفرعية التابعة (تأثير الكوتشينة المنسدلة) */}
-                {mainCard.subCards?.map((subCard, sIndex) => (
-                  <Link 
-                    key={`${mIndex}-${sIndex}`} 
-                    href={subCard.linkUrl || "#"} 
-                    // سحر الحركة هنا: اختفاء بنسبة 95% تحت الكارت الرئيسي، مع ظهور جزء بسيط (بسبب المارجن السالب). وعند الهوفر يتفرد بالكامل للـ mr-0
-                    className="min-w-[150px] md:min-w-[190px] flex flex-col gap-2 cursor-pointer pb-2 
-                               transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-right
-                               -mr-[115px] md:-mr-[145px] opacity-60 scale-[0.93]
-                               group-hover/deck:mr-0 group-hover/deck:opacity-100 group-hover/deck:scale-100"
-                    style={{ zIndex: 40 - sIndex }}
-                  >
-                    {/* الحواف الحادة لتبدو ملتصقة عند الفرد */}
-                    <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#222] border-r border-[#181818]/60 shadow-[-5px_0_15px_rgba(0,0,0,0.5)] group-hover/deck:shadow-none transition-shadow duration-700">
-                      <img src={subCard.image} alt={subCard.mainTitle} className="w-full h-full object-cover group-hover/deck:scale-105 transition-transform duration-700 ease-out" />
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                    {/* النصوص السفلية وزر الفتح */}
+                    <div className="px-1 text-right mt-1 flex justify-between items-start">
+                      <div>
+                        <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{mainCard.mainTitle}</h3>
+                        <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{mainCard.linkText}</span>
+                      </div>
+                      
+                      {/* زر السهم يظهر فقط إذا كان هناك كروت فرعية */}
+                      {hasSubCards && (
+                        <button 
+                          onClick={(e) => toggleDeck(mIndex, e)}
+                          className="bg-[#222] hover:bg-[#333] border border-[#444] text-white p-1.5 rounded-full transition-all duration-300 ml-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                    {/* إخفاء النص عند الطي وظهوره بانسيابية عند الفرد */}
-                    <div className="px-1 text-right mt-1 transition-opacity duration-500 opacity-0 group-hover/deck:opacity-100">
-                      <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{subCard.mainTitle}</h3>
-                      <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{subCard.linkText}</span>
-                    </div>
-                  </Link>
-                ))}
+                  </div>
 
-              </div>
-            ))}
+                  {/* 2. الكروت الفرعية التابعة */}
+                  {hasSubCards && mainCard.subCards.map((subCard, sIndex) => (
+                    <Link 
+                      key={`${mIndex}-${sIndex}`} 
+                      href={subCard.linkUrl || "#"} 
+                      // تم إزالة group-hover/deck واستخدام المتغير isExpanded للتحكم في الفرد والطي
+                      className={`min-w-[150px] md:min-w-[190px] flex flex-col gap-2 cursor-pointer pb-2 
+                                 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-right
+                                 ${isExpanded ? 'mr-0 opacity-100 scale-100' : '-mr-[125px] md:-mr-[160px] opacity-60 scale-[0.93]'}`}
+                      style={{ zIndex: 40 - sIndex }}
+                    >
+                      <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#222] border-r border-[#181818]/60 shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
+                        <img src={subCard.image} alt={subCard.mainTitle} className="w-full h-full object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                      </div>
+                      
+                      <div className={`px-1 text-right mt-1 transition-opacity duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+                        <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{subCard.mainTitle}</h3>
+                        <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{subCard.linkText}</span>
+                      </div>
+                    </Link>
+                  ))}
+
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
