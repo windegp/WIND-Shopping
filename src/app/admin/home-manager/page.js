@@ -6,7 +6,9 @@ import { db } from "@/lib/firebase";
 // --- خريطة الأقسام الأساسية فقط ---
 const SECTION_TYPES = {
   HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
-  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true }
+  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
+  // السطر الجديد هنا:
+  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true }
 };
 
 export default function HomeManagerPage() {
@@ -473,65 +475,112 @@ export default function HomeManagerPage() {
                                         <input type="text" value={card.image} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'image', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr"/>
                                       </div>
                                     </div>
-                                    <div>
-                                      <label className="block text-[11px] text-gray-400 mb-1 font-bold">نوع الشارة (Badge Type)</label>
-                                      <select value={card.badgeType} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'badgeType', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none">
-                                        <option value="none">بدون شارة</option>
-                                        <option value="list">قائمة (List)</option>
-                                        <option value="photos">صور (Photos)</option>
-                                      </select>
-                                    </div>
+
+                                    {/* الخانات الخاصة بـ FEATURED_SECTION فقط */}
+                                    {section.category !== 'TOP_TEN_SECTION' && (
+                                      <>
+                                        <div>
+                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">نوع الشارة (Badge Type)</label>
+                                          <select value={card.badgeType} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'badgeType', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none">
+                                            <option value="none">بدون شارة</option>
+                                            <option value="list">قائمة (List)</option>
+                                            <option value="photos">صور (Photos)</option>
+                                          </select>
+                                        </div>
+                                      </>
+                                    )}
+
                                     <div>
                                       <label className="block text-[11px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
                                       <input type="text" value={card.mainTitle} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'mainTitle', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
                                     </div>
-                                    <div>
-                                      <label className="block text-[11px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
-                                      <input type="text" value={card.linkText} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
-                                    </div>
+
+                                    {/* نص الرابط الملوّن - للـ FEATURED فقط */}
+                                    {section.category !== 'TOP_TEN_SECTION' && (
+                                      <div>
+                                        <label className="block text-[11px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
+                                        <input type="text" value={card.linkText} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                      </div>
+                                    )}
+
                                     <div>
                                       <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">رابط التوجيه (URL)</label>
                                       <input type="text" value={card.linkUrl} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا"/>
                                     </div>
+
+                                    {/* ✅ إضافة خانات خاصة بـ أفضل 10 منتجات فقط */}
+                                    {section.category === 'TOP_TEN_SECTION' && (
+                                      <>
+                                        <div>
+                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">السعر</label>
+                                          <input type="text" value={card.price || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'price', e.target.value)} placeholder="مثال: 1500 ج.م" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">التقييم</label>
+                                          <input type="text" value={card.rating || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'rating', e.target.value)} placeholder="مثال: 4.8" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">عدد المراجعات</label>
+                                          <input type="text" value={card.reviewsCount || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'reviewsCount', e.target.value)} placeholder="مثال: 120 مراجعة" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">تصنيف المنتج (الفئة)</label>
+                                          <input type="text" value={card.category || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'category', e.target.value)} placeholder="مثال: أجهزة منزلية" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none"/>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
 
-                                  {/* --- البطاقات الفرعية التابعة لهذه البطاقة --- */}
-                                  <div className="mt-6 border-t border-[#333] pt-4">
-                                    <h5 className="text-[#F5C518] font-bold text-sm mb-3">البطاقات الفرعية المرتبطة بهذه البطاقة:</h5>
-                                    <div className="space-y-4">
-                                      {(card.subCards || []).map((subCard, subIndex) => (
-                                        <div key={subIndex} className="p-4 border border-[#444] rounded-lg bg-[#222] relative">
-                                          <div className="flex justify-between items-center mb-3">
-                                            <span className="font-bold text-gray-400 text-xs">بطاقة فرعية #{subIndex + 1}</span>
-                                            <button onClick={() => removeSubCard(sectionIndex, cardIndex, subIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف البطاقة الفرعية</button>
+                                  {/* --- البطاقات الفرعية - للـ FEATURED فقط --- */}
+                                  {section.category !== 'TOP_TEN_SECTION' && (
+                                    <div className="mt-6 border-t border-[#333] pt-4">
+                                      <h5 className="text-[#F5C518] font-bold text-sm mb-3">البطاقات الفرعية المرتبطة بهذه البطاقة:</h5>
+                                      <div className="space-y-4">
+                                        {(card.subCards || []).map((subCard, subIndex) => (
+                                          <div key={subIndex} className="p-4 border border-[#444] rounded-lg bg-[#222] relative">
+                                            <div className="flex justify-between items-center mb-3">
+                                              <span className="font-bold text-gray-400 text-xs">بطاقة فرعية #{subIndex + 1}</span>
+                                              <button onClick={() => removeSubCard(sectionIndex, cardIndex, subIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف البطاقة الفرعية</button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                              <div className="col-span-1 md:col-span-2">
+                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط الصورة</label>
+                                                <input type="text" value={subCard.image} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'image', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr"/>
+                                              </div>
+                                              <div>
+                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
+                                                <input type="text" value={subCard.mainTitle} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'mainTitle', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none"/>
+                                              </div>
+                                              <div>
+                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
+                                                <input type="text" value={subCard.linkText} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkText', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none"/>
+                                              </div>
+                                              <div className="col-span-1 md:col-span-2">
+                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط التوجيه (URL)</label>
+                                                <input type="text" value={subCard.linkUrl} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkUrl', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr"/>
+                                              </div>
+                                            </div>
                                           </div>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div className="col-span-1 md:col-span-2">
-                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط الصورة</label>
-                                              <input type="text" value={subCard.image} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'image', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr"/>
-                                            </div>
-                                            <div>
-                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
-                                              <input type="text" value={subCard.mainTitle} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'mainTitle', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none"/>
-                                            </div>
-                                            <div>
-                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
-                                              <input type="text" value={subCard.linkText} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkText', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none"/>
-                                            </div>
-                                            <div className="col-span-1 md:col-span-2">
-                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط التوجيه (URL)</label>
-                                              <input type="text" value={subCard.linkUrl} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkUrl', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr"/>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
+                                      <button onClick={() => addSubCard(sectionIndex, cardIndex)} className="mt-3 w-full py-2 border border-dashed border-gray-500 text-gray-400 font-bold text-xs rounded-lg hover:border-white hover:text-white transition-all">+ إضافة بطاقة فرعية</button>
                                     </div>
-                                    <button onClick={() => addSubCard(sectionIndex, cardIndex)} className="mt-3 w-full py-2 border border-dashed border-gray-500 text-gray-400 font-bold text-xs rounded-lg hover:border-white hover:text-white transition-all">+ إضافة بطاقة فرعية</button>
-                                  </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
-                            <button onClick={() => addArrayItem(sectionIndex, 'cards', { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] })} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة بطاقة رئيسية (Main Card) جديدة</button>
+
+                            {/* ✅ زرار إضافة بطاقة جديدة مع template مختلف حسب نوع القسم */}
+                            <button 
+                              onClick={() => addArrayItem(sectionIndex, 'cards', 
+                                section.category === 'TOP_TEN_SECTION' 
+                                ? { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" } 
+                                : { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] }
+                              )} 
+                              className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all"
+                            >
+                              + إضافة بطاقة جديدة
+                            </button>
                           </div>
                         )}
                         
