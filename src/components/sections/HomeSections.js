@@ -104,6 +104,19 @@ export const NewArrivalsMarquee = ({ data }) => {
   );
 };
 
+// تصدير السيكشن تحت مسمى FeaturedCollections لحل خطأ الـ Build
+export const FeaturedCollections = ({ data }) => {
+  return (
+    <div className="py-10">
+      {/* نستخدم الـ SectionHeader الموحد للحفاظ على روح التصميم */}
+      <SectionHeader title={data?.title || "مجموعات مميزة"} />
+      
+      {/* استدعاء المكون الأصلي بتاعك */}
+      <CollectionsSection />
+    </div>
+  );
+};
+
 // --- 5. قسم الأكثر مبيعاً (Best Sellers) ---
 export const BestSellersSection = ({ data }) => {
   const products = data?.products || [];
