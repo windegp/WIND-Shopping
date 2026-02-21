@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 // --- خريطة الأقسام الأساسية فقط ---
 const SECTION_TYPES = {
   HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
-  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasFeaturedCards: true }
+  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true }
 };
 
 export default function HomeManagerPage() {
@@ -81,6 +81,7 @@ export default function HomeManagerPage() {
     
     // تأسيس البيانات بناءً على القسم المختار
     if (config.hasTitle) initialData.title = config.label || "";
+    if (config.hasSubTitle) initialData.subTitle = "";
     if (config.hasFeaturedCards) initialData.cards = [];
 
     updated[index].data = initialData;
@@ -99,7 +100,7 @@ export default function HomeManagerPage() {
     setLayoutSections([...layoutSections, { 
       category: defaultCategory, 
       designId: SECTION_TYPES[defaultCategory].designId, 
-      data: { title: "المميز اليوم", cards: [] } 
+      data: { title: "المميز اليوم", subTitle: "", cards: [] } 
     }]);
     setExpandedSections(prev => ({ ...prev, [layoutSections.length]: true }));
   };
@@ -140,6 +141,28 @@ export default function HomeManagerPage() {
   const removeArrayItem = (sectionIndex, arrayName, itemIndex) => {
     const updated = [...layoutSections];
     updated[sectionIndex].data[arrayName].splice(itemIndex, 1);
+    setLayoutSections(updated);
+  };
+
+  // --- دوال التحكم في البطاقات الفرعية (الجديدة) ---
+  const addSubCard = (sectionIndex, cardIndex) => {
+    const updated = [...layoutSections];
+    if (!updated[sectionIndex].data.cards[cardIndex].subCards) {
+      updated[sectionIndex].data.cards[cardIndex].subCards = [];
+    }
+    updated[sectionIndex].data.cards[cardIndex].subCards.push({ image: "", mainTitle: "", linkText: "", linkUrl: "" });
+    setLayoutSections(updated);
+  };
+
+  const updateSubCard = (sectionIndex, cardIndex, subIndex, field, value) => {
+    const updated = [...layoutSections];
+    updated[sectionIndex].data.cards[cardIndex].subCards[subIndex][field] = value;
+    setLayoutSections(updated);
+  };
+
+  const removeSubCard = (sectionIndex, cardIndex, subIndex) => {
+    const updated = [...layoutSections];
+    updated[sectionIndex].data.cards[cardIndex].subCards.splice(subIndex, 1);
     setLayoutSections(updated);
   };
 
@@ -406,10 +429,10 @@ export default function HomeManagerPage() {
                     {isExpanded && (
                       <div className="p-6 bg-[#242424] animate-[fadeIn_0.2s_ease-out]">
                         
-                        {/* 1. تعديل العنوان الرئيسي */}
+                        {/* 1. تعديل العنوان الرئيسي والفرعي */}
                         {config?.hasTitle && (
                           <div className="mb-6 bg-[#121212] p-4 rounded-lg border border-[#333]">
-                            <div>
+                            <div className="mb-4">
                               <label className="block text-xs font-bold text-[#F5C518] mb-2">العنوان الرئيسي للقسم</label>
                               <input 
                                 type="text" value={section.data?.title || ""} 
@@ -417,6 +440,16 @@ export default function HomeManagerPage() {
                                 className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white font-bold focus:border-[#F5C518] outline-none"
                               />
                             </div>
+                            {config?.hasSubTitle && (
+                              <div>
+                                <label className="block text-xs font-bold text-gray-400 mb-2">العنوان الفرعي (اختياري)</label>
+                                <input 
+                                  type="text" value={section.data?.subTitle || ""} 
+                                  onChange={(e) => handleLayoutDataChange(sectionIndex, 'subTitle', e.target.value)} 
+                                  className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white focus:border-[#F5C518] outline-none"
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -428,9 +461,11 @@ export default function HomeManagerPage() {
                               {(section.data?.cards || []).map((card, cardIndex) => (
                                 <div key={cardIndex} className="p-5 border border-[#555] rounded-xl bg-[#1a1a1a] relative shadow-inner">
                                   <div className="flex justify-between items-center mb-4 border-b border-[#333] pb-2">
-                                    <span className="font-bold text-gray-300 text-sm">بطاقة #{cardIndex + 1}</span>
-                                    <button onClick={() => removeArrayItem(sectionIndex, 'cards', cardIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف</button>
+                                    <span className="font-bold text-gray-300 text-sm">البطاقة الرئيسية #{cardIndex + 1}</span>
+                                    <button onClick={() => removeArrayItem(sectionIndex, 'cards', cardIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف البطاقة بالكامل</button>
                                   </div>
+                                  
+                                  {/* بيانات البطاقة الرئيسية */}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="col-span-1 md:col-span-2 flex gap-2">
                                       <div className="flex-1">
@@ -459,10 +494,44 @@ export default function HomeManagerPage() {
                                       <input type="text" value={card.linkUrl} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا"/>
                                     </div>
                                   </div>
+
+                                  {/* --- البطاقات الفرعية التابعة لهذه البطاقة --- */}
+                                  <div className="mt-6 border-t border-[#333] pt-4">
+                                    <h5 className="text-[#F5C518] font-bold text-sm mb-3">البطاقات الفرعية المرتبطة بهذه البطاقة:</h5>
+                                    <div className="space-y-4">
+                                      {(card.subCards || []).map((subCard, subIndex) => (
+                                        <div key={subIndex} className="p-4 border border-[#444] rounded-lg bg-[#222] relative">
+                                          <div className="flex justify-between items-center mb-3">
+                                            <span className="font-bold text-gray-400 text-xs">بطاقة فرعية #{subIndex + 1}</span>
+                                            <button onClick={() => removeSubCard(sectionIndex, cardIndex, subIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف البطاقة الفرعية</button>
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="col-span-1 md:col-span-2">
+                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط الصورة</label>
+                                              <input type="text" value={subCard.image} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'image', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr"/>
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
+                                              <input type="text" value={subCard.mainTitle} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'mainTitle', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none"/>
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
+                                              <input type="text" value={subCard.linkText} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkText', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none"/>
+                                            </div>
+                                            <div className="col-span-1 md:col-span-2">
+                                              <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط التوجيه (URL)</label>
+                                              <input type="text" value={subCard.linkUrl} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkUrl', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr"/>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <button onClick={() => addSubCard(sectionIndex, cardIndex)} className="mt-3 w-full py-2 border border-dashed border-gray-500 text-gray-400 font-bold text-xs rounded-lg hover:border-white hover:text-white transition-all">+ إضافة بطاقة فرعية</button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
-                            <button onClick={() => addArrayItem(sectionIndex, 'cards', { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "" })} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة بطاقة (Card) جديدة</button>
+                            <button onClick={() => addArrayItem(sectionIndex, 'cards', { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] })} className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all">+ إضافة بطاقة رئيسية (Main Card) جديدة</button>
                           </div>
                         )}
                         
