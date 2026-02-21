@@ -141,7 +141,7 @@ export const FeaturedToday = ({ data }) => {
                 </div>
                 
                 {/* العناوين والروابط - اتجاه LTR للحفاظ على شكل النص الإنجليزي */}
-                <div dir="ltr" className="px-1 text-left mt-1">
+                <div dir="rtl" className="px-1 text-right mt-1">
                   <h3 className="text-white text-base md:text-lg font-normal line-clamp-2">{card.mainTitle}</h3>
                   <span className="text-[#5799ef] text-sm md:text-base font-semibold">{card.linkText}</span>
                 </div>
