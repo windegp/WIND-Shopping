@@ -74,6 +74,7 @@ export const FeaturedToday = ({ data }) => {
   // دالة الفتح والإغلاق
   const toggleDeck = (index, e) => {
     e.preventDefault(); // لمنع الانتقال للرابط عند الضغط على زر الفتح
+    e.stopPropagation(); // إيقاف أي تداخل مع الروابط
     setExpandedDeck(expandedDeck === index ? null : index);
   };
 
@@ -84,12 +85,12 @@ export const FeaturedToday = ({ data }) => {
   if (!data || !data.cards) return null;
 
   return (
-    // تقليل المسافة العلوية (pt-2) والسفلية (pb-4)
-    <section className="bg-[#181818] pt-2 pb-4 mt-0 border-t border-[#333]">
+    // تقليل المسافة العلوية (pt-2) والسفلية أكثر (pb-1)
+    <section className="bg-[#181818] pt-2 pb-1 mt-0 border-t border-[#333]">
       <GlobalStyles />
       <div className="max-w-[1400px] mx-auto relative px-4 text-right">
         
-        {/* العناوين المحدثة - تقليل mb-6 إلى mb-3 لإنزال العنوان */}
+        {/* العناوين المحدثة */}
         <div className="mb-3 mr-2 md:mr-4" dir="rtl">
           <h2 className="text-[#F5C518] text-lg md:text-xl font-black uppercase tracking-wider">
             {data.title || "Featured today"}
@@ -120,10 +121,11 @@ export const FeaturedToday = ({ data }) => {
           </button>
 
           {/* شريط التمرير (المجموعات والكروت) */}
+          {/* تقليل المسافة بين المجموعات لـ gap-4 md:gap-6 */}
           <div 
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex overflow-x-auto gap-6 md:gap-10 scrollbar-hide snap-x relative z-10 py-4" 
+            className="flex overflow-x-auto gap-4 md:gap-6 scrollbar-hide snap-x relative z-10 py-4" 
             dir="rtl"
           >
             {data.cards.map((mainCard, mIndex) => {
@@ -136,8 +138,9 @@ export const FeaturedToday = ({ data }) => {
                   {/* 1. الكارت الرئيسي */}
                   <div className="relative z-50 flex flex-col gap-2 pb-2">
                     <Link href={mainCard.linkUrl || "#"} className="min-w-[150px] md:min-w-[190px] block relative">
-                      {/* لو الكارت له كروت فرعية، نخليه بدون دوران عند الفتح */}
-                      <div className={`relative aspect-[2/3] overflow-hidden bg-[#222] shadow-[0_0_15px_rgba(0,0,0,0.4)] transition-all duration-500 ${isExpanded && hasSubCards ? 'rounded-none border-l border-[#333]' : 'rounded-r-2xl'}`}>
+                      
+                      {/* دوران كامل (rounded-2xl) في الوضع الطبيعي، وحواف حادة عند الفتح */}
+                      <div className={`relative aspect-[2/3] overflow-hidden bg-[#222] shadow-[0_0_15px_rgba(0,0,0,0.4)] transition-all duration-500 ${isExpanded && hasSubCards ? 'rounded-none border-l border-[#333]' : 'rounded-2xl'}`}>
                         <img src={mainCard.image} alt={mainCard.mainTitle} className="w-full h-full object-cover" />
                         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
                         
@@ -160,21 +163,21 @@ export const FeaturedToday = ({ data }) => {
                       </div>
                     </Link>
 
-                    {/* النصوص السفلية وزر الفتح */}
+                    {/* النصوص السفلية وزر الفتح للكارت الرئيسي */}
                     <div className="px-1 text-right mt-1 flex justify-between items-start">
                       <div>
                         <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{mainCard.mainTitle}</h3>
                         <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{mainCard.linkText}</span>
                       </div>
                       
-                      {/* زر السهم يظهر فقط إذا كان هناك كروت فرعية */}
-                      {hasSubCards && (
+                      {/* زر الفتح يظهر هنا فقط إذا كان مغلقاً وهناك كروت فرعية */}
+                      {hasSubCards && !isExpanded && (
                         <button 
                           onClick={(e) => toggleDeck(mIndex, e)}
-                          className="bg-[#222] hover:bg-[#333] border border-[#444] text-white p-1.5 rounded-full transition-all duration-300 ml-1"
+                          className="bg-[#222] hover:bg-[#333] border border-[#444] text-white p-1.5 rounded-full transition-all duration-300 ml-1 shrink-0"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
                       )}
@@ -182,27 +185,45 @@ export const FeaturedToday = ({ data }) => {
                   </div>
 
                   {/* 2. الكروت الفرعية التابعة */}
-                  {hasSubCards && mainCard.subCards.map((subCard, sIndex) => (
-                    <Link 
-                      key={`${mIndex}-${sIndex}`} 
-                      href={subCard.linkUrl || "#"} 
-                      // تم إزالة group-hover/deck واستخدام المتغير isExpanded للتحكم في الفرد والطي
-                      className={`min-w-[150px] md:min-w-[190px] flex flex-col gap-2 cursor-pointer pb-2 
-                                 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-right
-                                 ${isExpanded ? 'mr-0 opacity-100 scale-100' : '-mr-[125px] md:-mr-[160px] opacity-60 scale-[0.93]'}`}
-                      style={{ zIndex: 40 - sIndex }}
-                    >
-                      <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#222] border-r border-[#181818]/60 shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
-                        <img src={subCard.image} alt={subCard.mainTitle} className="w-full h-full object-cover" />
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
-                      </div>
-                      
-                      <div className={`px-1 text-right mt-1 transition-opacity duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-                        <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{subCard.mainTitle}</h3>
-                        <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{subCard.linkText}</span>
-                      </div>
-                    </Link>
-                  ))}
+                  {hasSubCards && mainCard.subCards.map((subCard, sIndex) => {
+                    const isLastSubCard = sIndex === mainCard.subCards.length - 1;
+
+                    return (
+                      <Link 
+                        key={`${mIndex}-${sIndex}`} 
+                        href={subCard.linkUrl || "#"} 
+                        // تم تغيير الإخفاء ليكون كامل (مطابق لعرض الكارت) وبشفافية 0 لمنع ظهوره
+                        className={`min-w-[150px] md:min-w-[190px] flex flex-col gap-2 cursor-pointer pb-2 
+                                   transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-right
+                                   ${isExpanded ? 'mr-0 opacity-100 scale-100' : '-mr-[150px] md:-mr-[190px] opacity-0 scale-95 pointer-events-none'}`}
+                        style={{ zIndex: 40 - sIndex }}
+                      >
+                        <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#222] border-r border-[#181818]/60 shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
+                          <img src={subCard.image} alt={subCard.mainTitle} className="w-full h-full object-cover" />
+                          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                        </div>
+                        
+                        <div className={`px-1 text-right mt-1 flex justify-between items-start transition-opacity duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+                          <div>
+                            <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{subCard.mainTitle}</h3>
+                            <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{subCard.linkText}</span>
+                          </div>
+                          
+                          {/* زر الإغلاق يظهر هنا فقط إذا كان مفتوحاً وفي آخر كارت فرعي */}
+                          {isExpanded && isLastSubCard && (
+                            <button 
+                              onClick={(e) => toggleDeck(mIndex, e)}
+                              className="bg-[#222] hover:bg-[#333] border border-[#444] text-[#F5C518] p-1.5 rounded-full transition-all duration-300 ml-1 shrink-0"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
 
                 </div>
               );
