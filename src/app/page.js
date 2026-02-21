@@ -1,121 +1,69 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { db, storage } from "@/lib/firebase";
-import { 
-  collection, addDoc, query, orderBy, onSnapshot, 
-  serverTimestamp, doc, getDoc 
-} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { DESIGN_REGISTRY } from "@/lib/designRegistry";
-import { ReviewModal } from "@/components/sections/HomeSections";
-import { products as staticProducts } from "@/lib/products";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+// تأكد إن المسار ده متطابق مع مكان ملف سجل التصميمات عندك
+import { DESIGN_REGISTRY } from "@/lib/designRegistry"; 
 
 export default function Home() {
   const [layout, setLayout] = useState([]); 
-  const [allProducts, setAllProducts] = useState(staticProducts);
-  const [reviews, setReviews] = useState([]);
+  const [heroData, setHeroData] = useState({ slides: [], categories: [] });
   const [loading, setLoading] = useState(true);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false); 
-  const [newReview, setNewReview] = useState({ name: '', comment: '', rating: 10, image: null });
 
-  // --- 1. جلب البيانات (الترتيب، المنتجات، التقييمات) ---
+  // --- 1. جلب البيانات (المحرك الذكي) ---
   useEffect(() => {
-    // جلب ترتيب الأقسام
+    // أ. جلب ترتيب الأقسام والمحتوى (المميز اليوم، وأي قسم هنضيفه مستقبلاً)
     const unsubLayout = onSnapshot(doc(db, "homepage", "layout_config"), (docSnap) => {
-      if (docSnap.exists()) setLayout(docSnap.data().sections || []);
+      if (docSnap.exists()) {
+        setLayout(docSnap.data().sections || []);
+      }
       setLoading(false);
     });
 
-    // جلب التقييمات الحية
-    const qReviews = query(collection(db, "reviews"), orderBy("timestamp", "desc"));
-    const unsubReviews = onSnapshot(qReviews, (snap) => {
-      setReviews(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    // جلب المنتجات الحية
-    const qProducts = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    const unsubProducts = onSnapshot(qProducts, (snap) => {
-      if (!snap.empty) {
-        setAllProducts(snap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          image: doc.data().images ? doc.data().images[0] : doc.data().image 
-        })));
+    // ب. جلب بيانات قسم الهيرو (لأنه محفوظ في ملف منفصل في الداتابيز)
+    const unsubHero = onSnapshot(doc(db, "homepage", "main-hero"), (docSnap) => {
+      if (docSnap.exists()) {
+        setHeroData(docSnap.data());
       }
     });
 
-    return () => { unsubLayout(); unsubReviews(); unsubProducts(); };
+    // إغلاق الاتصال بقاعدة البيانات عند خروج العميل من الصفحة
+    return () => { 
+      unsubLayout(); 
+      unsubHero(); 
+    };
   }, []);
 
-  // --- 2. فلترة المنتجات لتوزيعها على الأقسام ---
-  const liveData = {
-    newArrivals: allProducts.filter(p => p.categories?.includes('new-arrivals')),
-    bestSellers: allProducts.slice(0, 8),
-    topRated: allProducts.filter(p => parseFloat(p.rating) >= 4.5),
-    dresses: allProducts.filter(p => p.categories?.includes('dress')),
-    blouses: allProducts.filter(p => p.categories?.includes('blouse')),
-    discounts: allProducts.filter(p => p.compareAtPrice > p.price),
-  };
-
-  // --- 3. معالج إرسال التقييم ---
-  const handleSendReview = async (e) => {
-    e.preventDefault();
-    setModalLoading(true);
-    try {
-      let url = "";
-      if (newReview.image) {
-        const imageRef = ref(storage, `reviews/${Date.now()}`);
-        await uploadBytes(imageRef, newReview.image);
-        url = await getDownloadURL(imageRef);
-      }
-      await addDoc(collection(db, "reviews"), {
-        ...newReview, userImage: url, timestamp: serverTimestamp(), productHandle: "home"
-      });
-      setIsReviewModalOpen(false);
-      setNewReview({ name: '', comment: '', rating: 10, image: null });
-    } catch (err) { console.error(err); }
-    setModalLoading(false);
-  };
-
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center text-[#F5C518] font-bold text-xl">
+        جاري تحميل WIND...
+      </div>
+    );
+  }
 
   return (
     <main className="bg-[#121212] min-h-screen">
+      {/* --- 2. محرك العرض الديناميكي (Loop) --- */}
       {layout.map((section, index) => {
-        const SectionDesign = DESIGN_REGISTRY[section.category];
-        const Component = SectionDesign ? SectionDesign[section.designId] : null;
+        // البحث عن التصميم المطلوب في سجل التصميمات
+        const SectionCategory = DESIGN_REGISTRY[section.category];
+        const Component = SectionCategory ? SectionCategory[section.designId] : null;
+        
+        // لو التصميم مش موجود لسبب ما، نتجاهله عشان الصفحة متضربش
         if (!Component) return null;
 
-        // "حقن" البيانات الحية داخل القسم بناءً على نوعه
-        const injectData = {
-          ...section.data,
-          products: section.category === "BEST_SELLERS" ? liveData.bestSellers :
-                    section.category === "PRODUCTS_MARQUEE" ? liveData.newArrivals :
-                    section.category === "DISCOUNTS" ? liveData.discounts :
-                    section.category === "TOP_RATED" ? liveData.topRated : section.data?.products,
-          dresses: liveData.dresses,
-          blouses: liveData.blouses,
-          reviews: reviews
-        };
+        // تحديد البيانات اللي هتتبعت للتصميم 
+        // (لو القسم هيرو نبعتله بيانات الهيرو، لو غيره نبعتله بياناته الخاصة اللي جياله من لوحة التحكم)
+        const sectionData = section.category === "HERO_SECTION" ? heroData : section.data;
 
         return (
           <Component 
             key={index} 
-            data={injectData} 
-            onOpenModal={() => setIsReviewModalOpen(true)} 
+            data={sectionData} 
           />
         );
       })}
-
-      <ReviewModal 
-        isOpen={isReviewModalOpen} 
-        onClose={() => setIsReviewModalOpen(false)}
-        onSubmit={handleSendReview}
-        newReview={newReview}
-        setNewReview={setNewReview}
-        loading={modalLoading}
-      />
     </main>
   );
 }
