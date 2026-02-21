@@ -1,13 +1,61 @@
+"use client";
+import React, { useRef, useState, useEffect } from 'react';
+import Link from 'next/link';
+
+// --- 1. الأنماط والحركات ---
+const GlobalStyles = () => (
+  <style jsx global>{`
+    @keyframes kenburns {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.15); }
+    }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(50%); }
+    }
+    @keyframes marquee-infinite {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-marquee { display: flex; animation: marquee 25s linear infinite; }
+    .animate-marquee-infinite { display: flex; width: max-content; animation: marquee-infinite 35s linear infinite; }
+    .pause-on-hover:hover { animation-play-state: paused; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .kenburns-bg { animation: kenburns 20s infinite alternate; }
+  `}</style>
+);
+
+// --- 2. مكون الهيدر (مهم كقالب جاهز لأي قسم جديد مستقبلاً) ---
+export const SectionHeader = ({ title, subTitle, link = "#" }) => (
+  <div className="flex items-center justify-between mb-6 px-4 pt-10" dir="rtl">
+    <div className="flex items-center gap-3">
+      <div className="w-1.5 h-8 bg-[#F5C518] rounded-sm"></div>
+      <div>
+        <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">{title}</h2>
+        {subTitle && <p className="text-gray-400 text-[10px] md:text-xs mt-1 font-normal">{subTitle}</p>}
+      </div>
+    </div>
+    <Link href={link} className="text-[#F5C518] text-sm font-bold flex items-center gap-1 hover:opacity-80 transition-opacity">
+      عرض الكل <span className="text-xl leading-none">›</span>
+    </Link>
+  </div>
+);
+
 // --- 3. قسم Featured Today (المميز اليوم) ---
 export const FeaturedToday = ({ data }) => {
-  const scrollRef = React.useRef(null);
-  const [showLeftArrow, setShowLeftArrow] = React.useState(true); // السهم الأيسر لعرض المزيد
-  const [showRightArrow, setShowRightArrow] = React.useState(false); // السهم الأيمن للرجوع
+  const scrollRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(true); // السهم الأيسر لعرض المزيد
+  const [showRightArrow, setShowRightArrow] = useState(false); // السهم الأيمن للرجوع
 
   const handleScroll = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      // في وضع RTL، قيمة scrollLeft تكون بالسالب، لذا نستخدم Math.abs
+      // في وضع RTL، قيمة scrollLeft تكون بالسالب
       const currentScroll = Math.abs(scrollLeft);
       setShowRightArrow(currentScroll > 5);
       setShowLeftArrow(currentScroll < scrollWidth - clientWidth - 5);
@@ -21,8 +69,7 @@ export const FeaturedToday = ({ data }) => {
     }
   };
 
-  // مراقبة التمرير عند التحميل
-  React.useEffect(() => {
+  useEffect(() => {
     handleScroll();
   }, [data]);
 
@@ -30,6 +77,7 @@ export const FeaturedToday = ({ data }) => {
 
   return (
     <section className="bg-[#181818] pt-6 pb-10 mt-0 border-t border-[#333]">
+      <GlobalStyles />
       <div className="max-w-[1400px] mx-auto relative px-4 text-right">
         
         {/* العنوان الرئيسي للقسم */}
@@ -71,9 +119,9 @@ export const FeaturedToday = ({ data }) => {
                   <img src={card.image} alt={card.mainTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
                   
-{/* شارة القائمة (List) */}
+                  {/* شارة القائمة (قائمة) */}
                   {card.badgeType === 'list' && (
-                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10" dir="rtl">
+                    <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                       </svg>
@@ -81,14 +129,16 @@ export const FeaturedToday = ({ data }) => {
                     </div>
                   )}
                   
-                  {/* شارة الصور (Photos) */}
+                  {/* شارة الصور (صور) */}
                   {card.badgeType === 'photos' && (
-                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10" dir="rtl">
+                    <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1.5 text-white font-bold text-sm drop-shadow-md z-10">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       صور
                     </div>
+                  )}
+                </div>
                 
                 {/* العناوين والروابط - اتجاه LTR للحفاظ على شكل النص الإنجليزي */}
                 <div dir="ltr" className="px-1 text-left mt-1">
