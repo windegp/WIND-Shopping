@@ -5,6 +5,13 @@ import ImageUploader from "@/components/ImageUploader";
 
 export default function CreateProductPage() {
   // ==========================================
+  // --- إضافات شيت شوبيفاي (للاقتراحات الذكية) ---
+  // ==========================================
+  const csvColors = ['fuchsia', 'jeans-blue', 'beige', 'clear', 'green', 'black', 'burgundy', 'rose', 'patterned', 'navy', 'blue', 'red', 'brown', 'pink', 'gray', 'olive', 'chocolate', 'yellow', 'purple', 'orange', 'mint', 'terracotta', 'coral-pink', 'turquoise', 'gold', 'bronze', 'silver', 'off-white'];
+  const csvSizes = ['One Size', '50-80-kg', '55-90-kg', '50-90-kg', '55-95-kg', '85-kg'];
+  const csvTypes = ['pullover', 'isdal', 'cardigan', 'set', 'dress', 'top'];
+
+  // ==========================================
   // 1. إدارة حالة البيانات (States)
   // ==========================================
   const [images, setImages] = useState([]);
@@ -127,12 +134,14 @@ export default function CreateProductPage() {
             )}
           </div>
 
-          {/* 3. التصنيف (Category) */}
+          {/* 3. التصنيف (Category) - تم إضافة الأقسام من الشيت */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <label className="block text-sm text-gray-300 mb-2">التصنيف (Category)</label>
             <select className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none">
               <option>Choose a product category</option>
               <option>Apparel & Accessories</option>
+              <option>Apparel & Accessories {'>'} Clothing</option>
+              <option>Apparel & Accessories {'>'} Clothing {'>'} Traditional & Ceremonial Clothing</option>
             </select>
           </div>
 
@@ -163,7 +172,7 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 5. المخزون (Inventory) - جديد */}
+          {/* 5. المخزون (Inventory) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm text-gray-300 font-bold">المخزون (Inventory)</h3>
@@ -196,7 +205,7 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 6. الشحن (Shipping) - جديد */}
+          {/* 6. الشحن (Shipping) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm text-gray-300 font-bold">الشحن (Shipping)</h3>
@@ -224,7 +233,7 @@ export default function CreateProductPage() {
             )}
           </div>
 
-          {/* 7. البدائل (Variants) - جديد واحترافي */}
+          {/* 7. البدائل (Variants) - تم إضافة الاقتراحات من الشيت */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <h3 className="text-sm text-gray-300 font-bold mb-4">البدائل (Variants)</h3>
             
@@ -241,7 +250,8 @@ export default function CreateProductPage() {
                       type="text" 
                       value={option.name} 
                       onChange={(e) => updateOption(index, 'name', e.target.value)} 
-                      placeholder="Size" 
+                      placeholder="Color أو Size" 
+                      list="csv-option-names"
                       className="w-full bg-[#1a1a1a] border border-[#333] p-2 rounded text-white outline-none" 
                     />
                   </div>
@@ -251,7 +261,8 @@ export default function CreateProductPage() {
                       type="text" 
                       value={option.values} 
                       onChange={(e) => updateOption(index, 'values', e.target.value)} 
-                      placeholder="S, M, L, XL" 
+                      placeholder="S, M, L / fuchsia, black" 
+                      list={option.name.toLowerCase().includes('color') ? 'csv-colors' : option.name.toLowerCase().includes('size') ? 'csv-sizes' : undefined}
                       className="w-full bg-[#1a1a1a] border border-[#333] p-2 rounded text-white outline-none" 
                     />
                   </div>
@@ -264,7 +275,7 @@ export default function CreateProductPage() {
             </button>
           </div>
 
-          {/* 8. الحقول الإضافية (Metafields) - جديد */}
+          {/* 8. الحقول الإضافية (Metafields) - تم إضافة Fabric و Fit */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm space-y-4">
             <h3 className="text-sm text-gray-300 font-bold border-b border-[#333] pb-2 mb-4">الحقول المخصصة (Metafields)</h3>
             
@@ -272,7 +283,9 @@ export default function CreateProductPage() {
               {label: "isdal bundle-list", name: "isdalBundle"}, 
               {label: "Product Size-Chart", name: "sizeChart"}, 
               {label: "Product Colors Bundle", name: "colorsBundle"}, 
-              {label: "Suggested Products", name: "suggested"}].map((field, i) => (
+              {label: "Suggested Products", name: "suggested"},
+              {label: "Fabric (الخامة)", name: "fabric"},
+              {label: "Fit (القصة)", name: "fit"}].map((field, i) => (
               <div key={i} className="flex flex-col md:flex-row md:items-center gap-2">
                 <label className="text-xs text-gray-400 w-1/3">{field.label}</label>
                 <input type="text" className="flex-1 bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
@@ -280,7 +293,7 @@ export default function CreateProductPage() {
             ))}
           </div>
 
-          {/* 9. محركات البحث (Search engine listing) - جديد */}
+          {/* 9. محركات البحث (Search engine listing) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <h3 className="text-sm text-gray-300 font-bold mb-1">Search engine listing</h3>
             <p className="text-xs text-gray-500 mb-4">Add a title and description to see how this product might appear in a search engine listing</p>
@@ -351,12 +364,28 @@ export default function CreateProductPage() {
             </div>
           </div>
 
+          {/* التنظيم (Product organization) - تم تفعيل مقترحات الشيت للـ Type */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm space-y-4">
             <h3 className="text-sm text-gray-300">تنظيم المنتج (Product organization)</h3>
-            <div><label className="block text-xs text-gray-400 mb-1">Type</label><input type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" /></div>
-            <div><label className="block text-xs text-gray-400 mb-1">Vendor</label><input type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" /></div>
-            <div><label className="block text-xs text-gray-400 mb-1">Collections</label><div className="relative"><span className="absolute left-2 top-2.5 text-gray-500 text-xs">🔍</span><input type="text" className="w-full bg-[#121212] border border-[#333] p-2 pl-7 rounded text-white outline-none" /></div></div>
-            <div><label className="block text-xs text-gray-400 mb-1">Tags</label><input type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" /></div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Type</label>
+              <input type="text" list="csv-types" placeholder="e.g. pullover" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Vendor</label>
+              <input type="text" defaultValue="WIND" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Collections</label>
+              <div className="relative">
+                <span className="absolute left-2 top-2.5 text-gray-500 text-xs">🔍</span>
+                <input type="text" className="w-full bg-[#121212] border border-[#333] p-2 pl-7 rounded text-white outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Tags</label>
+              <input type="text" placeholder="winter, new, casual" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+            </div>
           </div>
 
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
@@ -366,6 +395,24 @@ export default function CreateProductPage() {
         </div>
 
       </div>
+
+      {/* ========================================== */}
+      {/* قوائم الاقتراحات المخفية (تستمد البيانات من الشيت) */}
+      {/* ========================================== */}
+      <datalist id="csv-colors">
+        {csvColors.map(c => <option key={c} value={c} />)}
+      </datalist>
+      <datalist id="csv-sizes">
+        {csvSizes.map(s => <option key={s} value={s} />)}
+      </datalist>
+      <datalist id="csv-option-names">
+        <option value="Color" />
+        <option value="Size" />
+      </datalist>
+      <datalist id="csv-types">
+        {csvTypes.map(t => <option key={t} value={t} />)}
+      </datalist>
+
     </div>
   );
 }
