@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from "../../context/CartContext"; 
 import { db } from "../../lib/firebase"; 
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, getDocs, collection, onSnapshot } from "firebase/firestore";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,19 +22,86 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    const unsubSettings = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
-      if (docSnap.exists() && docSnap.data().menuItems) {
-        const menuItemsFromSettings = docSnap.data().menuItems.map(item => ({
-          name: item.title, 
-          title: item.title,
-          link: item.link.startsWith('/') || item.link.startsWith('http') ? item.link : `/${item.link}`,
-          highlight: item.highlight || false,
-          children: item.children || []
+    // 1. دالة لجلب أنواع المنتجات أوتوماتيكياً وترجمتها
+    const fetchAutomaticTypes = async () => {
+      try {
+        const productsSnap = await getDocs(collection(db, "products"));
+        const typesSet = new Set();
+        
+        productsSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.type) typesSet.add(data.type.trim());
+        });
+
+        // قاموس ترجمة شيك للأنواع (تقدر تزود عليه أي نوع جديد براحتك)
+        const formatName = (str) => {
+          if (!str) return "";
+          const dict = {
+            'dress': 'فساتين',
+            'knitwear': 'تريكو',
+            'prayer dress': 'إسدالات الصلاة',
+            'sweatshirt': 'سويت شيرت',
+            'shawl': 'شيلان',
+            'hoodie': 'هودي',
+            'sets': 'أطقم',
+            'jacket': 'جاكيت',
+            'coat': 'معاطف'
+          };
+          const lower = str.toLowerCase();
+          return dict[lower] || str.charAt(0).toUpperCase() + str.slice(1);
+        };
+
+        const autoChildren = Array.from(typesSet).filter(Boolean).map(type => ({
+          name: formatName(type),
+          title: formatName(type),
+          // بنبعت اسم النوع زي ما هو في الداتا بيز عشان صفحة القسم تلاقيه صح
+          link: `/collections/${type}` 
         }));
-        setCategories(menuItemsFromSettings);
+
+        return {
+          name: "تسوق بالأقسام",
+          title: "تسوق بالأقسام",
+          link: "#", // هاش عشان يفتح القائمة المنسدلة بس
+          highlight: true,
+          children: autoChildren
+        };
+      } catch (error) {
+        console.error("Error fetching auto types:", error);
+        return null;
       }
+    };
+
+    let unsubscribe = () => {};
+
+    // 2. دمج الأقسام الأوتوماتيكية مع الإعدادات اليدوية اللي في لوحة التحكم
+    fetchAutomaticTypes().then(autoCategoryNode => {
+      unsubscribe = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
+        let customMenu = [];
+        if (docSnap.exists() && docSnap.data().menuItems) {
+          customMenu = docSnap.data().menuItems.map(item => ({
+            name: item.title, 
+            title: item.title,
+            link: item.link.startsWith('/') || item.link.startsWith('http') ? item.link : `/${item.link}`,
+            highlight: item.highlight || false,
+            children: item.children || []
+          }));
+        }
+
+        const finalMenu = [{ name: "الرئيسية", link: "/", children: [] }];
+        
+        // لو لقينا منتجات وأنواع، بنضيف قائمة (تسوق بالأقسام)
+        if (autoCategoryNode && autoCategoryNode.children.length > 0) {
+          finalMenu.push(autoCategoryNode);
+        }
+        
+        // بنضيف أي لينكات يدوية إنت حاططها
+        finalMenu.push(...customMenu);
+
+        setCategories(finalMenu);
+      });
     });
-    return () => unsubSettings();
+
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -48,7 +115,7 @@ export default function Navbar() {
           animation: marquee 25s linear infinite;
           white-space: nowrap;
           display: inline-block;
-          will-change: transform; /* لتحسين الأداء ومنع الرعشة */
+          will-change: transform; 
         }
         .marquee-container:hover .animate-marquee {
           animation-play-state: paused;
@@ -57,11 +124,10 @@ export default function Navbar() {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
         }
-        /* منع التمدد الأفقي تماماً في المتصفح */
         body { overflow-x: hidden; }
       `}</style>
 
-      {/* 1. الشريط العلوي - أضفنا max-w-full و overflow-hidden لمنع التمدد */}
+      {/* 1. الشريط العلوي */}
       <div className="bg-[#F5C518] text-black text-xs md:text-sm font-black py-2 overflow-hidden relative z-[50] marquee-container border-b border-black w-full max-w-full">
         <div className="animate-marquee w-full text-center tracking-widest">
           <span className="mx-8">🚚 توصيل سريع لجميع محافظات مصر</span>
@@ -72,7 +138,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 2. النافبار الرئيسية - ثابتة الأبعاد */}
+      {/* 2. النافبار الرئيسية */}
       <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-2xl overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between relative">
           
@@ -86,16 +152,14 @@ export default function Navbar() {
             </svg>
           </button>
 
-          {/* اللوجو - تم تحديد أبعاد الصورة لضمان استقرار التحميل (Layout Stability) */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
             <Link href="/" className="block">
               <img 
                 src="/logo.jpg" 
                 alt="WIND" 
-                width={150} // حدد عرضاً تقريبياً
-                height={64} // حدد طولاً تقريبياً
+                width={150} 
+                height={64} 
                 className="h-16 md:h-17 w-auto object-contain hover:scale-105 transition-transform duration-300" 
-                // الحفاظ على w-auto ممتاز لكن width الثابت يخبر المتصفح بالمساحة المحجوزة
               />
             </Link>
           </div>
@@ -151,7 +215,7 @@ export default function Navbar() {
                         {cat.children && cat.children.length > 0 && (
                           <button 
                             onClick={() => toggleSubMenu(i)}
-                            className="p-4 bg-[#252525] text-[#F5C518] border-b border-[#333]/30"
+                            className={`p-4 transition-colors border-b border-[#333]/30 ${cat.highlight ? 'bg-[#F5C518] text-black border-none' : 'bg-[#252525] text-[#F5C518]'}`}
                           >
                             <svg className={`w-5 h-5 transition-transform duration-300 ${openSubMenus[i] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -160,7 +224,7 @@ export default function Navbar() {
                         )}
                       </div>
                       {cat.children && cat.children.length > 0 && openSubMenus[i] && (
-                        <ul className="bg-[#121212] border-r-2 border-[#F5C518] mr-2 transition-all">
+                        <ul className={`pr-4 border-r-2 transition-all ${cat.highlight ? 'bg-[#222] border-[#F5C518]' : 'bg-[#121212] border-[#F5C518] mr-2'}`}>
                           {cat.children.map((sub, j) => (
                             <li key={j} className="flex flex-col">
                                 <div className="flex items-center">

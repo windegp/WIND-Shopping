@@ -20,7 +20,7 @@ export default function CategoryPage() {
       if (!currentSlug) return;
       setLoading(true);
       try {
-        // 1. محاولة جلب بيانات القسم ديناميكياً من Firestore
+        // 1. محاولة جلب بيانات القسم ديناميكياً من Firestore (من صفحة الكولكشنز في الأدمن)
         const catQuery = query(
           collection(db, "collections"), 
           where("slug", "in", [currentSlug, `/${currentSlug}`])
@@ -33,27 +33,57 @@ export default function CategoryPage() {
           setCategoryData(data);
           currentCatName = data.name;
         } else {
-          // الـ Fallback من الكود الأول (لو القسم مش موجود في الداتا بيز لسه)
+          // الـ Fallback (لو القسم مش موجود في الداتا بيز كـ Collection، بس موجود كـ Type في المنتجات)
+          // بنعمله اسم شيك أوتوماتيك
+          const formatSlugToName = (slug) => {
+             return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ');
+          }
+
           const fallbackTitle = currentSlug === 'isdal' ? 'الإسدالات' : 
-                                currentSlug === 'shawls' ? 'الشيلان' : 'التشكيلة';
+                                currentSlug === 'shawls' ? 'الشيلان' : formatSlugToName(currentSlug);
+          
           setCategoryData({ name: fallbackTitle, description: "تشكيلة حصرية من WIND تناسب ذوقك." });
           currentCatName = fallbackTitle;
         }
 
-        // 2. جلب المنتجات (بحث شامل بـ 3 احتمالات)
+        // ==========================================
+        // 2. جلب المنتجات (بحث ذكي وموازي يدعم النظام القديم ونظام Shopify الجديد)
+        // ==========================================
         const searchTerms = [currentSlug, `/${currentSlug}`, currentCatName];
+        
+        // احتمالات الـ Type عشان نتفادى مشاكل الحروف الكابيتال والسمول من الشيت
+        const typeVariants = [
+          currentSlug, 
+          currentSlug.toLowerCase(), 
+          currentSlug.charAt(0).toUpperCase() + currentSlug.slice(1).toLowerCase(),
+          currentCatName
+        ];
 
-        const pQuery = query(
+        // الاستعلام الأول: بيبحث في الطريقة القديمة (categories array)
+        const q1 = getDocs(query(
           collection(db, "products"),
           where("categories", "array-contains-any", searchTerms),
           limit(40)
-        );
+        ));
+
+        // الاستعلام الثاني: بيبحث في الطريقة الجديدة (type string) المستوردة من شيت شوبيفاي
+        const q2 = getDocs(query(
+          collection(db, "products"),
+          where("type", "in", typeVariants),
+          limit(40)
+        ));
+
+        // تنفيذ الاستعلامين في نفس الوقت لسرعة التحميل
+        const [snap1, snap2] = await Promise.all([q1, q2]);
         
-        const pSnapshot = await getDocs(pQuery);
-        const productsData = pSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        // دمج النتائج بدون تكرار باستخدام Map
+        const productsMap = new Map();
+        
+        snap1.forEach(doc => productsMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        snap2.forEach(doc => productsMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        
+        // تحويل الـ Map لمصفوفة عشان نعرضها
+        const productsData = Array.from(productsMap.values());
         
         setProducts(productsData);
       } catch (error) {
