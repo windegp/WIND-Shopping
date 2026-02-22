@@ -174,35 +174,8 @@ export default function CollectionsPage() {
             
            // أ) المنتجات الجديدة (إضافة الـ slug الجديد)
             const productsToAdd = selectedProducts.filter(p => !originalProductIds.includes(p.id));
+            
             productsToAdd.forEach(product => {
-                const productRef = doc(db, "products", product.id);
-                batch.update(productRef, {
-                    categories: arrayUnion(cleanSlug, `/${cleanSlug}`) 
-                });
-            });
-
-            // ب) المنتجات المحذوفة أو في حالة تغير الـ Slug بالكامل
-            // هنجيب كل المنتجات اللي كانت في القسم ده أصلاً وننضفها
-            if (originalSlug) {
-                const productsToCleanIds = [...new Set([...originalProductIds, ...selectedProducts.map(p => p.id)])];
-                
-                productsToCleanIds.forEach(id => {
-                    const productRef = doc(db, "products", id);
-                    const isStillSelected = selectedProducts.find(p => p.id === id);
-                    
-                    // مسح الروابط القديمة دائماً
-                    batch.update(productRef, {
-                        categories: arrayRemove(originalSlug, `/${originalSlug}`)
-                    });
-
-                    // لو المنتج لسه معانا في القائمة، نأكد عليه الرابط الجديد
-                    if (isStillSelected) {
-                        batch.update(productRef, {
-                            categories: arrayUnion(cleanSlug, `/${cleanSlug}`)
-                        });
-                    }
-                });
-            }
                 const productRef = doc(db, "products", product.id);
                 // نضيف الـ slug والـ /slug عشان التوافق
                 batch.update(productRef, {
@@ -210,24 +183,40 @@ export default function CollectionsPage() {
                 });
             });
 
-            // ب) المنتجات المحذوفة (كانت في original بس مش موجودة في selected)
-            // دي الجزئية اللي كانت ناقصة عندك
-            const productsToRemoveIds = originalProductIds.filter(id => !selectedProducts.find(p => p.id === id));
-            
-            productsToRemoveIds.forEach(id => {
-                const productRef = doc(db, "products", id);
-                // نمسح الـ slug (سواء القديم أو الجديد لو اتغير)
-                // بنمسح كل الاحتمالات عشان نضمن التنظيف
-                const slugsToRemove = [cleanSlug, `/${cleanSlug}`];
-                if (originalSlug && originalSlug !== cleanSlug) {
-                    slugsToRemove.push(originalSlug, `/${originalSlug}`);
-                }
+            // ب) المنتجات المحذوفة أو في حالة تغير الـ Slug بالكامل
+            if (originalSlug) {
+                // هنجيب كل المنتجات اللي كانت في القسم ده أصلاً وننضفها
+                const productsToCleanIds = [...new Set([...originalProductIds, ...selectedProducts.map(p => p.id)])];
                 
-                batch.update(productRef, {
-                    categories: arrayRemove(...slugsToRemove)
-                });
-            });
+                productsToCleanIds.forEach(id => {
+                    const productRef = doc(db, "products", id);
+                    const isStillSelected = selectedProducts.find(p => p.id === id);
+                    
+                    // مسح الروابط القديمة دائماً لتجنب التكرار أو الروابط الميتة
+                    batch.update(productRef, {
+                        categories: arrayRemove(originalSlug, `/${originalSlug}`)
+                    });
 
+                    // لو المنتج لسه معانا في القائمة، نأكد عليه الرابط الجديد (لو كان اتغير)
+                    if (isStillSelected) {
+                        batch.update(productRef, {
+                            categories: arrayUnion(cleanSlug, `/${cleanSlug}`)
+                        });
+                    }
+                });
+            } else {
+                // لو مفيش originalSlug (قسم جديد تماماً)، نتأكد من المنتجات المحذوفة يدوياً من القائمة
+                const productsToRemoveIds = originalProductIds.filter(id => !selectedProducts.find(p => p.id === id));
+                
+                productsToRemoveIds.forEach(id => {
+                    const productRef = doc(db, "products", id);
+                    batch.update(productRef, {
+                        categories: arrayRemove(cleanSlug, `/${cleanSlug}`)
+                    });
+                });
+            }
+
+            // تنفيذ العمليات دفعة واحدة
             await batch.commit();
 
             setView('list');
@@ -502,10 +491,12 @@ export default function CollectionsPage() {
                                     <div className="flex gap-2">
                                         <button onClick={() => openEditor(item)} className="p-2 bg-[#222] rounded-lg hover:bg-[#F5C518] hover:text-black transition text-gray-400">
                                             <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDeleteCollection(item.id)} className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400">
-                                            <Trash2 size={16} />
-                                        </button>
+                                       <button 
+  onClick={() => handleDeleteCollection(item.id, item.slug)} 
+  className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400"
+>
+  <Trash2 size={16} />
+</button>
                                     </div>
                                     <a href={`https://wind-wsp-o6al.vercel.app/collections/${item.slug}`} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-[#F5C518] flex items-center gap-1">
                                         عرض <ExternalLink size={10} />
