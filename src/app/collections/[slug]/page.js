@@ -47,31 +47,26 @@ export default function CategoryPage() {
         }
 
         // ==========================================
+// ==========================================
 // 2. جلب المنتجات (بحث ذكي وموازي)
 // ==========================================
 
-// الاستعلام الأول: يبحث في Slugs (الطريقة الجديدة اللي عملناها في الأدمن)
+// الاستعلام الأول: يبحث في نظام الـ Slugs (النظام الجديد في الأدمن)
 const q1 = getDocs(query(
   collection(db, "products"),
-  // بنبحث عن الـ slug الصافي أو اللي أوله slash لضمان الدقة
   where("categories", "array-contains-any", [currentSlug, `/${currentSlug}`]),
   limit(40)
 ));
 
-// الاستعلام الثاني: بيبحث في الـ Type (نظام شوبيفاي القديم)
-// هنا بنستخدم الـ typeVariants اللي إنت عاملها (مجهود رائع في تغطية احتمالات الحروف)
+// الاستعلام الثاني: بيبحث في نظام الـ Type (نظام شوبيفاي القديم)
 const q2 = getDocs(query(
   collection(db, "products"),
   where("type", "in", typeVariants),
   limit(40)
 ));
 
-        // الاستعلام الثاني: بيبحث في الطريقة الجديدة (type string) المستوردة من شيت شوبيفاي
-        const q2 = getDocs(query(
-          collection(db, "products"),
-          where("type", "in", typeVariants),
-          limit(40)
-        ));
+// تنفيذ الاستعلامين معاً ودمج النتائج (snap1 و snap2)
+const [snap1, snap2] = await Promise.all([q1, q2]);
 
         // تنفيذ الاستعلامين في نفس الوقت لسرعة التحميل
         const [snap1, snap2] = await Promise.all([q1, q2]);
