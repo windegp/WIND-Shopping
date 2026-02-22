@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 // تأكد من مسار الفولدر (Admin) كابيتال أو سمول حسب اللي شغال معاك
-import ImageUploader from "@/components/Admin/ImageUploader";
+import ImageUploader from "@/components/ImageUploader";
 
 export default function CreateProductPage() {
   // ==========================================
