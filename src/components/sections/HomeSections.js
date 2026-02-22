@@ -219,10 +219,9 @@ export const FeaturedToday = ({ data }) => {
 };
 
 
-import Link from 'next/link';
-
 // --- 4. قسم أفضل 10 منتجات لدي وينـد (IMDb Style) ---
 export const TopTenProducts = ({ data }) => {
+  // التحقق من وجود بيانات لتجنب أخطاء الرندرة
   if (!data || !data.cards || data.cards.length === 0) return null;
 
   return (
@@ -243,7 +242,7 @@ export const TopTenProducts = ({ data }) => {
         {/* قائمة المنتجات الطولية */}
         <div className="flex flex-col gap-4">
           {data.cards.slice(0, 10).map((card, index) => (
-            <div key={index} className="flex bg-[#1a1a1a] rounded-xl overflow-hidden shadow-lg border border-[#222]">
+            <div key={index} className="flex bg-[#1a1a1a] rounded-xl overflow-hidden shadow-lg border border-[#222] transition-all hover:border-[#444]">
               
               {/* صورة المنتج مع الـ Bookmark */}
               <div className="relative w-[110px] md:w-[130px] shrink-0 bg-[#222]">
@@ -270,7 +269,7 @@ export const TopTenProducts = ({ data }) => {
                 {/* عنوان المنتج */}
                 <h3 className="text-white font-bold text-base md:text-lg mb-1 line-clamp-2 leading-tight">{card.mainTitle}</h3>
                 
-                {/* السعر والتصنيف (بنفس ستايل السنة والمدة) */}
+                {/* السعر والتصنيف */}
                 <div className="flex items-center gap-3 text-gray-400 text-[11px] md:text-sm mb-2">
                   <span className="text-white font-semibold">{card.price || "متوفر الآن"}</span>
                   {card.category && <span>{card.category}</span>}
@@ -293,7 +292,7 @@ export const TopTenProducts = ({ data }) => {
                   </button>
                 </div>
 
-                {/* زر عرض التفاصيل - تم ربطه بـ card.linkUrl المحدث */}
+                {/* زر عرض التفاصيل (مربوط بـ linkUrl الكارت) */}
                 <div className="mt-auto">
                    <Link href={card.linkUrl || "/"} className="inline-flex items-center gap-2 text-[#5799ef] hover:text-white transition-colors text-[13px] md:text-sm font-bold">
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,9 +307,9 @@ export const TopTenProducts = ({ data }) => {
           ))}
         </div>
         
-        {/* زر عرض الكل السفلي - تم ربطه بـ data.linkUrl المحدث */}
+        {/* زر عرض الكل السفلي (مربوط بـ linkUrl القسم) */}
         <div className="mt-6 flex justify-center pb-2">
-           <Link href={data.linkUrl || "/"} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base">
+           <Link href={data.linkUrl || "/"} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base border border-[#333]">
              عرض الكل
            </Link>
         </div>
