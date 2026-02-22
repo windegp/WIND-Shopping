@@ -57,44 +57,61 @@ export default function ProductsList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#333]">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-[#222] transition-colors">
-                <td className="p-4">
-                  <div className="w-12 h-12 rounded bg-gray-800 overflow-hidden border border-[#333]">
-                    {(product.images?.[0] || product.mainImageUrl) && (
-                      <img 
-                        src={product.images?.[0] || product.mainImageUrl} 
-                        className="w-full h-full object-cover" 
-                        alt={product.title}
-                      />
-                    )}
-                  </div>
-                </td>
-                <td className="p-4 font-bold text-white">{product.title}</td>
-                <td className="p-4 text-[#F5C518]">{product.price} ج.م</td>
-                <td className="p-4 text-gray-400">
-                  {/* تأكد من عرض الأقسام بشكل صحيح سواء كانت مصفوفة أو نص */}
-                  {Array.isArray(product.categories) ? product.categories.join(', ') : (product.category || 'عام')}
-                </td>
-                <td className="p-4">
-                  <div className="flex justify-center items-center gap-4">
-                    {/* التعديل الجوهري: رابط التعديل يرسل الـ ID كـ Query Parameter */}
-                    <Link 
-                      href={`/admin/products/create?id=${product.id}`} 
-                      className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                    >
-                      تعديل
-                    </Link>
-                    <button 
-                      onClick={() => handleDelete(product.id)} 
-                      className="text-red-500 hover:text-red-400 font-medium transition-colors"
-                    >
-                      حذف
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {products.map((product) => {
+              
+              // --- معالجة ذكية للبيانات لدعم الطريقة القديمة والجديدة (Shopify) ---
+              
+              // 1. تحديد الصورة
+              const displayImage = product.images?.[0] || product.mainImageUrl || product.image;
+              
+              // 2. تحديد السعر
+              const displayPrice = product.price || (product.variants && product.variants[0]?.price) || "0";
+              
+              // 3. تحديد القسم (نعطي الأولوية لبيانات شوبيفاي ثم القديمة)
+              let displayCategory = 'عام';
+              if (product.type) displayCategory = product.type;
+              else if (product.category) displayCategory = product.category;
+              else if (product.collections) displayCategory = product.collections;
+              else if (Array.isArray(product.categories) && product.categories.length > 0) displayCategory = product.categories.join('، ');
+
+              return (
+                <tr key={product.id} className="hover:bg-[#222] transition-colors">
+                  <td className="p-4">
+                    <div className="w-12 h-12 rounded bg-gray-800 overflow-hidden border border-[#333]">
+                      {displayImage && (
+                        <img 
+                          src={displayImage} 
+                          className="w-full h-full object-cover" 
+                          alt={product.title || 'Product'}
+                        />
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4 font-bold text-white">{product.title || 'بدون اسم'}</td>
+                  <td className="p-4 text-[#F5C518]">{displayPrice} ج.م</td>
+                  <td className="p-4 text-gray-400">
+                    {displayCategory}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex justify-center items-center gap-4">
+                      {/* رابط التعديل يرسل الـ ID كـ Query Parameter ليتم سحبه في صفحة الإنشاء */}
+                      <Link 
+                        href={`/admin/products/create?id=${product.id}`} 
+                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                      >
+                        تعديل
+                      </Link>
+                      <button 
+                        onClick={() => handleDelete(product.id)} 
+                        className="text-red-500 hover:text-red-400 font-medium transition-colors"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {products.length === 0 && (
