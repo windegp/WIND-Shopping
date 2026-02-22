@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import ImageUploader from "@/components/admin/ImageUploader";
+import ImageUploader from "@/components/ImageUploader";
 
 export default function CreateProductPage() {
   // ==========================================
