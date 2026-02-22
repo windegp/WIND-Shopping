@@ -10,6 +10,27 @@ import ImageUploader from "@/components/ImageUploader";
 // مكون الفورم الأساسي (مفصول عشان الـ Suspense)
 // ==========================================
 function CreateProductForm() {
+  // --- ضيف ده تحت بداية المكون مباشرة ---
+  const [availableCollections, setAvailableCollections] = useState([]);
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      const { collection, getDocs } = await import("firebase/firestore");
+      const snap = await getDocs(collection(db, "collections"));
+      setAvailableCollections(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchCats();
+  }, []);
+
+  const handleCollectionToggle = (colSlug) => {
+    const current = productData.collections || [];
+    const currentArray = Array.isArray(current) ? current : (current ? [current] : []);
+    if (currentArray.includes(colSlug)) {
+      setProductData({ ...productData, collections: currentArray.filter(c => c !== colSlug) });
+    } else {
+      setProductData({ ...productData, collections: [...currentArray, colSlug] });
+    }
+  };
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -120,7 +141,8 @@ function CreateProductForm() {
               status: data.status || "Active",
               type: data.type || "",
               vendor: data.vendor || "WIND",
-              collections: data.collections || "",
+              // --- استبدل سطر collections القديم بـ ده ---
+              collections: Array.isArray(data.collections) ? data.collections : (data.collections ? [data.collections] : []),
               tags: data.tags || "",
               themeTemplate: data.themeTemplate || "Default product"
             });
@@ -700,19 +722,25 @@ function CreateProductForm() {
                 className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" 
               />
             </div>
+            {/* --- استبدل جزء الكولكشن بالكامل بهذا الكود --- */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Collections</label>
-              <div className="relative">
-                <span className="absolute left-2 top-2.5 text-gray-500 text-xs">🔍</span>
-                <input 
-                  type="text" 
-                  name="collections"
-                  value={productData.collections}
-                  onChange={handleProductChange}
-                  list="csv-collections" 
-                  placeholder="اختر الكولكشن أو أضف جديداً..."
-                  className="w-full bg-[#121212] border border-[#333] p-2 pl-7 rounded text-white outline-none" 
-                />
+              <label className="block text-xs text-gray-400 mb-3 font-bold border-b border-[#333] pb-1">الأقسام (Collections)</label>
+              <div className="space-y-2 max-h-60 overflow-y-auto bg-black/40 p-3 rounded-lg border border-[#333] custom-scrollbar">
+                {availableCollections.length > 0 ? (
+                  availableCollections.map((col) => (
+                    <label key={col.id} className="flex items-center gap-3 p-2 hover:bg-[#1a1a1a] rounded cursor-pointer transition group">
+                      <input 
+                        type="checkbox" 
+                        checked={(Array.isArray(productData.collections) ? productData.collections : []).includes(col.slug)}
+                        onChange={() => handleCollectionToggle(col.slug)}
+                        className="w-4 h-4 accent-[#F5C518] cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-300 group-hover:text-white transition">{col.name}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-[10px] text-gray-500 italic text-center">لا توجد كولكشنز مضافة</p>
+                )}
               </div>
             </div>
             <div>

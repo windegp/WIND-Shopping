@@ -1,17 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-// 1. حل مشكلة Error #130 عبر التحميل الديناميكي للمكتبة
-import dynamic from 'next/dynamic';
-const Nestable = dynamic(() => import('react-nestable'), { 
-  ssr: false,
-  loading: () => <div className="p-10 text-center text-gray-500 font-bold">جاري تشغيل محرك القوائم...</div>
-});
-
+import React, { useState, useEffect, useRef } from "react";
+import Nestable from "react-nestable";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase"; 
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { Trash2, GripVertical, Plus, Save, Loader2, CornerDownLeft, Link as LinkIcon, Info } from "lucide-react";
+import { Trash2, GripVertical, Plus, Save, Loader2, CornerDownLeft } from "lucide-react";
 
 // استايل المكتبة الأساسي
 import "react-nestable/dist/styles/index.css"; 
@@ -20,14 +14,19 @@ export default function MenuManager() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [lastAddedId, setLastAddedId] = useState(null); 
-  const [isMounted, setIsMounted] = useState(false);
+  const [lastAddedId, setLastAddedId] = useState(null); // عشان نعمل وميض للعنصر الجديد
+  const [availableCollections, setAvailableCollections] = useState([]); // لستة الكولكشنز من الفايربيس
 
-  // جلب البيانات عند التحميل
+  // 1. جلب البيانات من Firebase
   useEffect(() => {
-    setIsMounted(true);
     const fetchData = async () => {
       try {
+        // Ctrl + F: fetchData
+const colSnap = await getDoc(doc(db, "collections", "all")); // أو حسب مسمى الكولكشن عندك
+// الأفضل نجيبهم من الـ collection نفسه
+const { getDocs, collection } = await import("firebase/firestore");
+const colsQuery = await getDocs(collection(db, "collections"));
+setAvailableCollections(colsQuery.docs.map(d => ({ name: d.data().name, slug: d.data().slug })));
         const docRef = doc(db, "settings", "navigation");
         const snap = await getDoc(docRef);
         
@@ -35,16 +34,16 @@ export default function MenuManager() {
           const addIds = (list) =>
             list.map((item) => ({
               ...item,
-              id: uuidv4(), 
+              id: uuidv4(), // تجديد الـ ID لضمان عمل المكتبة
               children: item.children ? addIds(item.children) : [],
             }));
           setItems(addIds(snap.data().menuItems));
         } else {
-          // بيانات افتراضية لو مفيش داتا
+          // Fallback Default Data
           const defaultItems = [
             { id: uuidv4(), title: "الرئيسية", link: "/", children: [] },
-            { id: uuidv4(), title: "التشكيلة الجديدة", link: "/collections/Knitwear", children: [] },
-            { id: uuidv4(), title: "تخفيضات WIND", link: "/sale", children: [], highlight: true },
+            { id: uuidv4(), title: "وصل حديثاً", link: "/new-arrivals", children: [] },
+            { id: uuidv4(), title: "تخفيضات", link: "/sale", children: [], highlight: true },
           ];
           setItems(defaultItems);
         }
@@ -57,14 +56,13 @@ export default function MenuManager() {
     fetchData();
   }, []);
 
-  // دالة تنظيف البيانات قبل الحفظ لفايربيس
+  // دالة تنظيف البيانات قبل الحفظ (إزالة الـ IDs المؤقتة)
   const cleanDataForFirebase = (list) => {
-    if (!Array.isArray(list)) return [];
     return list.map((item) => {
       const cleanedItem = {
-        title: item.title?.trim() || "قسم بدون اسم",
-        link: item.link?.trim() || "/",
-        highlight: !!item.highlight
+        title: item.title || "بدون اسم",
+        link: item.link || "#",
+        highlight: item.highlight || false
       };
       if (item.children && item.children.length > 0) {
         cleanedItem.children = cleanDataForFirebase(item.children);
@@ -73,6 +71,7 @@ export default function MenuManager() {
     });
   };
 
+  // حفظ البيانات
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -80,22 +79,25 @@ export default function MenuManager() {
       await setDoc(doc(db, "settings", "navigation"), {
         menuItems: cleanedItems,
       });
-      alert("تم حفظ قائمة WIND الجديدة بنجاح! 🚀");
+      alert("تم حفظ قائمة WIND بنجاح! 🎉");
     } catch (error) {
       console.error("Error saving menu:", error);
-      alert("حدث خطأ أثناء الاتصال بـ Firebase");
+      alert("حدث خطأ أثناء الحفظ");
     } finally {
       setSaving(false);
     }
   };
 
+  // إضافة عنصر جديد (إما في الجذر أو داخل أب)
   const addItem = (parentId = null) => {
     const newId = uuidv4();
-    const newItem = { id: newId, title: "قسم جديد", link: "/collections/", children: [] };
+    const newItem = { id: newId, title: "قسم جديد", link: "/", children: [] };
 
     if (parentId === null) {
+      // إضافة في القائمة الرئيسية
       setItems([...items, newItem]);
     } else {
+      // إضافة كـ ابن (Child)
       const addRecursive = (list) => {
         return list.map(item => {
           if (item.id === parentId) {
@@ -109,10 +111,13 @@ export default function MenuManager() {
       };
       setItems(addRecursive(items));
     }
+    
+    // تفعيل الوميض للإشارة للإضافة
     setLastAddedId(newId);
     setTimeout(() => setLastAddedId(null), 2000);
   };
 
+  // تحديث البيانات
   const updateItem = (id, field, value) => {
     const updateRecursive = (list) =>
       list.map((item) => {
@@ -123,156 +128,203 @@ export default function MenuManager() {
     setItems(updateRecursive(items));
   };
 
+  // حذف عنصر
   const deleteItem = (id) => {
     const deleteRecursive = (list) =>
       list.filter((item) => item.id !== id).map((item) => ({
         ...item,
         children: item.children ? deleteRecursive(item.children) : [],
       }));
-    if (confirm("سيتم حذف هذا القسم وفروعه، هل أنت متأكد؟")) setItems(deleteRecursive(items));
+    if (confirm("هل تريد حذف هذا القسم؟")) setItems(deleteRecursive(items));
   };
 
+  // *** دالة تحديد النص المناسب لزر الإضافة بناءً على العمق ***
+  const getAddButtonText = (depth) => {
+    if (depth === 0) return "إضافة كولكشن (صيفي/شتوي)";
+    if (depth === 1) return "إضافة فئة (تيشرت/بنطلون)";
+    if (depth === 2) return "إضافة نوع (جينز/ميلتون)";
+    return "إضافة فرع";
+  };
+
+  // شكل العنصر (Render Item)
   const renderItem = ({ item, collapseIcon, handler, depth }) => {
-    const isNew = item.id === lastAddedId; 
+    const isNew = item.id === lastAddedId; // هل هذا العنصر تم إضافته حالا؟
 
     return (
       <div className={`
-        flex flex-col gap-2 bg-[#1a1a1a] border p-4 rounded-xl mb-3 shadow-lg transition-all duration-500
-        ${isNew ? 'border-[#F5C518] scale-[1.02]' : 'border-[#333] hover:border-gray-500'}
+        flex flex-col gap-2 bg-[#1a1a1a] border p-4 rounded-lg mb-2 shadow-md transition-all duration-500
+        ${isNew ? 'border-[#F5C518] shadow-[0_0_15px_rgba(245,197,24,0.3)]' : 'border-[#333] hover:border-gray-600'}
       `}>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full">
-          {/* مقبض السحب */}
-          <div {...handler} className="cursor-grab text-gray-500 hover:text-[#F5C518] p-1 shrink-0">
+        {/* الصف العلوي: المقبض + الاسم + الرابط + الحذف */}
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full">
+          {/* مقبض السحب (Drag Handle) */}
+          <div {...handler} className="cursor-grab text-gray-500 hover:text-[#F5C518] p-1">
             <GripVertical size={20} />
           </div>
 
-          <div className="text-[#F5C518] w-6 flex justify-center shrink-0">{collapseIcon}</div>
+          {/* أيقونة التوسيع/الطي */}
+          <div className="text-[#F5C518] cursor-pointer w-6 flex justify-center">
+            {collapseIcon}
+          </div>
 
-          {/* الاسم */}
+          {/* خانة الاسم */}
           <div className="flex-1 w-full">
-            <label className="text-[10px] text-gray-500 block mb-1">اسم القسم في الموقع</label>
             <input
               type="text"
               value={item.title}
               onChange={(e) => updateItem(item.id, "title", e.target.value)}
-              className="w-full bg-black border border-[#333] text-white p-2.5 rounded-lg text-sm focus:border-[#F5C518] outline-none font-bold"
-              placeholder="مثال: فساتين، تريكو..."
+              className="w-full bg-[#121212] border border-[#333] text-white p-2 rounded text-sm focus:outline-none focus:border-[#F5C518] placeholder-gray-600 font-medium"
+              placeholder="اسم القسم"
             />
           </div>
 
-          {/* الرابط */}
+          {/* خانة الرابط */}
           <div className="flex-1 w-full">
-            <label className="text-[10px] text-gray-500 block mb-1 flex items-center gap-1">
-              الرابط (من شيت شوبيفاي) <LinkIcon size={10}/>
-            </label>
             <input
               type="text"
               value={item.link}
               onChange={(e) => updateItem(item.id, "link", e.target.value)}
-              className="w-full bg-black border border-[#333] text-gray-400 p-2.5 rounded-lg text-sm focus:border-[#F5C518] outline-none font-mono"
-              dir="ltr"
-              placeholder="/collections/Type-Name"
-            />
-          </div>
+              className="w-full bg-[#121212] border border-[#333] text-gray-400 p-2 rounded text-sm focus:outline-none focus:border-[#F5C518] dir-ltr text-left"
+              style={{ direction: "ltr" }}
+           {/* Ctrl + F: placeholder="/category-link" */}
+<div className="flex-1 w-full flex gap-1">
+  <select
+    value={item.link.startsWith('/collections/') ? item.link.replace('/collections/', '') : ""}
+    onChange={(e) => {
+      const slug = e.target.value;
+      updateItem(item.id, "link", slug ? `/collections/${slug}` : "/");
+    }}
+    className="bg-[#121212] border border-[#333] text-gray-400 p-2 rounded text-xs focus:outline-none focus:border-[#F5C518] w-1/3"
+  >
+    <option value="">رابط مخصص</option>
+    {availableCollections.map(c => (
+      <option key={c.slug} value={c.slug}>{c.name}</option>
+    ))}
+  </select>
+  
+  <input
+    type="text"
+    value={item.link}
+    onChange={(e) => updateItem(item.id, "link", e.target.value)}
+    className="flex-1 bg-[#121212] border border-[#333] text-gray-400 p-2 rounded text-sm focus:outline-none focus:border-[#F5C518] dir-ltr text-left"
+    style={{ direction: "ltr" }}
+    placeholder="/category-link"
+  />
+</div>
 
-          <button onClick={() => deleteItem(item.id)} className="text-gray-600 hover:text-red-500 p-2 transition-colors">
-            <Trash2 size={20} />
+          {/* زر الحذف */}
+          <button onClick={() => deleteItem(item.id)} className="text-gray-600 hover:text-red-500 transition-colors p-2 rounded hover:bg-[#222]">
+            {/* Ctrl + F: Trash2 */}
+<button 
+  onClick={() => updateItem(item.id, "highlight", !item.highlight)} 
+  className={`p-2 rounded transition-colors ${item.highlight ? 'text-[#F5C518] bg-[#F5C518]/10' : 'text-gray-600 hover:bg-[#222]'}`}
+  title="تميز بلون مختلف"
+>
+  <Save size={18} className={item.highlight ? "fill-current" : ""} />
+</button>
+            <Trash2 size={18} />
           </button>
         </div>
 
-        <div className="flex justify-between items-center mt-1 pr-12">
-           {depth < 3 ? (
-            <button onClick={() => addItem(item.id)} className="text-[10px] font-black text-[#F5C518] flex items-center gap-1 hover:text-white transition">
-              <CornerDownLeft size={12} /> + إضافة فرع تحت {item.title}
+        {/* الصف السفلي: زر الإضافة الذكي (يظهر فقط إذا لم نصل لأقصى عمق) */}
+        {depth < 3 && (
+          <div className="mr-10 flex items-center gap-2">
+            <CornerDownLeft size={14} className="text-gray-600" />
+            <button 
+              onClick={() => addItem(item.id)}
+              className="text-[11px] font-bold text-[#F5C518] hover:text-white hover:bg-[#333] px-2 py-1 rounded transition flex items-center gap-1 border border-dashed border-[#F5C518]/30 hover:border-[#F5C518]"
+            >
+              <Plus size={12} />
+              {getAddButtonText(depth)}
             </button>
-           ) : <span />}
-           
-           <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-600">تمييز باللون الذهبي؟</span>
-              <input 
-                type="checkbox" 
-                checked={item.highlight} 
-                onChange={(e) => updateItem(item.id, "highlight", e.target.checked)}
-                className="accent-[#F5C518]"
-              />
-           </div>
-        </div>
+          </div>
+        )}
       </div>
     );
   };
 
-  // حماية لمنع الـ Flash قبل التحميل
-  if (!isMounted || loading) {
-    return (
-      <div className="p-10 text-center text-[#F5C518] bg-[#121212] min-h-screen flex flex-col items-center justify-center">
-        <Loader2 className="animate-spin mb-4" size={48}/>
-        <p className="font-black tracking-widest animate-pulse">WIND NAVIGATION ENGINE</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-10 text-center text-[#F5C518] bg-[#121212] min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" size={40}/></div>;
 
   return (
-    <div className="p-6 min-h-screen bg-[#121212] text-white font-sans" dir="rtl">
-      
-      {/* الشريط العلوي */}
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 mb-10 bg-[#1a1a1a] p-8 rounded-2xl border border-[#333] shadow-2xl">
+    <div className="p-6 min-h-screen bg-[#121212] text-white font-sans overflow-x-hidden" dir="rtl">
+      {/* الهيدر */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-[#1a1a1a] p-6 rounded-xl border border-[#333]">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
-             <span className="bg-[#F5C518] text-black px-3 py-1 rounded-md text-xl">WIND</span> 
-             إدارة المنيو
+          <h1 className="text-2xl font-bold tracking-wider flex items-center gap-2">
+             إدارة قائمة <span className="text-[#F5C518]">WIND</span>
           </h1>
-          <p className="text-gray-500 text-sm mt-2 flex items-center gap-2">
-            <Info size={14} className="text-[#F5C518]" />
-            اربط الأقسام بالـ Type الموجود في الشيت باستخدام: <code className="bg-black px-2 py-1 rounded text-[#F5C518]">/collections/Type</code>
+          <p className="text-gray-400 text-sm mt-1">
+            استخدم زر <span className="text-[#F5C518] font-bold">+</span> لإضافة أقسام فرعية، أو اسحب للترتيب.
           </p>
         </div>
-        <div className="flex gap-4 w-full md:w-auto">
-          <button onClick={() => addItem(null)} className="flex-1 md:flex-none px-6 py-3 bg-[#222] border border-[#333] text-white rounded-xl hover:border-[#F5C518] transition flex items-center justify-center gap-2 font-bold">
-            <Plus size={20} /> قسم رئيسي
+        <div className="flex gap-3 w-full md:w-auto">
+          <button onClick={() => addItem(null)} className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-3 bg-[#222] border border-[#333] text-white rounded-lg hover:border-[#F5C518] transition">
+            <Plus size={18} /> قسم رئيسي جديد
           </button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 md:flex-none px-8 py-3 bg-[#F5C518] text-black font-black rounded-xl hover:bg-white transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(245,197,24,0.2)]">
-            {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} حفظ التغييرات
+          <button onClick={handleSave} disabled={saving} className="flex-1 md:flex-none justify-center flex items-center gap-2 px-6 py-3 bg-[#F5C518] text-black font-black rounded-lg hover:bg-yellow-500 transition disabled:opacity-50 shadow-[0_0_15px_rgba(245,197,24,0.3)]">
+            {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} حفظ
           </button>
         </div>
       </div>
 
-      {/* منطقة بناء المنيو */}
-      <div className="max-w-4xl mx-auto pb-32">
+      {/* منطقة القوائم */}
+      <div className="menu-builder-area max-w-4xl mx-auto pb-20">
         <Nestable
-          items={items}
+          items={Array.isArray(items) ? items : []}
           renderItem={renderItem}
           onChange={(newItems) => setItems(newItems)}
-          maxDepth={4} 
-          threshold={40}
+          maxDepth={4} // أقصى عمق مسموح
+          threshold={30}
         />
-        
-        {items.length === 0 && (
-          <div className="text-center py-24 border-2 border-dashed border-[#333] rounded-2xl bg-[#1a1a1a]/50">
-            <p className="text-gray-500 font-bold mb-4">قائمة الموقع فارغة تماماً</p>
-            <button onClick={() => addItem(null)} className="bg-[#F5C518] text-black px-6 py-2 rounded-lg font-black hover:scale-105 transition">ابدأ بناء المنيو الآن</button>
-          </div>
-        )}
       </div>
 
-      {/* تحسينات التصميم الخاصة بالمكتبة */}
+      {items.length === 0 && (
+        <div className="text-center py-20 border-2 border-dashed border-[#333] rounded-lg bg-[#1a1a1a]/50">
+          <p className="text-gray-500 font-bold mb-4">القائمة فارغة تماماً</p>
+          <button onClick={() => addItem(null)} className="text-[#F5C518] hover:underline">أضف أول قسم الآن</button>
+        </div>
+      )}
+
+      {/* CSS مخصص لحل مشكلة اختفاء العناصر عند السحب */}
       <style jsx global>{`
-        .nestable-drag-layer { position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none; }
-        .nestable-drag-layer > .nestable-item, .nestable-row { 
-          background-color: #1a1a1a !important; 
-          border: 2px solid #F5C518 !important; 
-          border-radius: 12px; 
-          width: 100%; 
-          opacity: 0.9;
+        /* 1. إصلاح مشكلة الاختفاء */
+        .nestable-drag-layer {
+          position: fixed;
+          top: 0;
+          left: 0;
+          z-index: 9999;
+          pointer-events: none;
         }
+        
+        /* التأكد من أن العنصر المسحوب يحتفظ بخلفيته وشكله */
+        .nestable-drag-layer > .nestable-item,
+        .nestable-row {
+           /* مهم جداً: الخلفية لازم تكون صريحة */
+           background-color: #1a1a1a !important; 
+           border: 1px solid #F5C518 !important; /* لون ذهبي أثناء السحب */
+           border-radius: 8px;
+           width: 100%;
+           box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        /* 2. تنسيقات عامة للمكتبة */
         .nestable-list { list-style: none; padding: 0; margin: 0; }
-        .nestable-item-children { 
-          margin-right: 40px; 
-          border-right: 1px dashed #444; 
-          padding-right: 20px;
-          margin-top: 10px;
+        .nestable-item { margin-bottom: 10px; }
+        .nestable-item-content { 
+            background: transparent !important; 
+            border: none !important; 
+            padding: 0 !important; 
         }
-        .nestable-handle { cursor: grab; }
-        .nestable-handle:active { cursor: grabbing; }
+        
+        /* إزاحة الأبناء لليسار */
+        .nestable-item-children {
+            margin-right: 30px; /* المسافة البادئة للأبناء */
+            border-right: 2px dashed #333; /* خط إرشادي للأبناء */
+            padding-right: 15px;
+        }
+
+        /* أيقونة السهم للتوسيع */
+        .nestable-item-icon { margin-left: 10px; }
       `}</style>
     </div>
   );

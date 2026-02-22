@@ -172,10 +172,37 @@ export default function CollectionsPage() {
 
             // 3. Smart Product Updating (الإضافة والحذف)
             
-            // أ) المنتجات الجديدة (موجودة في selected بس ماكانتش في original)
+           // أ) المنتجات الجديدة (إضافة الـ slug الجديد)
             const productsToAdd = selectedProducts.filter(p => !originalProductIds.includes(p.id));
-            
             productsToAdd.forEach(product => {
+                const productRef = doc(db, "products", product.id);
+                batch.update(productRef, {
+                    categories: arrayUnion(cleanSlug, `/${cleanSlug}`) 
+                });
+            });
+
+            // ب) المنتجات المحذوفة أو في حالة تغير الـ Slug بالكامل
+            // هنجيب كل المنتجات اللي كانت في القسم ده أصلاً وننضفها
+            if (originalSlug) {
+                const productsToCleanIds = [...new Set([...originalProductIds, ...selectedProducts.map(p => p.id)])];
+                
+                productsToCleanIds.forEach(id => {
+                    const productRef = doc(db, "products", id);
+                    const isStillSelected = selectedProducts.find(p => p.id === id);
+                    
+                    // مسح الروابط القديمة دائماً
+                    batch.update(productRef, {
+                        categories: arrayRemove(originalSlug, `/${originalSlug}`)
+                    });
+
+                    // لو المنتج لسه معانا في القائمة، نأكد عليه الرابط الجديد
+                    if (isStillSelected) {
+                        batch.update(productRef, {
+                            categories: arrayUnion(cleanSlug, `/${cleanSlug}`)
+                        });
+                    }
+                });
+            }
                 const productRef = doc(db, "products", product.id);
                 // نضيف الـ slug والـ /slug عشان التوافق
                 batch.update(productRef, {
@@ -213,12 +240,23 @@ export default function CollectionsPage() {
         }
     };
 
-    const handleDeleteCollection = async (id) => {
-        if (confirm("تحذير: سيتم حذف القسم فقط. المنتجات ستبقى لكن سيتم إزالة اسم القسم منها. هل أنت متأكد؟")) {
-           // في حالة حذف القسم بالكامل، يفضل تنظيف المنتجات أيضاً (اختياري)
-           // للكود البسيط سنحذف القسم فقط الآن
+  const handleDeleteCollection = async (id, slug) => {
+        if (confirm("تحذير: سيتم حذف القسم وإزالة ارتباطه بكافة المنتجات. هل أنت متأكد؟")) {
             try {
-                await deleteDoc(doc(db, "collections", id));
+                const batch = writeBatch(db);
+                batch.delete(doc(db, "collections", id));
+
+                // تنظيف المنتجات من الـ slug المحذوف
+                const q = query(collection(db, "products"), where("categories", "array-contains-any", [slug, `/${slug}`]));
+                const snapshot = await getDocs(q);
+                snapshot.docs.forEach(productDoc => {
+                    batch.update(doc(db, "products", productDoc.id), {
+                        categories: arrayRemove(slug, `/${slug}`)
+                    });
+                });
+
+                await batch.commit();
+                alert("تم حذف القسم بنجاح");
             } catch (err) {
                 alert("خطأ في الحذف");
             }
