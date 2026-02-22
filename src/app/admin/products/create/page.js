@@ -47,9 +47,54 @@ export default function CreateProductPage() {
   const [seoDesc, setSeoDesc] = useState("");
   const [urlHandle, setUrlHandle] = useState("");
 
+  // ====== التعديل هنا: إضافة حالات (States) لحفظ كل المدخلات ======
+  const [productData, setProductData] = useState({
+    title: "",
+    description: "",
+    category: "",
+    price: "",
+    compareAtPrice: "",
+    costPerItem: "",
+    quantity: "",
+    sku: "",
+    barcode: "",
+    sellOutOfStock: "No",
+    weight: "",
+    weightUnit: "kg",
+    countryOfOrigin: "Egypt",
+    status: "Active",
+    type: "",
+    vendor: "WIND",
+    collections: "",
+    tags: "",
+    themeTemplate: "Default product"
+  });
+
+  const [metafields, setMetafields] = useState({
+    youMayAlsoLike: "",
+    isdalBundle: "",
+    sizeChart: "",
+    colorsBundle: "",
+    suggested: "",
+    fabric: "",
+    fit: ""
+  });
+
   // ==========================================
   // 2. دوال التحكم (Functions)
   // ==========================================
+  
+  // دوال حفظ التغييرات في الحقول
+  const handleProductChange = (e) => {
+    const { name, value } = e.target;
+    setProductData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMetafieldChange = (e) => {
+    const { name, value } = e.target;
+    setMetafields(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleImageKitSuccess = (url) => setImages((prev) => [...prev, url]);
   
   const handleAddImageUrl = () => {
@@ -78,6 +123,22 @@ export default function CreateProductPage() {
     setOptions(newOptions);
   };
 
+  // دالة مؤقتة لتجربة طباعة البيانات قبل الحفظ لفايربيس
+  const handleSaveProduct = () => {
+    const finalProduct = {
+      ...productData,
+      images,
+      chargeTax,
+      inventoryTracked,
+      physicalProduct,
+      options,
+      seo: { title: seoTitle, description: seoDesc, handle: urlHandle },
+      metafields
+    };
+    console.log("البيانات الجاهزة للحفظ:", finalProduct);
+    alert("تم تجميع البيانات بنجاح! راجع الـ Console.");
+  };
+
   // ==========================================
   // 3. واجهة المستخدم (نسخة شوبيفاي المكتملة)
   // ==========================================
@@ -89,7 +150,7 @@ export default function CreateProductPage() {
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <span className="text-gray-500">{"<"}</span> إضافة منتج
         </h1>
-        <button className="bg-[#F5C518] text-black px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition">
+        <button onClick={handleSaveProduct} className="bg-[#F5C518] text-black px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition">
           حفظ
         </button>
       </div>
@@ -105,7 +166,14 @@ export default function CreateProductPage() {
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <div className="mb-4">
               <label className="block text-sm text-gray-300 mb-2">العنوان (Title)</label>
-              <input type="text" placeholder="Short sleeve t-shirt" className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white focus:border-[#F5C518] outline-none transition" />
+              <input 
+                type="text" 
+                name="title"
+                value={productData.title}
+                onChange={handleProductChange}
+                placeholder="Short sleeve t-shirt" 
+                className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white focus:border-[#F5C518] outline-none transition" 
+              />
             </div>
             <div>
               <label className="block text-sm text-gray-300 mb-2">الوصف (Description)</label>
@@ -119,7 +187,13 @@ export default function CreateProductPage() {
                   <span className="cursor-pointer hover:text-white">🔗</span>
                   <span className="cursor-pointer hover:text-white">📷</span>
                 </div>
-                <textarea rows="6" className="w-full bg-[#121212] p-3 text-white outline-none resize-none"></textarea>
+                <textarea 
+                  name="description"
+                  value={productData.description}
+                  onChange={handleProductChange}
+                  rows="6" 
+                  className="w-full bg-[#121212] p-3 text-white outline-none resize-none"
+                ></textarea>
               </div>
             </div>
           </div>
@@ -153,11 +227,14 @@ export default function CreateProductPage() {
             )}
           </div>
 
-          {/* 3. التصنيف (Category) - معدلة لتأخذ من الشيت مع إمكانية كتابة قسم جديد */}
+          {/* 3. التصنيف (Category) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <label className="block text-sm text-gray-300 mb-2">التصنيف (Category)</label>
             <input 
               type="text" 
+              name="category"
+              value={productData.category}
+              onChange={handleProductChange}
               list="csv-collections"
               placeholder="اختر أو اكتب قسماً جديداً..." 
               className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none" 
@@ -170,17 +247,47 @@ export default function CreateProductPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Price</label>
-                <div className="relative"><span className="absolute left-3 top-2 text-gray-500">E£</span><input type="number" placeholder="0.00" className="w-full bg-[#121212] border border-[#333] p-2 pl-8 rounded text-white outline-none" /></div>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500">E£</span>
+                  <input 
+                    type="number" 
+                    name="price"
+                    value={productData.price}
+                    onChange={handleProductChange}
+                    placeholder="0.00" 
+                    className="w-full bg-[#121212] border border-[#333] p-2 pl-8 rounded text-white outline-none" 
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Compare at price</label>
-                <div className="relative"><span className="absolute left-3 top-2 text-gray-500">E£</span><input type="number" placeholder="0.00" className="w-full bg-[#121212] border border-[#333] p-2 pl-8 rounded text-white outline-none" /></div>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500">E£</span>
+                  <input 
+                    type="number" 
+                    name="compareAtPrice"
+                    value={productData.compareAtPrice}
+                    onChange={handleProductChange}
+                    placeholder="0.00" 
+                    className="w-full bg-[#121212] border border-[#333] p-2 pl-8 rounded text-white outline-none" 
+                  />
+                </div>
               </div>
             </div>
             <div className="border-t border-[#333] mt-5 pt-5 grid grid-cols-3 gap-4 items-center">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Cost per item</label>
-                <div className="relative"><span className="absolute left-3 top-2 text-gray-500">E£</span><input type="number" placeholder="0.00" className="w-full bg-[#121212] border border-[#333] p-2 pl-8 rounded text-white outline-none" /></div>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500">E£</span>
+                  <input 
+                    type="number" 
+                    name="costPerItem"
+                    value={productData.costPerItem}
+                    onChange={handleProductChange}
+                    placeholder="0.00" 
+                    className="w-full bg-[#121212] border border-[#333] p-2 pl-8 rounded text-white outline-none" 
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2 mt-4 justify-center">
                 <span className="text-sm text-gray-300">Charge tax</span>
@@ -210,16 +317,49 @@ export default function CreateProductPage() {
               </div>
               <div className="flex justify-between items-center border-t border-[#333] pt-3 mt-2">
                 <span className="text-sm text-gray-300">Obour City</span>
-                <input type="number" placeholder="0" className="w-24 bg-[#121212] border border-[#333] p-1.5 rounded text-center text-white outline-none" />
+                <input 
+                  type="number" 
+                  name="quantity"
+                  value={productData.quantity}
+                  onChange={handleProductChange}
+                  placeholder="0" 
+                  className="w-24 bg-[#121212] border border-[#333] p-1.5 rounded text-center text-white outline-none" 
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div><label className="block text-xs text-gray-400 mb-1">SKU</label><input type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" /></div>
-              <div><label className="block text-xs text-gray-400 mb-1">Barcode</label><input type="text" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" /></div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">SKU</label>
+                <input 
+                  type="text" 
+                  name="sku"
+                  value={productData.sku}
+                  onChange={handleProductChange}
+                  className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Barcode</label>
+                <input 
+                  type="text" 
+                  name="barcode"
+                  value={productData.barcode}
+                  onChange={handleProductChange}
+                  className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white" 
+                />
+              </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Sell when out of stock</label>
-                <select className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none"><option>No</option><option>Yes</option></select>
+                <select 
+                  name="sellOutOfStock"
+                  value={productData.sellOutOfStock}
+                  onChange={handleProductChange}
+                  className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none"
+                >
+                  <option>No</option>
+                  <option>Yes</option>
+                </select>
               </div>
             </div>
           </div>
@@ -240,13 +380,35 @@ export default function CreateProductPage() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Product weight</label>
                   <div className="flex">
-                    <input type="number" placeholder="0.0" className="flex-1 bg-[#121212] border border-[#333] border-l-0 rounded-r rounded-l-none p-2 text-white outline-none" />
-                    <select className="bg-[#222] border border-[#333] text-white p-2 rounded-l outline-none"><option>kg</option><option>g</option></select>
+                    <input 
+                      type="number" 
+                      name="weight"
+                      value={productData.weight}
+                      onChange={handleProductChange}
+                      placeholder="0.0" 
+                      className="flex-1 bg-[#121212] border border-[#333] border-l-0 rounded-r rounded-l-none p-2 text-white outline-none" 
+                    />
+                    <select 
+                      name="weightUnit"
+                      value={productData.weightUnit}
+                      onChange={handleProductChange}
+                      className="bg-[#222] border border-[#333] text-white p-2 rounded-l outline-none"
+                    >
+                      <option>kg</option>
+                      <option>g</option>
+                    </select>
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Country of origin</label>
-                  <select className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none"><option>Egypt</option></select>
+                  <select 
+                    name="countryOfOrigin"
+                    value={productData.countryOfOrigin}
+                    onChange={handleProductChange}
+                    className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none"
+                  >
+                    <option>Egypt</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -294,7 +456,7 @@ export default function CreateProductPage() {
             </button>
           </div>
 
-          {/* 8. الحقول الإضافية (Metafields) - شاملة كل حقول الشيت */}
+          {/* 8. الحقول الإضافية (Metafields) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm space-y-4">
             <h3 className="text-sm text-gray-300 font-bold border-b border-[#333] pb-2 mb-4">الحقول المخصصة (Metafields)</h3>
             
@@ -307,7 +469,13 @@ export default function CreateProductPage() {
               {label: "Fit (القصة)", name: "fit"}].map((field, i) => (
               <div key={i} className="flex flex-col md:flex-row md:items-center gap-2">
                 <label className="text-xs text-gray-400 w-1/3">{field.label}</label>
-                <input type="text" className="flex-1 bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+                <input 
+                  type="text" 
+                  name={field.name}
+                  value={metafields[field.name]}
+                  onChange={handleMetafieldChange}
+                  className="flex-1 bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" 
+                />
               </div>
             ))}
           </div>
@@ -366,9 +534,14 @@ export default function CreateProductPage() {
         <div className="space-y-6">
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <label className="block text-sm text-gray-300 mb-2">الحالة (Status)</label>
-            <select className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none">
-              <option>Active</option>
-              <option>Draft</option>
+            <select 
+              name="status"
+              value={productData.status}
+              onChange={handleProductChange}
+              className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none"
+            >
+              <option value="Active">Active</option>
+              <option value="Draft">Draft</option>
             </select>
           </div>
 
@@ -383,13 +556,16 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* التنظيم (Product organization) - معدلة لتأخذ من قوائم الشيت */}
+          {/* التنظيم (Product organization) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm space-y-4">
             <h3 className="text-sm text-gray-300">تنظيم المنتج (Product organization)</h3>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Type</label>
               <input 
                 type="text" 
+                name="type"
+                value={productData.type}
+                onChange={handleProductChange}
                 list="csv-types" 
                 placeholder="اختر أو اكتب نوعاً جديداً..." 
                 className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" 
@@ -397,7 +573,13 @@ export default function CreateProductPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Vendor</label>
-              <input type="text" defaultValue="WIND" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+              <input 
+                type="text" 
+                name="vendor"
+                value={productData.vendor}
+                onChange={handleProductChange}
+                className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" 
+              />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Collections</label>
@@ -405,6 +587,9 @@ export default function CreateProductPage() {
                 <span className="absolute left-2 top-2.5 text-gray-500 text-xs">🔍</span>
                 <input 
                   type="text" 
+                  name="collections"
+                  value={productData.collections}
+                  onChange={handleProductChange}
                   list="csv-collections" 
                   placeholder="اختر الكولكشن أو أضف جديداً..."
                   className="w-full bg-[#121212] border border-[#333] p-2 pl-7 rounded text-white outline-none" 
@@ -413,13 +598,27 @@ export default function CreateProductPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Tags</label>
-              <input type="text" placeholder="winter, new, casual" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+              <input 
+                type="text" 
+                name="tags"
+                value={productData.tags}
+                onChange={handleProductChange}
+                placeholder="winter, new, casual" 
+                className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" 
+              />
             </div>
           </div>
 
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <label className="block text-sm text-gray-300 mb-2">Theme template</label>
-            <select className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none"><option>Default product</option></select>
+            <select 
+              name="themeTemplate"
+              value={productData.themeTemplate}
+              onChange={handleProductChange}
+              className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none"
+            >
+              <option value="Default product">Default product</option>
+            </select>
           </div>
         </div>
 
