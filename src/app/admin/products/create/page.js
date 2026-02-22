@@ -9,7 +9,26 @@ export default function CreateProductPage() {
   // ==========================================
   const csvColors = ['fuchsia', 'jeans-blue', 'beige', 'clear', 'green', 'black', 'burgundy', 'rose', 'patterned', 'navy', 'blue', 'red', 'brown', 'pink', 'gray', 'olive', 'chocolate', 'yellow', 'purple', 'orange', 'mint', 'terracotta', 'coral-pink', 'turquoise', 'gold', 'bronze', 'silver', 'off-white'];
   const csvSizes = ['One Size', '50-80-kg', '55-90-kg', '50-90-kg', '55-95-kg', '85-kg'];
-  const csvTypes = ['pullover', 'isdal', 'cardigan', 'set', 'dress', 'top'];
+  
+  // الأنواع الفعلية المستخرجة من شيت شوبيفاي المرفق
+  const csvTypes = ['Knitwear', 'Prayer Dress', 'Sweatshirt', 'Shawl', 'Hoodie', 'Sets', 'dress', 'Jacket'];
+  
+  // الأقسام المستخرجة من عمود Product Category في الشيت
+  const csvCollections = [
+    'Apparel & Accessories > Clothing > Clothing Tops > Sweaters',
+    'Apparel & Accessories > Clothing > Traditional & Ceremonial Clothing',
+    'Apparel & Accessories > Clothing > Clothing Tops > T-Shirts',
+    'Apparel & Accessories > Clothing > Clothing Tops > Cardigans',
+    'Apparel & Accessories > Clothing Accessories > Scarves & Shawls',
+    'Apparel & Accessories > Clothing > Activewear > Activewear Sweatshirts & Hoodies > Hoodies',
+    'Apparel & Accessories > Clothing > Clothing Tops > Hoodies',
+    'Apparel & Accessories > Clothing > Outfit Sets',
+    'Apparel & Accessories > Clothing > Clothing Tops > Tunics',
+    'Apparel & Accessories > Clothing > Clothing Tops > Sweatshirts',
+    'Apparel & Accessories > Clothing > Outerwear > Coats & Jackets',
+    'Apparel & Accessories > Clothing > Outerwear > Coats & Jackets > Wrap Coats',
+    'Apparel & Accessories > Clothing > Pants > Trousers'
+  ];
 
   // ==========================================
   // 1. إدارة حالة البيانات (States)
@@ -134,15 +153,15 @@ export default function CreateProductPage() {
             )}
           </div>
 
-          {/* 3. التصنيف (Category) - تم إضافة الأقسام من الشيت */}
+          {/* 3. التصنيف (Category) - معدلة لتأخذ من الشيت مع إمكانية كتابة قسم جديد */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <label className="block text-sm text-gray-300 mb-2">التصنيف (Category)</label>
-            <select className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none">
-              <option>Choose a product category</option>
-              <option>Apparel & Accessories</option>
-              <option>Apparel & Accessories {'>'} Clothing</option>
-              <option>Apparel & Accessories {'>'} Clothing {'>'} Traditional & Ceremonial Clothing</option>
-            </select>
+            <input 
+              type="text" 
+              list="csv-collections"
+              placeholder="اختر أو اكتب قسماً جديداً..." 
+              className="w-full bg-[#121212] border border-[#333] p-2.5 rounded-lg text-white outline-none" 
+            />
           </div>
 
           {/* 4. السعر (Price) */}
@@ -233,7 +252,7 @@ export default function CreateProductPage() {
             )}
           </div>
 
-          {/* 7. البدائل (Variants) - تم إضافة الاقتراحات من الشيت */}
+          {/* 7. البدائل (Variants) */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm">
             <h3 className="text-sm text-gray-300 font-bold mb-4">البدائل (Variants)</h3>
             
@@ -275,7 +294,7 @@ export default function CreateProductPage() {
             </button>
           </div>
 
-          {/* 8. الحقول الإضافية (Metafields) - تم إضافة Fabric و Fit */}
+          {/* 8. الحقول الإضافية (Metafields) - شاملة كل حقول الشيت */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm space-y-4">
             <h3 className="text-sm text-gray-300 font-bold border-b border-[#333] pb-2 mb-4">الحقول المخصصة (Metafields)</h3>
             
@@ -364,12 +383,17 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* التنظيم (Product organization) - تم تفعيل مقترحات الشيت للـ Type */}
+          {/* التنظيم (Product organization) - معدلة لتأخذ من قوائم الشيت */}
           <div className="bg-[#1a1a1a] rounded-xl border border-[#333] p-5 shadow-sm space-y-4">
             <h3 className="text-sm text-gray-300">تنظيم المنتج (Product organization)</h3>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Type</label>
-              <input type="text" list="csv-types" placeholder="e.g. pullover" className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" />
+              <input 
+                type="text" 
+                list="csv-types" 
+                placeholder="اختر أو اكتب نوعاً جديداً..." 
+                className="w-full bg-[#121212] border border-[#333] p-2 rounded text-white outline-none" 
+              />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Vendor</label>
@@ -379,7 +403,12 @@ export default function CreateProductPage() {
               <label className="block text-xs text-gray-400 mb-1">Collections</label>
               <div className="relative">
                 <span className="absolute left-2 top-2.5 text-gray-500 text-xs">🔍</span>
-                <input type="text" className="w-full bg-[#121212] border border-[#333] p-2 pl-7 rounded text-white outline-none" />
+                <input 
+                  type="text" 
+                  list="csv-collections" 
+                  placeholder="اختر الكولكشن أو أضف جديداً..."
+                  className="w-full bg-[#121212] border border-[#333] p-2 pl-7 rounded text-white outline-none" 
+                />
               </div>
             </div>
             <div>
@@ -397,8 +426,14 @@ export default function CreateProductPage() {
       </div>
 
       {/* ========================================== */}
-      {/* قوائم الاقتراحات المخفية (تستمد البيانات من الشيت) */}
+      {/* قوائم الاقتراحات المخفية (تستمد البيانات من الشيت وتسمح بالإضافة) */}
       {/* ========================================== */}
+      <datalist id="csv-collections">
+        {csvCollections.map(c => <option key={c} value={c} />)}
+      </datalist>
+      <datalist id="csv-types">
+        {csvTypes.map(t => <option key={t} value={t} />)}
+      </datalist>
       <datalist id="csv-colors">
         {csvColors.map(c => <option key={c} value={c} />)}
       </datalist>
@@ -408,9 +443,6 @@ export default function CreateProductPage() {
       <datalist id="csv-option-names">
         <option value="Color" />
         <option value="Size" />
-      </datalist>
-      <datalist id="csv-types">
-        {csvTypes.map(t => <option key={t} value={t} />)}
       </datalist>
 
     </div>
