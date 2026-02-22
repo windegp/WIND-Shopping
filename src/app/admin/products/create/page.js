@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import ImageUploader from "@/components/admin/ImageUploader"; // تأكد إن المسار ده صح لمكان الزرار
+import ImageUploader from "@/components/ImageUploader"; // تأكد إن المسار ده صح لمكان الزرار
 
 export default function CreateProductPage() {
   // ستيت بسيطة جداً لحفظ روابط الصور اللي بتترفع
