@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Nestable from "react-nestable";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase"; 
@@ -10,22 +10,26 @@ import { Trash2, GripVertical, Plus, Save, Loader2, CornerDownLeft, Star } from 
 // استايل المكتبة الأساسي
 import "react-nestable/dist/styles/index.css"; 
 
-export default function MenuManager() {
+function MenuManagerContent() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastAddedId, setLastAddedId] = useState(null); 
   const [availableCollections, setAvailableCollections] = useState([]); 
 
-  // 1. جلب البيانات من Firebase
+  // 1. جلب البيانات
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // جلب الكولكشنز المتاحة للربط الذكي
+        // جلب الكولكشنز عشان تظهر في السلكت
         const colsQuery = await getDocs(collection(db, "collections"));
-        setAvailableCollections(colsQuery.docs.map(d => ({ name: d.data().name, slug: d.data().slug })));
+        const colsData = colsQuery.docs.map(d => ({ 
+          name: d.data().name || "بدون اسم", 
+          slug: d.data().slug || "" 
+        }));
+        setAvailableCollections(colsData);
 
-        // جلب بيانات المنيو
+        // جلب المنيو
         const docRef = doc(db, "settings", "navigation");
         const snap = await getDoc(docRef);
         
@@ -34,15 +38,16 @@ export default function MenuManager() {
             list.map((item) => ({
               ...item,
               id: uuidv4(), 
+              title: String(item.title || ""),
+              link: String(item.link || ""),
               children: item.children ? addIds(item.children) : [],
             }));
           setItems(addIds(snap.data().menuItems));
         } else {
-          const defaultItems = [
+          setItems([
             { id: uuidv4(), title: "الرئيسية", link: "/", children: [] },
-            { id: uuidv4(), title: "تخفيضات", link: "/sale", children: [], highlight: true },
-          ];
-          setItems(defaultItems);
+            { id: uuidv4(), title: "تخفيضات", link: "/collections/sale", children: [], highlight: true },
+          ]);
         }
       } catch (error) {
         console.error("Error loading menu:", error);
@@ -56,9 +61,9 @@ export default function MenuManager() {
   const cleanDataForFirebase = (list) => {
     return list.map((item) => {
       const cleanedItem = {
-        title: item.title || "بدون اسم",
-        link: item.link || "#",
-        highlight: item.highlight || false
+        title: String(item.title || "بدون اسم"),
+        link: String(item.link || "#"),
+        highlight: !!item.highlight
       };
       if (item.children && item.children.length > 0) {
         cleanedItem.children = cleanDataForFirebase(item.children);
@@ -109,21 +114,18 @@ export default function MenuManager() {
   };
 
   const deleteItem = (id) => {
-    const deleteRecursive = (list) => list.filter((item) => item.id !== id).map((item) => ({
-      ...item,
-      children: item.children ? deleteRecursive(item.children) : [],
-    }));
-    if (confirm("هل تريد حذف هذا القسم؟")) setItems(deleteRecursive(items));
-  };
-
-  const getAddButtonText = (depth) => {
-    if (depth === 0) return "إضافة كولكشن";
-    if (depth === 1) return "إضافة فئة";
-    return "إضافة فرع";
+    if (confirm("هل تريد حذف هذا القسم؟")) {
+      const deleteRecursive = (list) => list.filter((item) => item.id !== id).map((item) => ({
+        ...item,
+        children: item.children ? deleteRecursive(item.children) : [],
+      }));
+      setItems(deleteRecursive(items));
+    }
   };
 
   const renderItem = ({ item, collapseIcon, handler, depth }) => {
     const isNew = item.id === lastAddedId;
+    const currentLink = String(item.link || "");
 
     return (
       <div className={`flex flex-col gap-2 bg-[#1a1a1a] border p-4 rounded-lg mb-2 shadow-md transition-all duration-500 ${isNew ? 'border-[#F5C518]' : 'border-[#333]'}`}>
@@ -144,17 +146,16 @@ export default function MenuManager() {
             />
           </div>
 
-          {/* الجزء المصحح للرابط الذكي */}
           <div className="flex-[2] w-full flex gap-1">
             <select
-              value={item.link.startsWith('/collections/') ? item.link.replace('/collections/', '') : ""}
+              value={currentLink.startsWith('/collections/') ? currentLink.replace('/collections/', '') : ""}
               onChange={(e) => {
                 const slug = e.target.value;
                 updateItem(item.id, "link", slug ? `/collections/${slug}` : "/");
               }}
               className="bg-[#121212] border border-[#333] text-gray-400 p-2 rounded text-[10px] focus:border-[#F5C518] outline-none w-[100px]"
             >
-              <option value="">رابط حر</option>
+              <option value="">رابط يدوي</option>
               {availableCollections.map(c => (
                 <option key={c.slug} value={c.slug}>{c.name}</option>
               ))}
@@ -173,7 +174,6 @@ export default function MenuManager() {
             <button 
               onClick={() => updateItem(item.id, "highlight", !item.highlight)} 
               className={`p-2 rounded transition-colors ${item.highlight ? 'text-[#F5C518] bg-[#F5C518]/10' : 'text-gray-600 hover:bg-[#222]'}`}
-              title="تميز بلون مختلف"
             >
               <Star size={18} fill={item.highlight ? "currentColor" : "none"} />
             </button>
@@ -190,7 +190,7 @@ export default function MenuManager() {
               onClick={() => addItem(item.id)}
               className="text-[11px] font-bold text-[#F5C518] hover:bg-[#333] px-2 py-1 rounded transition flex items-center gap-1 border border-dashed border-[#F5C518]/30"
             >
-              <Plus size={12} /> {getAddButtonText(depth)}
+              <Plus size={12} /> إضافة فرعي
             </button>
           </div>
         )}
@@ -231,5 +231,13 @@ export default function MenuManager() {
         .nestable-item-children { margin-right: 30px; border-right: 2px dashed #333; padding-right: 15px; }
       `}</style>
     </div>
+  );
+}
+
+export default function MenuManager() {
+  return (
+    <Suspense fallback={<div className="text-center py-20 bg-[#121212] text-[#F5C518]">Loading...</div>}>
+      <MenuManagerContent />
+    </Suspense>
   );
 }
