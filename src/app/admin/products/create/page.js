@@ -95,7 +95,7 @@ function CreateProductForm() {
     status: "Active",
     type: "",
     vendor: "WIND",
-    collections: "",
+    collections: [],
     tags: "",
     themeTemplate: "Default product"
   });
@@ -141,8 +141,7 @@ function CreateProductForm() {
               status: data.status || "Active",
               type: data.type || "",
               vendor: data.vendor || "WIND",
-              // --- استبدل سطر collections القديم بـ ده ---
-              collections: Array.isArray(data.collections) ? data.collections : (data.collections ? [data.collections] : []),
+              collections: Array.isArray(data.categories) ? data.categories : (Array.isArray(data.collections) ? data.collections : (typeof data.collections === 'string' && data.collections !== "" ? [data.collections] : [])),
               tags: data.tags || "",
               themeTemplate: data.themeTemplate || "Default product"
             });
@@ -241,8 +240,10 @@ function CreateProductForm() {
       const handleToUse = urlHandle || productData.title.toLowerCase().replace(/\s+/g, '-');
       const documentId = isEditing ? productId : handleToUse;
 
+// --- التعديل: ضمان حفظ الأقسام في حقل categories كمصفوفة Slugs للربط ---
       const finalProduct = {
         ...productData,
+        categories: Array.isArray(productData.collections) ? productData.collections : [],
         images,
         chargeTax,
         inventoryTracked,

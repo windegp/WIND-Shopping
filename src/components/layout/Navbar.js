@@ -24,13 +24,23 @@ export default function Navbar() {
   useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
       if (docSnap.exists() && docSnap.data().menuItems) {
-        const menuItemsFromSettings = docSnap.data().menuItems.map(item => ({
-          name: item.title, 
-          title: item.title,
-          link: item.link.startsWith('/') || item.link.startsWith('http') ? item.link : `/${item.link}`,
-          highlight: item.highlight || false,
-          children: item.children || []
-        }));
+ const menuItemsFromSettings = docSnap.data().menuItems.map(item => {
+  // --- المنطق الذكي لتحديد الرابط ---
+  let finalLink = item.link;
+
+  // لو الرابط مش بيبدأ بـ / ومش رابط خارجي (يعني مجرد slug زي winter)
+  if (!finalLink.startsWith('/') && !finalLink.startsWith('http')) {
+    finalLink = `/category/${item.link}`; 
+  }
+
+  return {
+    name: item.title,
+    title: item.title,
+    link: finalLink,
+    highlight: item.highlight || false,
+    children: item.children || []
+  };
+});
         setCategories(menuItemsFromSettings);
       }
     });

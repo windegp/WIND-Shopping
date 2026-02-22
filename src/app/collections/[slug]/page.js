@@ -47,24 +47,24 @@ export default function CategoryPage() {
         }
 
         // ==========================================
-        // 2. جلب المنتجات (بحث ذكي وموازي يدعم النظام القديم ونظام Shopify الجديد)
-        // ==========================================
-        const searchTerms = [currentSlug, `/${currentSlug}`, currentCatName];
-        
-        // احتمالات الـ Type عشان نتفادى مشاكل الحروف الكابيتال والسمول من الشيت
-        const typeVariants = [
-          currentSlug, 
-          currentSlug.toLowerCase(), 
-          currentSlug.charAt(0).toUpperCase() + currentSlug.slice(1).toLowerCase(),
-          currentCatName
-        ];
+// 2. جلب المنتجات (بحث ذكي وموازي)
+// ==========================================
 
-        // الاستعلام الأول: بيبحث في الطريقة القديمة (categories array)
-        const q1 = getDocs(query(
-          collection(db, "products"),
-          where("categories", "array-contains-any", searchTerms),
-          limit(40)
-        ));
+// الاستعلام الأول: يبحث في Slugs (الطريقة الجديدة اللي عملناها في الأدمن)
+const q1 = getDocs(query(
+  collection(db, "products"),
+  // بنبحث عن الـ slug الصافي أو اللي أوله slash لضمان الدقة
+  where("categories", "array-contains-any", [currentSlug, `/${currentSlug}`]),
+  limit(40)
+));
+
+// الاستعلام الثاني: بيبحث في الـ Type (نظام شوبيفاي القديم)
+// هنا بنستخدم الـ typeVariants اللي إنت عاملها (مجهود رائع في تغطية احتمالات الحروف)
+const q2 = getDocs(query(
+  collection(db, "products"),
+  where("type", "in", typeVariants),
+  limit(40)
+));
 
         // الاستعلام الثاني: بيبحث في الطريقة الجديدة (type string) المستوردة من شيت شوبيفاي
         const q2 = getDocs(query(
