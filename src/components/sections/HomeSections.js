@@ -219,6 +219,8 @@ export const FeaturedToday = ({ data }) => {
 };
 
 
+import Link from 'next/link';
+
 // --- 4. قسم أفضل 10 منتجات لدي وينـد (IMDb Style) ---
 export const TopTenProducts = ({ data }) => {
   if (!data || !data.cards || data.cards.length === 0) return null;
@@ -291,9 +293,9 @@ export const TopTenProducts = ({ data }) => {
                   </button>
                 </div>
 
-                {/* زر عرض التفاصيل */}
+                {/* زر عرض التفاصيل - تم ربطه بـ card.linkUrl المحدث */}
                 <div className="mt-auto">
-                   <Link href={card.linkUrl || "#"} className="inline-flex items-center gap-2 text-[#5799ef] hover:text-white transition-colors text-[13px] md:text-sm font-bold">
+                   <Link href={card.linkUrl || "/"} className="inline-flex items-center gap-2 text-[#5799ef] hover:text-white transition-colors text-[13px] md:text-sm font-bold">
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -306,9 +308,9 @@ export const TopTenProducts = ({ data }) => {
           ))}
         </div>
         
-        {/* زر عرض الكل السفلي */}
+        {/* زر عرض الكل السفلي - تم ربطه بـ data.linkUrl المحدث */}
         <div className="mt-6 flex justify-center pb-2">
-           <Link href={data.linkUrl || "#"} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base">
+           <Link href={data.linkUrl || "/"} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base">
              عرض الكل
            </Link>
         </div>
