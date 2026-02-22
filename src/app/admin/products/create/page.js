@@ -6,7 +6,6 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-// استيراد مكون الرفع الذي أنشأناه لـ ImageKit
 import ImageUploader from "@/components/admin/ImageUploader";
 
 export default function CreateProductPage() {

@@ -1,4 +1,4 @@
-import ImageKit from "imagekit";
+import ImageKit from "@imagekit/nodejs"; // التحديث هنا
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
