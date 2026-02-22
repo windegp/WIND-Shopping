@@ -1,19 +1,31 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 // تأكد من مسار الفولدر (Admin) كابيتال أو سمول حسب اللي شغال معاك
 import ImageUploader from "@/components/ImageUploader";
 
-export default function CreateProductPage() {
+// ==========================================
+// مكون الفورم الأساسي (مفصول عشان الـ Suspense)
+// ==========================================
+function CreateProductForm() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // هل نحن في وضع التعديل أم الإضافة؟
+  const productId = searchParams.get('id');
+  const isEditing = !!productId;
+
+  const [isLoadingData, setIsLoadingData] = useState(isEditing);
+  const [isSaving, setIsSaving] = useState(false);
+
   // ==========================================
   // --- إضافات شيت شوبيفاي (للاقتراحات الذكية) ---
   // ==========================================
   const csvColors = ['fuchsia', 'jeans-blue', 'beige', 'clear', 'green', 'black', 'burgundy', 'rose', 'patterned', 'navy', 'blue', 'red', 'brown', 'pink', 'gray', 'olive', 'chocolate', 'yellow', 'purple', 'orange', 'mint', 'terracotta', 'coral-pink', 'turquoise', 'gold', 'bronze', 'silver', 'off-white'];
   const csvSizes = ['One Size', '50-80-kg', '55-90-kg', '50-90-kg', '55-95-kg', '85-kg'];
-  
-  // الأنواع الفعلية المستخرجة من شيت شوبيفاي المرفق
   const csvTypes = ['Knitwear', 'Prayer Dress', 'Sweatshirt', 'Shawl', 'Hoodie', 'Sets', 'dress', 'Jacket'];
-  
-  // الأقسام المستخرجة من عمود Product Category في الشيت
   const csvCollections = [
     'Apparel & Accessories > Clothing > Clothing Tops > Sweaters',
     'Apparel & Accessories > Clothing > Traditional & Ceremonial Clothing',
@@ -37,17 +49,14 @@ export default function CreateProductPage() {
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [chargeTax, setChargeTax] = useState(false);
   
-  // حالات المرحلة الثانية (الجديدة)
   const [inventoryTracked, setInventoryTracked] = useState(true);
   const [physicalProduct, setPhysicalProduct] = useState(true);
-  const [options, setOptions] = useState([]); // للـ Variants (المقاس والألوان)
+  const [options, setOptions] = useState([]);
   
-  // حالات الـ SEO
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDesc, setSeoDesc] = useState("");
   const [urlHandle, setUrlHandle] = useState("");
 
-  // ====== التعديل هنا: إضافة حالات (States) لحفظ كل المدخلات ======
   const [productData, setProductData] = useState({
     title: "",
     description: "",
@@ -81,10 +90,92 @@ export default function CreateProductPage() {
   });
 
   // ==========================================
+  // جلب بيانات المنتج من Firebase إذا كنا في وضع التعديل
+  // ==========================================
+  useEffect(() => {
+    if (productId) {
+      const fetchProduct = async () => {
+        try {
+          const docRef = doc(db, "products", productId);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // تعبئة البيانات الأساسية
+            setProductData({
+              title: data.title || "",
+              description: data.description || "",
+              category: data.category || "",
+              price: data.price || (data.variants?.[0]?.price) || "",
+              compareAtPrice: data.compareAtPrice || (data.variants?.[0]?.compareAtPrice) || "",
+              costPerItem: data.costPerItem || "",
+              quantity: data.quantity || (data.variants?.[0]?.quantity) || "",
+              sku: data.sku || (data.variants?.[0]?.sku) || "",
+              barcode: data.barcode || "",
+              sellOutOfStock: data.sellOutOfStock || "No",
+              weight: data.weight || "",
+              weightUnit: data.weightUnit || "kg",
+              countryOfOrigin: data.countryOfOrigin || "Egypt",
+              status: data.status || "Active",
+              type: data.type || "",
+              vendor: data.vendor || "WIND",
+              collections: data.collections || "",
+              tags: data.tags || "",
+              themeTemplate: data.themeTemplate || "Default product"
+            });
+
+            // تعبئة الصور
+            setImages(data.images || (data.image ? [data.image] : []));
+            
+            // تعبئة الـ SEO والـ Metafields
+            setSeoTitle(data.seo?.title || "");
+            setSeoDesc(data.seo?.description || "");
+            setUrlHandle(data.seo?.handle || productId);
+
+            setMetafields({
+              youMayAlsoLike: data.metafields?.youMayAlsoLike || "",
+              isdalBundle: data.metafields?.isdalBundle || "",
+              sizeChart: data.metafields?.sizeChart || "",
+              colorsBundle: data.metafields?.colorsBundle || "",
+              suggested: data.metafields?.suggested || "",
+              fabric: data.metafields?.fabric || "",
+              fit: data.metafields?.fit || ""
+            });
+
+            // تعبئة الخيارات (Variants) من الشيت للواجهة
+            if (data.variants && data.variants.length > 0) {
+              const loadedOptions = [];
+              const opt1Name = data.variants[0].option1Name;
+              if (opt1Name) {
+                const vals = [...new Set(data.variants.map(v => v.option1Value).filter(Boolean))].join(', ');
+                if(vals) loadedOptions.push({ name: opt1Name, values: vals });
+              }
+              const opt2Name = data.variants[0].option2Name;
+              if (opt2Name) {
+                const vals = [...new Set(data.variants.map(v => v.option2Value).filter(Boolean))].join(', ');
+                if(vals) loadedOptions.push({ name: opt2Name, values: vals });
+              }
+              if(loadedOptions.length > 0) setOptions(loadedOptions);
+            } else if (data.options) {
+              setOptions(data.options);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching product:", error);
+          alert("حدث خطأ أثناء تحميل بيانات المنتج.");
+        } finally {
+          setIsLoadingData(false);
+        }
+      };
+      
+      fetchProduct();
+    }
+  }, [productId]);
+
+  // ==========================================
   // 2. دوال التحكم (Functions)
   // ==========================================
-  
-  // دوال حفظ التغييرات في الحقول
   const handleProductChange = (e) => {
     const { name, value } = e.target;
     setProductData(prev => ({ ...prev, [name]: value }));
@@ -108,36 +199,60 @@ export default function CreateProductPage() {
     setImages(images.filter((_, index) => index !== indexToRemove));
   };
 
-  // دوال الـ Variants
-  const addOption = () => {
-    setOptions([...options, { name: '', values: '' }]);
-  };
-
-  const removeOption = (index) => {
-    setOptions(options.filter((_, i) => i !== index));
-  };
-
+  const addOption = () => setOptions([...options, { name: '', values: '' }]);
+  const removeOption = (index) => setOptions(options.filter((_, i) => i !== index));
   const updateOption = (index, field, value) => {
     const newOptions = [...options];
     newOptions[index][field] = value;
     setOptions(newOptions);
   };
 
-  // دالة مؤقتة لتجربة طباعة البيانات قبل الحفظ لفايربيس
-  const handleSaveProduct = () => {
-    const finalProduct = {
-      ...productData,
-      images,
-      chargeTax,
-      inventoryTracked,
-      physicalProduct,
-      options,
-      seo: { title: seoTitle, description: seoDesc, handle: urlHandle },
-      metafields
-    };
-    console.log("البيانات الجاهزة للحفظ:", finalProduct);
-    alert("تم تجميع البيانات بنجاح! راجع الـ Console.");
+  // ==========================================
+  // الحفظ الفعلي في قاعدة البيانات (Firebase)
+  // ==========================================
+  const handleSaveProduct = async () => {
+    if (!productData.title) return alert("يرجى إدخال عنوان المنتج على الأقل!");
+    
+    setIsSaving(true);
+    try {
+      // تجهيز الرابط المخصص (Handle)
+      const handleToUse = urlHandle || productData.title.toLowerCase().replace(/\s+/g, '-');
+      const documentId = isEditing ? productId : handleToUse;
+
+      const finalProduct = {
+        ...productData,
+        images,
+        chargeTax,
+        inventoryTracked,
+        physicalProduct,
+        options,
+        seo: { title: seoTitle, description: seoDesc, handle: handleToUse },
+        metafields,
+        updatedAt: serverTimestamp(),
+      };
+
+      // إذا كان منتجاً جديداً، نضيف تاريخ الإنشاء
+      if (!isEditing) {
+        finalProduct.createdAt = serverTimestamp();
+      }
+
+      // الحفظ أو التحديث في فايربيس
+      await setDoc(doc(db, "products", documentId), finalProduct, { merge: true });
+      
+      alert(isEditing ? "تم تحديث المنتج بنجاح!" : "تم إضافة المنتج بنجاح!");
+      router.push('/admin/products'); // العودة لصفحة المنتجات
+      
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert("حدث خطأ أثناء حفظ المنتج.");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoadingData) {
+    return <div className="text-center py-20 text-[#F5C518] text-xl font-bold">جاري تحميل بيانات المنتج...</div>;
+  }
 
   // ==========================================
   // 3. واجهة المستخدم (نسخة شوبيفاي المكتملة)
@@ -148,10 +263,14 @@ export default function CreateProductPage() {
       {/* عنوان الصفحة */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-gray-500">{"<"}</span> إضافة منتج
+          <span className="text-gray-500">{"<"}</span> {isEditing ? "تعديل منتج" : "إضافة منتج"}
         </h1>
-        <button onClick={handleSaveProduct} className="bg-[#F5C518] text-black px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition">
-          حفظ
+        <button 
+          onClick={handleSaveProduct} 
+          disabled={isSaving}
+          className={`bg-[#F5C518] text-black px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isSaving ? "جاري الحفظ..." : "حفظ"}
         </button>
       </div>
 
@@ -443,7 +562,7 @@ export default function CreateProductPage() {
                       value={option.values} 
                       onChange={(e) => updateOption(index, 'values', e.target.value)} 
                       placeholder="S, M, L / fuchsia, black" 
-                      list={option.name.toLowerCase().includes('color') ? 'csv-colors' : option.name.toLowerCase().includes('size') ? 'csv-sizes' : undefined}
+                      list={option.name?.toLowerCase().includes('color') ? 'csv-colors' : option.name?.toLowerCase().includes('size') ? 'csv-sizes' : undefined}
                       className="w-full bg-[#1a1a1a] border border-[#333] p-2 rounded text-white outline-none" 
                     />
                   </div>
@@ -645,5 +764,16 @@ export default function CreateProductPage() {
       </datalist>
 
     </div>
+  );
+}
+
+// ==========================================
+// المكون الأساسي المغلف بـ Suspense لعدم حدوث أخطاء Vercel
+// ==========================================
+export default function CreateProductPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-20 text-[#F5C518]">جاري التحميل...</div>}>
+      <CreateProductForm />
+    </Suspense>
   );
 }
