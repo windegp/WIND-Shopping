@@ -462,7 +462,7 @@ export default function CollectionsPage() {
                     </button>
                 </div>
 
-                {/* Collections Grid */}
+             {/* Collections Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {collections.map((item) => (
                         <div key={item.id} className="bg-[#1a1a1a] border border-[#333] rounded-2xl overflow-hidden group hover:border-[#F5C518] transition-all duration-300 flex flex-col">
@@ -491,12 +491,10 @@ export default function CollectionsPage() {
                                     <div className="flex gap-2">
                                         <button onClick={() => openEditor(item)} className="p-2 bg-[#222] rounded-lg hover:bg-[#F5C518] hover:text-black transition text-gray-400">
                                             <Edit2 size={16} />
-                                       <button 
-  onClick={() => handleDeleteCollection(item.id, item.slug)} 
-  className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400"
->
-  <Trash2 size={16} />
-</button>
+                                        </button>
+                                        <button onClick={() => handleDeleteCollection(item.id, item.slug)} className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400">
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                     <a href={`https://wind-wsp-o6al.vercel.app/collections/${item.slug}`} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-[#F5C518] flex items-center gap-1">
                                         عرض <ExternalLink size={10} />
