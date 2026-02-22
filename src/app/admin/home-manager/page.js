@@ -452,6 +452,19 @@ export default function HomeManagerPage() {
                               </div>
                             )}
 
+                            {/* إضافة رابط عرض الكل للقسم بالكامل */}
+<div className="mt-4 pt-4 border-t border-[#333]">
+  <label className="block text-xs font-bold text-[#F5C518] mb-2">رابط زر "عرض الكل" (صفحة المجموعة)</label>
+  <input 
+    type="text" 
+    value={section.data?.linkUrl || ""} 
+    onChange={(e) => handleLayoutDataChange(sectionIndex, 'linkUrl', e.target.value)} 
+    placeholder="مثال: /collections/shoes"
+    className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white focus:border-[#F5C518] outline-none"
+    dir="ltr"
+  />
+</div>
+
                             {/* ✅ رابط "عرض الكل" - خاص بـ TOP_TEN_SECTION فقط */}
                             {section.category === 'TOP_TEN_SECTION' && (
                               <div className="mt-4">
@@ -508,6 +521,17 @@ export default function HomeManagerPage() {
                                       <label className="block text-[11px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
                                       <input type="text" value={card.mainTitle} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'mainTitle', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
                                     </div>
+                                    <div>
+  <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">رابط تفاصيل المنتج (داخل الكارت)</label>
+  <input 
+    type="text" 
+    value={card.linkUrl || ""} 
+    onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} 
+    placeholder="ألصق رابط المنتج هنا"
+    className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" 
+    dir="ltr" 
+  />
+</div>
 
                                     {/* نص الرابط الملوّن - خاص بـ FEATURED فقط */}
                                     {section.category !== 'TOP_TEN_SECTION' && (
