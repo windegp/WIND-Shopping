@@ -1,16 +1,16 @@
-export const runtime = 'nodejs'; // ضروري جداً عشان الـ Buffer يشتغل على Vercel
+export const runtime = 'nodejs'; 
 import { NextResponse } from 'next/server';
 import ImageKit from "imagekit";
 
-// ربط ImageKit بالمفاتيح اللي إنت حطيتها في ملف .env
-const imagekit = new ImageKit({
-  publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
-});
-
 export async function POST(request) {
   try {
+    // 💡 التعديل هنا: نقلنا الإعدادات داخل الدالة عشان Vercel ما يزعلش وقت الـ Build
+    const imagekit = new ImageKit({
+      publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+    });
+
     const formData = await request.formData();
     const file = formData.get('file');
 
@@ -22,14 +22,13 @@ export async function POST(request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // رفع الصورة لـ ImageKit
+    // الرفع المباشر
     const response = await imagekit.upload({
       file: buffer,
-      fileName: file.name.replace(/\s+/g, '-'), // بنشيل المسافات من اسم الصورة
-      folder: "/wind_shop_images", // ده الفولدر اللي هيتعمل في حسابك هناك
+      fileName: file.name.replace(/\s+/g, '-'), 
+      folder: "/WIND_Shopping", 
     });
 
-    // السيرفر بيرد عليك بالرابط النظيف للصورة!
     return NextResponse.json({ url: response.url }, { status: 200 });
 
   } catch (error) {
