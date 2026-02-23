@@ -31,6 +31,7 @@ export default function ProductPage() {
         setProduct(staticProduct);
         setActiveImage(staticProduct.mainImage);
         if (staticProduct.sizes?.length > 0) setSelectedSize(staticProduct.sizes[0]);
+        if (staticProduct.colors?.length > 0) setSelectedColor(staticProduct.colors[0].name || staticProduct.colors[0]);
         setLoading(false);
       } else {
         try {
@@ -45,9 +46,38 @@ export default function ProductPage() {
             const firstImg = fbProduct.images?.[0] || fbProduct.mainImageUrl || fbProduct.image;
             setActiveImage(firstImg);
 
-            const sizesArray = fbProduct.options?.sizes || fbProduct.sizes;
-            if (Array.isArray(sizesArray) && sizesArray.length > 0) {
-              setSelectedSize(sizesArray[0]);
+            // === الربط الذكي مع صفحة الإضافة (قراءة المقاسات والألوان الافتراضية) ===
+            let initialSize = "";
+            let initialColor = "";
+            
+            if (fbProduct.options && Array.isArray(fbProduct.options)) {
+              fbProduct.options.forEach(opt => {
+                const optName = (opt.name || "").toLowerCase();
+                if ((optName.includes("size") || optName === "المقاس" || optName === "مقاس") && opt.values) {
+                   initialSize = opt.values.split(',')[0].trim();
+                }
+                if ((optName.includes("color") || optName === "اللون" || optName === "لون") && opt.values) {
+                   initialColor = opt.values.split(',')[0].trim();
+                }
+              });
+            }
+            
+            // تعيين المقاس الافتراضي (سواء بالنظام الجديد أو القديم)
+            if (initialSize) {
+              setSelectedSize(initialSize);
+            } else {
+              const sizesArray = fbProduct.options?.sizes || fbProduct.sizes;
+              if (Array.isArray(sizesArray) && sizesArray.length > 0) setSelectedSize(sizesArray[0]);
+            }
+
+            // تعيين اللون الافتراضي (سواء بالنظام الجديد أو القديم)
+            if (initialColor) {
+              setSelectedColor(initialColor);
+            } else {
+              const colorsArray = fbProduct.options?.colors;
+              if (Array.isArray(colorsArray) && colorsArray.length > 0) {
+                setSelectedColor(colorsArray[0].name || colorsArray[0]);
+              }
             }
           }
         } catch (error) {
@@ -76,8 +106,30 @@ export default function ProductPage() {
   };
 
   const gallery = product.images || [product.mainImage, ...Array.from({ length: product.imagesCount || 0 }, (_, i) => `${i + 1}.webp`)];
-  const safeSizes = Array.isArray(product.options?.sizes) ? product.options.sizes : (Array.isArray(product.sizes) ? product.sizes : []);
-  const safeColors = Array.isArray(product.options?.colors) ? product.options.colors : [];
+  
+  // === معالجة الألوان والمقاسات لدعم (النظام الجديد) الخاص بلوحة التحكم و (النظام القديم) ===
+  let safeSizes = [];
+  let safeColors = [];
+
+  if (product.options && Array.isArray(product.options)) {
+    product.options.forEach(opt => {
+      const optName = (opt.name || "").toLowerCase();
+      if (optName.includes("size") || optName === "المقاس" || optName === "مقاس") {
+        safeSizes = opt.values.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      if (optName.includes("color") || optName === "اللون" || optName === "لون") {
+        safeColors = opt.values.split(',').map(c => c.trim()).filter(Boolean);
+      }
+    });
+  }
+
+  // دعم للأنظمة القديمة في الفايربيس إن وجدت
+  if (safeSizes.length === 0) {
+    safeSizes = Array.isArray(product.options?.sizes) ? product.options.sizes : (Array.isArray(product.sizes) ? product.sizes : []);
+  }
+  if (safeColors.length === 0) {
+    safeColors = Array.isArray(product.options?.colors) ? product.options.colors : [];
+  }
 
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-32 font-sans selection:bg-[#F5C518] selection:text-black">
@@ -98,7 +150,7 @@ export default function ProductPage() {
           <div className="flex items-center gap-3 text-sm text-gray-300 font-medium">
             <span className="text-[#F5C518]">WIND Series</span>
             <span>•</span>
-            <span>{product.category || "أزياء"}</span>
+            <span>{product.category || product.type || "أزياء"}</span>
             <span>•</span>
             <span className="border border-gray-500 px-1.5 rounded text-xs bg-black/50">WIND-24</span>
           </div>
@@ -152,14 +204,12 @@ export default function ProductPage() {
                 <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
               </div>
               
-              {/* السعر والخصم - تم تصحيح الخط لضمان ظهوره بشكل احترافي على كل الأجهزة */}
+              {/* السعر والخصم - تم تعديل الخط ليكون أكثر احترافية كالماركات العالمية */}
               <div className="flex items-end gap-2 mt-2">
-                <span className="text-4xl font-black text-white tracking-tighter drop-shadow-sm">
-                  {product?.price || "0"}
-                </span>
-                <span className="text-sm font-bold text-[#F5C518] mb-1.5">ج.م</span>
-                {product?.oldPrice && (
-                  <span className="text-sm text-gray-500 line-through mb-1.5 mr-2">{product.oldPrice} ج.م</span>
+                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '0.5px' }} className="text-4xl font-normal text-white">{product.price}</span>
+                <span className="text-sm font-normal text-[#F5C518] mb-1.5">ج.م</span>
+                {product.compareAtPrice && (
+                  <span className="text-sm text-gray-500 line-through mb-1.5 mr-2">{product.compareAtPrice} ج.م</span>
                 )}
               </div>
 
@@ -169,7 +219,7 @@ export default function ProductPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                 </span>
-                <span className="text-xs font-bold text-green-400">متوفر في المخزون</span>
+                <span className="text-xs font-bold text-green-400">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
               </div>
 
               {/* ملاحظة الشحن */}
@@ -198,18 +248,30 @@ export default function ProductPage() {
                 </h3>
               </div>
               <div className="flex flex-wrap gap-4">
-                {safeColors.map((color, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedColor(color.name)}
-                    className="flex flex-col items-center gap-2 group"
-                  >
-                    <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === color.name ? "border-2 border-[#F5C518] bg-[#F5C518]/10 scale-105" : "border border-[#333] hover:border-gray-500"}`}>
-                      <img src={color.swatch} className="w-full h-full rounded-full object-cover shadow-inner" alt={color.name} />
-                    </div>
-                    <span className={`text-xs font-bold ${selectedColor === color.name ? "text-white" : "text-gray-500"}`}>{color.name}</span>
-                  </button>
-                ))}
+                {safeColors.map((colorItem, idx) => {
+                  // استخراج اسم اللون
+                  const colorName = typeof colorItem === 'string' ? colorItem : colorItem.name;
+                  // جلب درجة اللون من `colorSwatches` (لوحة التحكم) أو من النظام القديم، ولو مفيش يعطي رمادي
+                  const hexOrImage = product.colorSwatches?.[colorName] || (typeof colorItem === 'object' ? colorItem.swatch : '#333333');
+                  const isImage = hexOrImage.startsWith('http') || hexOrImage.includes('/');
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedColor(colorName)}
+                      className="flex flex-col items-center gap-2 group"
+                    >
+                      <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === colorName ? "border-2 border-[#F5C518] bg-[#F5C518]/10 scale-105" : "border border-[#333] hover:border-gray-500"}`}>
+                        {isImage ? (
+                          <img src={hexOrImage} className="w-full h-full rounded-full object-cover shadow-inner" alt={colorName} />
+                        ) : (
+                          <div style={{ backgroundColor: hexOrImage }} className="w-full h-full rounded-full shadow-inner border border-[#222]"></div>
+                        )}
+                      </div>
+                      <span className={`text-xs font-bold uppercase ${selectedColor === colorName ? "text-white" : "text-gray-500"}`}>{colorName}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -258,11 +320,11 @@ export default function ProductPage() {
           
           <div className="text-sm">
             <span className="text-gray-400">الخامة الأساسية: </span>
-            <span className="text-white">قطن 100% معالج ضد الانكماش</span>
+            <span className="text-white">{product.metafields?.fabric || "قطن 100% معالج ضد الانكماش"}</span>
           </div>
           <div className="text-sm">
             <span className="text-gray-400">القصّة (Fit): </span>
-            <span className="text-white">مريح (Relaxed Fit) - مناسب للجنسين</span>
+            <span className="text-white">{product.metafields?.fit || "مريح (Relaxed Fit) - مناسب للجنسين"}</span>
           </div>
         </div>
       </div>
@@ -295,7 +357,7 @@ export default function ProductPage() {
             className="flex-1 bg-[#F5C518] text-black font-black text-lg py-4 rounded-[4px] shadow-lg hover:bg-[#ffdb4d] transition-all flex justify-center items-center gap-2 group"
           >
             <Plus size={22} className="transition-transform group-hover:scale-125" />
-            أضف إلى حقيبتك ( {product?.price || ""} ج.م )
+            أضف إلى حقيبتك ( {product.price} ج.م )
           </button>
           
           {/* زر التفضيلات (Dropdown style from Netflix) */}

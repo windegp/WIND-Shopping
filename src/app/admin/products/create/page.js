@@ -51,6 +51,7 @@ function CreateProductForm() {
   const [inventoryTracked, setInventoryTracked] = useState(true);
   const [physicalProduct, setPhysicalProduct] = useState(true);
   const [options, setOptions] = useState([]);
+  const [colorSwatches, setColorSwatches] = useState({}); // الإضافة الجديدة لحفظ أكواد الألوان
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDesc, setSeoDesc] = useState("");
   const [urlHandle, setUrlHandle] = useState("");
@@ -187,6 +188,7 @@ function CreateProductForm() {
             setSeoTitle(data.seo?.title || "");
             setSeoDesc(data.seo?.description || "");
             setUrlHandle(data.seo?.handle || productId);
+            setColorSwatches(data.colorSwatches || {}); // الإضافة الجديدة لجلب الألوان
 
             setMetafields({
               youMayAlsoLike: data.metafields?.youMayAlsoLike || "",
@@ -284,6 +286,7 @@ function CreateProductForm() {
         inventoryTracked,
         physicalProduct,
         options,
+        colorSwatches, // الإضافة الجديدة لحفظ الألوان المخصصة
         seo: { 
           title: seoTitle || productData.title, 
           description: seoDesc || productData.description.substring(0, 160), 
@@ -390,7 +393,7 @@ function CreateProductForm() {
                   rows="10" 
                   className="w-full bg-[#121212] p-5 text-white outline-none resize-none leading-relaxed text-sm"
                   placeholder="اكتب تفاصيل المنتج بوضوح..."
-                ></textarea>
+                 ></textarea>
               </div>
             </div>
           </div>
@@ -567,7 +570,7 @@ function CreateProductForm() {
             </div>
           </div>
 
-          {/* 6. البدائل (Variants) */}
+          {/* 6. البدائل (Variants) + تخصيص الألوان (الطريق الثاني) */}
           <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
             <div className="flex justify-between items-center mb-8">
                <h3 className="text-sm font-black text-gray-400 flex items-center gap-2"><ListFilter size={18} className="text-[#F5C518]"/> البدائل (Variants)</h3>
@@ -588,6 +591,30 @@ function CreateProductForm() {
                       <input type="text" value={option.values} onChange={(e) => updateOption(index, 'values', e.target.value)} placeholder="fuchsia, black, jeans-blue" className="w-full bg-[#1a1a1a] border border-[#333] p-4 rounded-2xl text-white outline-none focus:border-[#F5C518]" />
                     </div>
                   </div>
+
+                  {/* 🔥 الإضافة السحرية: باليتة تخصيص الألوان بتظهر أوتوماتيك لو الاختيار هو "اللون" 🔥 */}
+                  {(option.name.toLowerCase() === 'color' || option.name === 'اللون' || option.name === 'لون') && option.values.trim() !== '' && (
+                    <div className="mt-5 bg-[#1a1a1a] p-5 rounded-2xl border border-[#F5C518]/30 shadow-inner">
+                      <label className="block text-[10px] font-black text-[#F5C518] mb-3 uppercase tracking-widest flex items-center gap-2">
+                         <div className="w-2 h-2 rounded-full bg-[#F5C518] animate-pulse"></div> تخصيص درجات الألوان (Color Picker)
+                      </label>
+                      <div className="flex flex-wrap gap-3">
+                        {option.values.split(',').map(val => val.trim()).filter(Boolean).map((colorName, i) => (
+                          <div key={i} className="flex items-center gap-2 bg-[#121212] px-3 py-2 rounded-xl border border-[#444] hover:border-gray-400 transition-colors">
+                            <span className="text-xs text-white font-bold">{colorName}</span>
+                            <input
+                              type="color"
+                              value={colorSwatches[colorName] || '#ffffff'}
+                              onChange={(e) => setColorSwatches({...colorSwatches, [colorName]: e.target.value})}
+                              className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0"
+                              title={`اختر درجة اللون لـ ${colorName}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               ))}
               {options.length === 0 && (
@@ -731,6 +758,9 @@ function CreateProductForm() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 20px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #F5C518; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        /* استايل خاص لمدخل الألوان عشان يبان كدائرة متناسقة */
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
       `}</style>
     </div>
   );
