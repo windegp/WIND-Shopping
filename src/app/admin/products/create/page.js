@@ -105,8 +105,8 @@ function CreateProductForm() {
     fetchCats();
   }, []);
 
-  // ==========================================
-  // 3. جلب بيانات المنتج والربط الذكي (The Master Sync Logic)
+// ==========================================
+  // 3. جلب بيانات المنتج والربط الذكي (WIND Master Sync)
   // ==========================================
   useEffect(() => {
     if (productId && availableCollections.length > 0) {
@@ -118,27 +118,52 @@ function CreateProductForm() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // --- خوارزمية WIND للربط الشامل ---
-            // نجمع كل الاحتمالات (categories القديمة، collections، والـ type بتاع شوبيفاي)
-            let combinedCats = [];
-            if (Array.isArray(data.categories)) combinedCats = [...data.categories];
-            else if (Array.isArray(data.collections)) combinedCats = [...data.collections];
-            else if (typeof data.collections === 'string' && data.collections !== "") combinedCats = [data.collections];
+            // --- [بداية خوارزمية الربط الذكي] ---
+            let combinedSlugs = [];
 
-            // الربط التلقائي بناءً على الـ Type (مثلاً: Knitwear -> كولكشن التريكو)
+            // أ) قراءة الروابط الموجودة فعلياً في المنتج (سواء في categories أو collections)
+            const existingEntries = data.categories || data.collections || [];
+            const entriesArray = Array.isArray(existingEntries) ? existingEntries : [existingEntries];
+
+            entriesArray.forEach(entry => {
+              if (typeof entry === 'string') {
+                // 1. هل الكلمة دي slug موجود فعلاً عندنا في صفحة الكولكشن؟
+                const isDirectSlug = availableCollections.find(c => c.slug === entry);
+                if (isDirectSlug) {
+                  combinedSlugs.push(entry);
+                } 
+                // 2. لو هي "جملة شوبيفاي الطويلة"، هندور جوه الجملة على أي اسم كولكشن من بتاعنا
+                else {
+                  const matchInString = availableCollections.find(c => 
+                    entry.toLowerCase().includes(c.name.toLowerCase()) || 
+                    entry.toLowerCase().includes(c.slug.toLowerCase())
+                  );
+                  if (matchInString) combinedSlugs.push(matchInString.slug);
+                }
+              }
+            });
+
+            // ب) الربط بناءً على الـ Type (الموجود في شيت شوبيفاي)
             if (data.type) {
-              const typeSlug = data.type.toLowerCase().trim().replace(/\s+/g, '-');
-              const matchedCol = availableCollections.find(c => c.slug === typeSlug);
-              if (matchedCol && !combinedCats.includes(matchedCol.slug)) {
-                combinedCats.push(matchedCol.slug);
+              const typeToSearch = data.type.toLowerCase().trim();
+              const matchedByType = availableCollections.find(c => 
+                c.slug === typeToSearch.replace(/\s+/g, '-') || 
+                c.name.toLowerCase() === typeToSearch
+              );
+              if (matchedByType && !combinedSlugs.includes(matchedByType.slug)) {
+                combinedSlugs.push(matchedByType.slug);
               }
             }
 
-            // تعبئة الـ States الأساسية (نفس بنية الـ 800 سطر الأصلية)
+            // تصفية المصفوفة من أي تكرار
+            const finalSelected = [...new Set(combinedSlugs)];
+            // --- [نهاية خوارزمية الربط] ---
+
+            // تعبئة الـ States (نفس الهيكل بتاعك بالظبط بدون حذف)
             setProductData({
               title: data.title || "",
               description: data.description || "",
-              category: data.category || "",
+              category: data.category || "", // بنسيب حقل شوبيفاي زي ما هو للمطابقة
               price: data.price || (data.variants?.[0]?.price) || "",
               compareAtPrice: data.compareAtPrice || (data.variants?.[0]?.compareAtPrice) || "",
               costPerItem: data.costPerItem || "",
@@ -152,16 +177,16 @@ function CreateProductForm() {
               status: data.status || "Active",
               type: data.type || "",
               vendor: data.vendor || "WIND",
-              selectedCollections: combinedCats, // هنا بيحصل السحر
+              selectedCollections: finalSelected, // هنا المربعات هتنور لوحدها
               tags: data.tags || "",
               themeTemplate: data.themeTemplate || "Default product"
             });
 
-            // تعبئة الصور والـ SEO والـ Metafields
             setImages(data.images || (data.image ? [data.image] : []));
             setSeoTitle(data.seo?.title || "");
             setSeoDesc(data.seo?.description || "");
             setUrlHandle(data.seo?.handle || productId);
+
             setMetafields({
               youMayAlsoLike: data.metafields?.youMayAlsoLike || "",
               isdalBundle: data.metafields?.isdalBundle || "",
@@ -172,7 +197,6 @@ function CreateProductForm() {
               fit: data.metafields?.fit || ""
             });
 
-            // معالجة الـ Variants وتحويلها لشكل قابل للتعديل
             if (data.options) {
               setOptions(data.options);
             } else if (data.variants && data.variants.length > 0) {
