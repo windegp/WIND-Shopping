@@ -539,9 +539,8 @@ export default function HomeManagerPage() {
                                 </p>
                               </div>
                             ) : (
-                            
-                            {/* --- الحالة الثانية: الإدخال اليدوي (الكود القديم بتاعك كامل) --- */}
                             <div>
+                              {/* --- الحالة الثانية: الإدخال اليدوي (الكود القديم بتاعك كامل) --- */}
                               <div className="space-y-6">
                                 {(section.data?.cards || []).map((card, cardIndex) => (
                                 <div key={cardIndex} className="p-5 border border-[#555] rounded-xl bg-[#1a1a1a] relative shadow-inner">
