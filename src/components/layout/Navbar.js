@@ -9,7 +9,7 @@ import { X, Menu, ShoppingBag, ChevronDown, ChevronRight, ArrowLeft } from "luci
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [openSubMenus, setOpenSubMenus] = useState({});
+  const [openSubMenus, setOpenSubMenus] = useState({}); // يبدأ مغلقاً تماماً
   const { cartItems = [], toggleCart } = useCart() || {};
   const [categories, setCategories] = useState([]);
 
@@ -107,9 +107,9 @@ export default function Navbar() {
       {/* 3. القائمة السينمائية (Cinematic Overlay Menu) */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[1000] overflow-hidden" dir="rtl">
-          {/* خلفية غامضة بتأثير زجاجي */}
+          {/* خلفية غامضة بتأثير زجاجي (تم تقليل الـ blur لمنع التهنيج) */}
           <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-[40px] transition-all duration-1000"
+            className="absolute inset-0 bg-black/60 backdrop-blur-[10px] transition-all duration-500"
             onClick={() => setIsMenuOpen(false)}
           ></div>
           
@@ -129,57 +129,67 @@ export default function Navbar() {
             {/* محتوى القائمة - تدرج هرمي */}
             <div className="flex-1 overflow-y-auto px-8 py-4 custom-scrollbar">
               <ul className="space-y-6">
-                {categories.map((cat, i) => (
-                  <li key={i} className="group animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                    <div className="flex items-center justify-between py-2">
-                      <Link 
-                        href={cat.link} 
-                        onClick={() => !cat.children?.length && setIsMenuOpen(false)}
-                        className="text-3xl md:text-4xl font-black text-white/40 hover:text-white transition-all hover:pr-4 relative"
-                      >
-                        <span className="group-hover:text-[#F5C518] transition-colors">{cat.title}</span>
-                      </Link>
-                      
-                      {cat.children?.length > 0 && (
-                        <button 
-                          onClick={() => toggleSubMenu(cat.id || i)} 
-                          className={`w-12 h-12 flex items-center justify-center rounded-full border border-white/5 text-white/30 hover:text-[#F5C518] transition-all ${openSubMenus[cat.id || i] ? 'bg-[#F5C518] text-black border-transparent rotate-180' : ''}`}
+                {categories.map((cat, i) => {
+                  const hasChildren = cat.children && cat.children.length > 0;
+                  const isOpen = openSubMenus[cat.id || i];
+                  
+                  return (
+                    <li key={i} className="group animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                      <div className="flex items-center justify-between py-2">
+                        <Link 
+                          href={cat.link} 
+                          onClick={() => !hasChildren && setIsMenuOpen(false)}
+                          className="text-3xl md:text-4xl font-black text-white/40 hover:text-white transition-all hover:pr-4 relative"
                         >
-                          <ChevronDown size={20} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* الأقسام الفرعية - نظام الكتالوج */}
-                    {cat.children?.length > 0 && openSubMenus[cat.id || i] && (
-                      <div className="mt-4 pr-6 space-y-4 border-r border-[#F5C518]/20 animate-expand">
-                        {cat.children.map((sub, j) => (
-                          <div key={j} className="group/sub">
-                            <Link 
-                              href={sub.link} 
-                              onClick={() => setIsMenuOpen(false)}
-                              className="flex items-center gap-4 text-white/60 hover:text-[#F5C518] transition-all"
-                            >
-                              <span className="w-2 h-[1px] bg-[#F5C518]/30 group-hover/sub:w-6 transition-all"></span>
-                              <span className="text-lg font-bold italic">{sub.title}</span>
-                            </Link>
-                            
-                            {/* فروع الفروع - (Deep Nesting) */}
-                            {sub.children?.length > 0 && (
-                              <div className="mt-2 pr-6 space-y-2 opacity-60">
-                                {sub.children.map((grand, k) => (
-                                  <Link key={k} href={grand.link} onClick={() => setIsMenuOpen(false)} className="block text-xs text-white/40 hover:text-[#F5C518] py-1">
-                                    {grand.title}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          <span className="group-hover:text-[#F5C518] transition-colors">{cat.title}</span>
+                        </Link>
+                        
+                        {/* السهم المطور الواضح */}
+                        {hasChildren && (
+                          <button 
+                            onClick={() => toggleSubMenu(cat.id || i)} 
+                            className={`w-12 h-12 flex items-center justify-center rounded-full border border-white/5 text-white/30 hover:text-[#F5C518] transition-all ${isOpen ? 'bg-[#F5C518] text-black border-transparent' : ''}`}
+                            title={isOpen ? "إغلاق القسم" : "فتح القسم"}
+                          >
+                            <ChevronDown 
+                              size={20} 
+                              className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+                            />
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </li>
-                ))}
+
+                      {/* الأقسام الفرعية - نظام الكتالوج */}
+                      {hasChildren && isOpen && (
+                        <div className="mt-4 pr-6 space-y-4 border-r border-[#F5C518]/20 animate-expand">
+                          {cat.children.map((sub, j) => (
+                            <div key={j} className="group/sub">
+                              <Link 
+                                href={sub.link} 
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-4 text-white/60 hover:text-[#F5C518] transition-all"
+                              >
+                                <span className="w-2 h-[1px] bg-[#F5C518]/30 group-hover/sub:w-6 transition-all"></span>
+                                <span className="text-lg font-bold italic">{sub.title}</span>
+                              </Link>
+                              
+                              {/* فروع الفروع - (Deep Nesting) */}
+                              {sub.children?.length > 0 && (
+                                <div className="mt-2 pr-6 space-y-2 opacity-60">
+                                  {sub.children.map((grand, k) => (
+                                    <Link key={k} href={grand.link} onClick={() => setIsMenuOpen(false)} className="block text-xs text-white/40 hover:text-[#F5C518] py-1">
+                                      {grand.title}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
@@ -201,22 +211,23 @@ export default function Navbar() {
         .animate-marquee { animation: marquee 30s linear infinite; }
         
         @keyframes slide-in { 
-          from { transform: translateX(100%); filter: blur(10px); } 
-          to { transform: translateX(0); filter: blur(0); } 
+          from { transform: translateX(100%); opacity: 0; } 
+          to { transform: translateX(0); opacity: 1; } 
         }
-        .animate-slide-in { animation: slide-in 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        /* تقليل مدة الأنيميشن وتغيير الـ bezier ليكون أسرع وأخف */
+        .animate-slide-in { animation: slide-in 0.4s ease-out; }
 
         @keyframes fade-up {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(15px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-up { animation: fade-up 0.6s ease forwards; opacity: 0; }
+        .animate-fade-up { animation: fade-up 0.4s ease-out forwards; opacity: 0; }
 
         @keyframes expand {
           from { opacity: 0; max-height: 0; }
           to { opacity: 1; max-height: 1000px; }
         }
-        .animate-expand { animation: expand 0.5s ease-out forwards; overflow: hidden; }
+        .animate-expand { animation: expand 0.4s ease-out forwards; overflow: hidden; }
 
         .custom-scrollbar::-webkit-scrollbar { width: 2px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #F5C518; }
