@@ -151,14 +151,20 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
   
-  // دالة لتحويل الوصف من HTML لنص عادي لاقتطاع النبذة
+  // دالة لتحويل الوصف من HTML لنص عادي لاقتطاع النبذة (مع تجاهل العناوين)
   const stripHtml = (html) => {
     if (!html) return "";
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    return doc.body.textContent || "";
+    // 1. نحذف أي عناوين (H1-H6) من النص عشان نشيل عنوان الوصف الأساسي
+    let noHeaders = html.replace(/<h[1-6]>.*?<\/h[1-6]>/gi, "");
+    const doc = new DOMParser().parseFromString(noHeaders, 'text/html');
+    let text = doc.body.textContent || "";
+    // 2. نحذف الكلمات الافتتاحية لو مكتوبة كنص عادي في أول السطر
+    text = text.replace(/^(عن المنتج|وصف المنتج|تفاصيل المنتج|وصف القطعة)[\s:-]*/gi, "");
+    return text.trim();
   };
   
-  const shortDescription = stripHtml(product.description).substring(0, 80) + "...";
+  // 110 حرف بتدينا تقريباً سطرين متناسقين في الموبايل
+  const shortDescription = stripHtml(product.description).substring(0, 110) + "... ";
 
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-32 font-sans selection:bg-[#F5C518] selection:text-black">
@@ -212,11 +218,12 @@ export default function ProductPage() {
       {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-6 max-w-4xl mx-auto" dir="rtl">
         {/* التعديل الثاني: العناصر الثلاثة تحت اسم المنتج + نبذة الوصف */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-black text-white mb-2 tracking-tight">{product.title}</h1>
+        <div className="mb-4 pt-2">
+          {/* تصغير الخط لـ 26px وتقليل المسافة السفلية لرفعه لفوق */}
+          <h1 className="text-[26px] leading-tight font-black text-white mb-1.5 tracking-tight">{product.title}</h1>
           
           {/* العناصر التلاتة */}
-          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium mb-4">
+          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium mb-3">
             <span className="text-[#F5C518]">WIND Series</span>
             <span>•</span>
             <span>{product.category || product.type || "أزياء"}</span>
@@ -224,16 +231,16 @@ export default function ProductPage() {
             <span className="border border-gray-500 px-1.5 rounded text-xs bg-[#1a1a1a]">WIND-24</span>
           </div>
 
-          {/* نبذة الوصف مع التدرج اللوني والزرار */}
-          <div className="relative text-sm text-gray-400 leading-relaxed pr-2 border-r-2 border-[#333]">
-            <p className="inline bg-gradient-to-l from-gray-400 to-transparent bg-clip-text text-transparent">
+          {/* نبذة الوصف مع التدرج اللوني والزرار في نفس السطر */}
+          <div className="relative text-sm leading-relaxed pr-2 border-r-2 border-[#333]">
+            <span className="bg-gradient-to-l from-gray-400 via-gray-400 to-[#121212] bg-clip-text text-transparent">
               {shortDescription}
-            </p>
+            </span>
             <button 
               onClick={() => setDescModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-[#F5C518] font-bold mr-2 hover:underline decoration-1 underline-offset-4"
+              className="inline-flex items-center gap-1 text-[#F5C518] font-bold mr-1 hover:underline decoration-1 underline-offset-4 whitespace-nowrap align-bottom"
             >
-              المزيد عن المنتج <span className="w-4 h-4 rounded-full border border-[#F5C518] flex items-center justify-center text-[10px] font-black">!</span>
+              المزيد عن المنتج <span className="w-3.5 h-3.5 rounded-full border border-[#F5C518] flex items-center justify-center text-[9px] font-black">!</span>
             </button>
           </div>
         </div>
