@@ -82,8 +82,8 @@ export default function Navbar() {
         .animate-marquee { animation: marquee 25s linear infinite; white-space: nowrap; display: inline-block; will-change: transform; }
         .marquee-container:hover .animate-marquee { animation-play-state: paused; }
         
-        @keyframes slideInRtl { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .layer-animate { animation: slideInRtl 0.2s ease-out forwards; }
+        @keyframes fastFadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        .layer-animate { animation: fastFadeIn 0.25s ease-out forwards; }
       `}</style>
 
       {/* 1. الشريط العلوي الأصلي الخاص بك (لم يتم تغييره) */}
@@ -97,7 +97,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 2. النافبار الأساسية (بحجم اللوجو الأصلي) */}
+      {/* 2. النافبار الأساسية (بحجم اللوجو الأصلي وأيقونة المنيو الأصلية) */}
       <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-xl">
         <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between relative">
           
@@ -130,24 +130,25 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* 3. المنيو الجانبي (نظام الطبقات السريع) */}
+      {/* 3. المنيو الجانبي (نظام الطبقات السريع والخالي من التهنيج) */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[200] flex" dir="rtl">
-          {/* خلفية معتمة خفيفة لتقليل الضغط على المعالج */}
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onClick={closeMenu}></div>
+          {/* خلفية معتمة سريعة جداً (بدون Blur لمنع التقل) */}
+          <div className="absolute inset-0 bg-black/80 transition-opacity" onClick={closeMenu}></div>
           
           {/* جسم المنيو */}
-          <div className="relative bg-[#111] w-[85%] max-w-[380px] h-full shadow-2xl flex flex-col border-l border-[#333] transition-transform duration-300 translate-x-0">
+          <div className="relative bg-[#111] w-[85%] max-w-[380px] h-full shadow-2xl flex flex-col border-l border-[#333] animate-[slideInRtl_0.3s_ease-out]">
             
-            {/* هيدر المنيو (يحتوي على زر الرجوع أو العنوان الرئيسي) */}
-            <div className="p-6 bg-[#1a1a1a] border-b border-[#333] flex justify-between items-center min-h-[80px]">
+            {/* هيدر المنيو (زر الرجوع المطور والواضح جداً) */}
+            <div className="p-5 bg-[#1a1a1a] border-b border-[#333] flex justify-between items-center min-h-[80px]">
               {menuHistory.length > 0 ? (
+                // زر رجوع واضح ومميز
                 <button 
                   onClick={goBack} 
-                  className="flex items-center gap-3 text-[#F5C518] hover:text-white transition-colors group"
+                  className="flex items-center gap-2 text-black bg-[#F5C518] px-4 py-2 rounded-xl hover:bg-white transition-colors active:scale-95"
                 >
-                  <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
-                  <span className="font-black text-lg">رجوع</span>
+                  <ArrowRight size={20} strokeWidth={2.5} />
+                  <span className="font-black text-sm">رجوع</span>
                 </button>
               ) : (
                 <h3 className="text-[#F5C518] font-black text-2xl italic uppercase tracking-tighter">WIND MENU</h3>
@@ -158,7 +159,7 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* عنوان القسم الفرعي الحالي (يظهر فقط داخل الفروع) */}
+            {/* عنوان القسم الحالي (يظهر فقط داخل الفروع لتوضيح مكان الزبون) */}
             {menuHistory.length > 0 && (
               <div className="px-6 pt-6 pb-2 bg-[#111]">
                 <h4 className="text-white text-xl font-black">{activeMenu.title}</h4>
@@ -166,27 +167,29 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* قائمة العناصر (تتحدث فورياً بناءً على الطبقة الحالية) */}
+            {/* قائمة العناصر */}
             <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
-              {/* key يتغير مع اسم القائمة عشان الأنيميشن يشتغل كل مرة نغير الطبقة */}
               <ul className="space-y-3 layer-animate" key={activeMenu.title}>
                 {activeMenu.items.map((item, i) => (
                   <li key={item.id || i}>
-                    {/* لو العنصر له أبناء، يظهر كزرار يدخلك للطبقة اللي بعدها */}
+                    {/* لو العنصر له فروع (يظهر زر عليه سهم لليسار) */}
                     {item.children?.length > 0 ? (
                       <button 
                         onClick={() => goToSubMenu(item)} 
-                        className="w-full flex items-center justify-between p-4 bg-[#1a1a1a] border border-[#222] rounded-2xl hover:bg-[#F5C518] group transition-all duration-200"
+                        className="w-full flex items-center justify-between p-4 bg-[#1a1a1a] border border-[#222] rounded-xl hover:border-[#F5C518] transition-all duration-200"
                       >
-                        <span className="text-white group-hover:text-black font-black text-lg">{item.title}</span>
-                        <ChevronLeft className="text-[#F5C518] group-hover:text-black" size={24} />
+                        <span className="text-white font-black text-lg">{item.title}</span>
+                        {/* مربع صغير يميز السهم عشان يكون واضح للمستخدم إنه هيدخل قسم تاني */}
+                        <div className="bg-[#222] p-1.5 rounded-lg text-[#F5C518]">
+                          <ChevronLeft size={20} />
+                        </div>
                       </button>
                     ) : (
-                      /* لو العنصر ملوش أبناء، يظهر كرابط عادي */
+                      /* لو العنصر نهائي (ملوش فروع)، يظهر كرابط عادي */
                       <Link 
                         href={item.link} 
                         onClick={closeMenu} 
-                        className="flex items-center p-4 bg-transparent border border-[#333] rounded-2xl text-gray-300 hover:text-[#F5C518] hover:border-[#F5C518] font-bold text-lg transition-all duration-200"
+                        className="flex items-center p-4 bg-transparent border border-[#333] rounded-xl text-gray-300 hover:text-[#F5C518] hover:border-[#F5C518] font-bold text-lg transition-all duration-200"
                       >
                         {item.title}
                       </Link>
