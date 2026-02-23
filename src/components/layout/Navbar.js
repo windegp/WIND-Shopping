@@ -5,187 +5,222 @@ import Link from 'next/link';
 import { useCart } from "../../context/CartContext"; 
 import { db } from "../../lib/firebase"; 
 import { doc, onSnapshot } from "firebase/firestore";
+import { X, Menu, ShoppingBag, ChevronDown, ChevronRight, ArrowLeft } from "lucide-react";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState({});
   const { cartItems = [], toggleCart } = useCart() || {};
-  
-  // الحالة الابتدائية للمنيو (تبدأ بقسم الرئيسية كأمان)
-  const [categories, setCategories] = useState([
-    { name: "الرئيسية", link: "/", children: [] },
-  ]);
+  const [categories, setCategories] = useState([]);
 
-  const toggleSubMenu = (index) => {
-    setOpenSubMenus(prev => ({
-      ...prev,
-      [index]: !prev[index]
+  // --- دالة معالجة الروابط لضمان التوافق ---
+  const formatLink = (link) => {
+    if (!link) return "/";
+    if (link.startsWith('/') || link.startsWith('http')) return link;
+    return `/collections/${link}`;
+  };
+
+  // --- دالة تنظيف البيانات "الشجرية" لضمان ظهور كل الفروع ---
+  const sanitizeMenuItems = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items.map(item => ({
+      ...item,
+      title: typeof item.title === 'string' ? item.title : "قسم",
+      link: formatLink(item.link),
+      children: sanitizeMenuItems(item.children || []) // تنظيف الفروع بشكل متكرر (Recursive)
     }));
   };
 
-  // --- ركن التعليم: الـ useEffect هو "المراقب" اللي بيجيب الداتا ---
   useEffect(() => {
-    // onSnapshot بتعمل اتصال حي (Live) مع الفايربيس
-    const unsubSettings = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
-      
+    const unsub = onSnapshot(doc(db, "settings", "navigation"), (docSnap) => {
       if (docSnap.exists() && docSnap.data().menuItems) {
-        
-        // هنا بنعمل "فلترة" لكل عنصر جاي من قاعدة البيانات لضمان عدم حدوث Error 130
-        const menuItemsFromSettings = docSnap.data().menuItems.map(item => {
-          
-          // 🛡️ فحص الأمان 1: التأكد أن العنوان نص (String)
-          const safeTitle = typeof item.title === 'string' ? item.title : "قسم";
-          
-          // 🛡️ فحص الأمان 2: التأكد أن الرابط نص (String)
-          const safeLink = typeof item.link === 'string' ? item.link : "/";
-          
-          let finalLink = safeLink;
-
-          // منطق الربط: لو الرابط مش بيبدأ بسلاش (/) ومش رابط خارجي، ضيف له /collections/
-          if (!finalLink.startsWith('/') && !finalLink.startsWith('http')) {
-            finalLink = `/collections/${finalLink}`; 
-          }
-
-          return {
-            name: safeTitle,
-            title: safeTitle,
-            link: finalLink,
-            highlight: !!item.highlight, // علامة الـ !! تضمن تحويل القيمة لـ true أو false
-            // 🛡️ فحص الأمان 3: التأكد أن الأبناء (Children) مصفوفة سليمة
-            children: Array.isArray(item.children) ? item.children.map(child => ({
-              ...child,
-              title: typeof child.title === 'string' ? child.title : "فرعي",
-              link: typeof child.link === 'string' ? child.link : "/"
-            })) : []
-          };
-        });
-        
-        setCategories(menuItemsFromSettings);
+        const cleanData = sanitizeMenuItems(docSnap.data().menuItems);
+        setCategories(cleanData);
       }
     });
-
-    return () => unsubSettings(); // تنظيف الاتصال عند مغادرة الصفحة
+    return () => unsub();
   }, []);
+
+  const toggleSubMenu = (id) => {
+    setOpenSubMenus(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <>
-      {/* ركن التصميم (CSS) */}
-      <style jsx global>{`
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { animation: marquee 25s linear infinite; white-space: nowrap; display: inline-block; will-change: transform; }
-        .marquee-container:hover .animate-marquee { animation-play-state: paused; }
-        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        body { overflow-x: hidden; }
-      `}</style>
-
-      {/* 1. الشريط العلوي (Marquee) */}
-      <div className="bg-[#F5C518] text-black text-xs md:text-sm font-black py-2 overflow-hidden relative z-[50] marquee-container border-b border-black w-full">
-        <div className="animate-marquee w-full text-center tracking-widest uppercase">
-          <span className="mx-8">🚚 توصيل سريع لجميع محافظات مصر</span>
-          <span className="mx-8">•</span>
-          <span className="mx-8">🔥 خصم 10% بكود: <span className="bg-black text-[#F5C518] px-1 italic">WIND10</span></span>
-          <span className="mx-8">•</span>
-          <span className="mx-8">✨ تشكيلة الشتاء الجديدة متاحة الآن</span>
+      {/* 1. شريط الإعلانات السينمائي المتحرك */}
+      <div className="bg-[#F5C518] text-black h-10 flex items-center overflow-hidden border-b border-black relative z-[110]">
+        <div className="whitespace-nowrap flex animate-marquee font-black text-[10px] md:text-xs uppercase tracking-[0.2em]">
+          {[1, 2, 3].map((i) => (
+            <span key={i} className="flex items-center">
+              <span className="mx-10">🚚 شحن مجاني للطلبات فوق 2000 ج.م</span>
+              <span className="mx-10">•</span>
+              <span className="mx-10">🔥 استعمل كود WIND لخصم إضافي</span>
+              <span className="mx-10">•</span>
+              <span className="mx-10">✨ جودة مصرية بمقاييس عالمية</span>
+              <span className="mx-10">•</span>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* 2. النافبار الرئيسية */}
-      <nav className="bg-[#121212] border-b border-[#333] sticky top-0 z-[100] h-20 w-full shadow-2xl">
-        <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between relative">
+      {/* 2. النافبار الرئيسية (WIND Premium Header) */}
+      <nav className="bg-black/95 backdrop-blur-xl border-b border-white/5 sticky top-0 z-[100] h-20 w-full transition-all duration-500">
+        <div className="max-w-[1600px] mx-auto px-6 h-full flex items-center justify-between">
           
-          {/* زر القائمة للموبايل والديسكتوب */}
-          <button onClick={() => setIsMenuOpen(true)} className="text-white p-2 hover:text-[#F5C518] transition-colors z-20">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+          {/* زر القائمة - تصميم مينيمال */}
+          <button 
+            onClick={() => setIsMenuOpen(true)} 
+            className="group flex items-center gap-3 text-white/70 hover:text-[#F5C518] transition-all"
+          >
+            <div className="flex flex-col gap-1.5 overflow-hidden">
+              <span className="w-8 h-[2px] bg-current transition-all group-hover:w-5"></span>
+              <span className="w-5 h-[2px] bg-current transition-all group-hover:w-8"></span>
+            </div>
+            <span className="hidden md:block text-[10px] font-black tracking-widest uppercase">Menu</span>
           </button>
 
-          {/* اللوجو (في المنتصف) */}
-          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+          {/* اللوجو - المركز السينمائي */}
+          <div className="absolute left-1/2 -translate-x-1/2">
             <Link href="/">
-              <img src="/logo.jpg" alt="WIND" className="h-14 md:h-16 w-auto object-contain hover:scale-105 transition-transform duration-300" />
+              <img 
+                src="/logo.jpg" 
+                alt="WIND" 
+                className="h-12 md:h-14 w-auto object-contain brightness-110 contrast-125 hover:scale-105 transition-all duration-700" 
+              />
             </Link>
           </div>
 
-          {/* أيقونة السلة */}
-          <div className="flex items-center gap-4 z-20">
-            <button onClick={toggleCart} className="relative p-2 group">
-              <svg className="w-8 h-8 text-white group-hover:text-[#F5C518] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
+          {/* السلة والبحث */}
+          <div className="flex items-center gap-6">
+            <button onClick={toggleCart} className="relative group p-2 text-white/70 hover:text-[#F5C518] transition-all">
+              <ShoppingBag size={24} strokeWidth={1.5} />
               {cartItems?.length > 0 && (
-                <span className="absolute top-1 right-0 bg-[#F5C518] text-black text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border border-black shadow-lg">
+                <span className="absolute -top-1 -right-1 bg-[#F5C518] text-black text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-black">
                   {cartItems.length}
                 </span>
               )}
             </button>
           </div>
         </div>
+      </nav>
 
-        {/* 3. المنيو الجانبية (Sidebar Menu) */}
-        {isMenuOpen && (
-          <div className="fixed inset-0 z-[200] flex" dir="rtl">
-            {/* الخلفية المظلمة */}
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
+      {/* 3. القائمة السينمائية (Cinematic Overlay Menu) */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[1000] overflow-hidden" dir="rtl">
+          {/* خلفية غامضة بتأثير زجاجي */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-[40px] transition-all duration-1000"
+            onClick={() => setIsMenuOpen(false)}
+          ></div>
+          
+          <div className="absolute top-0 right-0 w-full max-w-[450px] h-full bg-[#0a0a0a] border-l border-white/5 shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col animate-slide-in">
             
-            {/* محتوى المنيو */}
-            <div className="relative bg-[#1a1a1a] w-[85%] max-w-[320px] h-full shadow-2xl flex flex-col border-l border-[#333] animate-[slideInRight_0.3s_ease-out]">
-              
-              {/* هيدر المنيو */}
-              <div className="p-6 bg-[#222] border-b border-[#333] flex justify-between items-center">
-                <h3 className="text-[#F5C518] font-black text-xl italic uppercase tracking-tighter">WIND MENU</h3>
-                <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-white">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
+            {/* إغلاق المنيو */}
+            <div className="p-8 flex justify-between items-center">
+              <span className="text-[10px] font-black text-white/30 tracking-[0.5em] uppercase italic">WIND Catalogue</span>
+              <button 
+                onClick={() => setIsMenuOpen(false)} 
+                className="text-white/50 hover:text-[#F5C518] hover:rotate-90 transition-all duration-500"
+              >
+                <X size={32} strokeWidth={1} />
+              </button>
+            </div>
 
-              {/* قائمة الأقسام */}
-              <div className="flex-1 overflow-y-auto py-6">
-                <ul className="space-y-2 px-4">
-                  {categories.map((cat, i) => (
-                    <li key={i} className="flex flex-col group">
-                      <div className="flex items-center w-full bg-[#252525] rounded-xl overflow-hidden border border-transparent hover:border-[#333] transition-all">
-                        <Link 
-                          href={cat.link || "/"} 
-                          onClick={() => !cat.children?.length && setIsMenuOpen(false)}
-                          className={`flex-1 p-4 font-black transition-colors ${cat.highlight ? 'bg-[#F5C518] text-black' : 'text-gray-200 hover:text-[#F5C518]'}`}
+            {/* محتوى القائمة - تدرج هرمي */}
+            <div className="flex-1 overflow-y-auto px-8 py-4 custom-scrollbar">
+              <ul className="space-y-6">
+                {categories.map((cat, i) => (
+                  <li key={i} className="group animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                    <div className="flex items-center justify-between py-2">
+                      <Link 
+                        href={cat.link} 
+                        onClick={() => !cat.children?.length && setIsMenuOpen(false)}
+                        className="text-3xl md:text-4xl font-black text-white/40 hover:text-white transition-all hover:pr-4 relative"
+                      >
+                        <span className="group-hover:text-[#F5C518] transition-colors">{cat.title}</span>
+                      </Link>
+                      
+                      {cat.children?.length > 0 && (
+                        <button 
+                          onClick={() => toggleSubMenu(cat.id || i)} 
+                          className={`w-12 h-12 flex items-center justify-center rounded-full border border-white/5 text-white/30 hover:text-[#F5C518] transition-all ${openSubMenus[cat.id || i] ? 'bg-[#F5C518] text-black border-transparent rotate-180' : ''}`}
                         >
-                          {cat.name}
-                        </Link>
-                        {cat.children?.length > 0 && (
-                          <button onClick={() => toggleSubMenu(i)} className="p-4 text-[#F5C518] border-r border-[#333] hover:bg-black/20">
-                            <svg className={`w-5 h-5 transition-transform ${openSubMenus[i] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* الأقسام الفرعية */}
-                      {cat.children?.length > 0 && openSubMenus[i] && (
-                        <ul className="mt-2 pr-4 space-y-1 border-r-2 border-[#F5C518]/30">
-                          {cat.children.map((sub, j) => (
-                            <li key={j}>
-                              <Link href={sub.link || "#"} onClick={() => setIsMenuOpen(false)} className="block p-3 text-sm text-gray-400 hover:text-[#F5C518] font-bold border-b border-[#333]/10">
-                                {sub.title || sub.name}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
+                          <ChevronDown size={20} />
+                        </button>
                       )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    </div>
 
-              {/* فوتر المنيو */}
-              <div className="p-6 border-t border-[#333] text-center">
-                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">WIND Egyptian Wear © 2026</p>
+                    {/* الأقسام الفرعية - نظام الكتالوج */}
+                    {cat.children?.length > 0 && openSubMenus[cat.id || i] && (
+                      <div className="mt-4 pr-6 space-y-4 border-r border-[#F5C518]/20 animate-expand">
+                        {cat.children.map((sub, j) => (
+                          <div key={j} className="group/sub">
+                            <Link 
+                              href={sub.link} 
+                              onClick={() => setIsMenuOpen(false)}
+                              className="flex items-center gap-4 text-white/60 hover:text-[#F5C518] transition-all"
+                            >
+                              <span className="w-2 h-[1px] bg-[#F5C518]/30 group-hover/sub:w-6 transition-all"></span>
+                              <span className="text-lg font-bold italic">{sub.title}</span>
+                            </Link>
+                            
+                            {/* فروع الفروع - (Deep Nesting) */}
+                            {sub.children?.length > 0 && (
+                              <div className="mt-2 pr-6 space-y-2 opacity-60">
+                                {sub.children.map((grand, k) => (
+                                  <Link key={k} href={grand.link} onClick={() => setIsMenuOpen(false)} className="block text-xs text-white/40 hover:text-[#F5C518] py-1">
+                                    {grand.title}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* فوتر المنيو */}
+            <div className="p-10 border-t border-white/5 bg-black/20">
+              <div className="flex gap-6 mb-8">
+                <span className="text-[9px] text-white/20 font-bold uppercase tracking-widest hover:text-[#F5C518] cursor-pointer">Instagram</span>
+                <span className="text-[9px] text-white/20 font-bold uppercase tracking-widest hover:text-[#F5C518] cursor-pointer">Facebook</span>
+                <span className="text-[9px] text-white/20 font-bold uppercase tracking-widest hover:text-[#F5C518] cursor-pointer">TikTok</span>
               </div>
+              <p className="text-[8px] text-white/10 font-black uppercase tracking-[0.8em]">WIND PREMIUM EGYPTIAN WEAR</p>
             </div>
           </div>
-        )}
-      </nav>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .animate-marquee { animation: marquee 30s linear infinite; }
+        
+        @keyframes slide-in { 
+          from { transform: translateX(100%); filter: blur(10px); } 
+          to { transform: translateX(0); filter: blur(0); } 
+        }
+        .animate-slide-in { animation: slide-in 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up { animation: fade-up 0.6s ease forwards; opacity: 0; }
+
+        @keyframes expand {
+          from { opacity: 0; max-height: 0; }
+          to { opacity: 1; max-height: 1000px; }
+        }
+        .animate-expand { animation: expand 0.5s ease-out forwards; overflow: hidden; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #F5C518; }
+      `}</style>
     </>
   );
 }
