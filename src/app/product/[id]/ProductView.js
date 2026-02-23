@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
@@ -7,7 +7,7 @@ import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import SizeChartModal from '@/components/SizeChartModal';
 // استدعاء الأيقونات الاحترافية لتعزيز التجربة السينمائية وكلمات الثقة
-import { Play, Plus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck } from "lucide-react";
+import { Play, Plus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight } from "lucide-react";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -21,6 +21,9 @@ export default function ProductPage() {
   const [isSizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isDescModalOpen, setDescModalOpen] = useState(false); // حالة مودال الوصف السينمائي
+  const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); // حالة مودال تكبير الصورة
+  
+  const colorsScrollRef = useRef(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -107,6 +110,13 @@ export default function ProductPage() {
 
   const gallery = product.images || [product.mainImage, ...Array.from({ length: product.imagesCount || 0 }, (_, i) => `${i + 1}.webp`)];
   
+  // دالة التقليب للصورة التالية
+  const handleNextImage = () => {
+    const currentIndex = gallery.indexOf(activeImage);
+    const nextIndex = (currentIndex + 1) % gallery.length;
+    setActiveImage(gallery[nextIndex]);
+  };
+  
   // === معالجة الألوان والمقاسات لدعم (النظام الجديد) الخاص بلوحة التحكم و (النظام القديم) ===
   let safeSizes = [];
   let safeColors = [];
@@ -131,67 +141,120 @@ export default function ProductPage() {
     safeColors = Array.isArray(product.options?.colors) ? product.options.colors : [];
   }
 
+  // استخراج الصورة المرتبطة باللون المختار حالياً (للبوستر الصغير)
+  const currentColorImage = () => {
+    if (!selectedColor) return gallery[1] || activeImage;
+    const hexOrImage = product.colorSwatches?.[selectedColor];
+    if (hexOrImage && (hexOrImage.startsWith('http') || hexOrImage.includes('/'))) {
+      return hexOrImage;
+    }
+    return gallery[1] || activeImage;
+  };
+  
+  // دالة لتحويل الوصف من HTML لنص عادي لاقتطاع النبذة
+  const stripHtml = (html) => {
+    if (!html) return "";
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || "";
+  };
+  
+  const shortDescription = stripHtml(product.description).substring(0, 80) + "...";
+
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-32 font-sans selection:bg-[#F5C518] selection:text-black">
       
       {/* 1. القسم السينمائي (Hero Section) */}
-      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black">
+      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group">
         <img 
           src={getImageUrl(activeImage)} 
           alt={product.title} 
           className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
         />
         {/* تدرج لوني يعطي تأثير دمج مع الخلفية زي نتفليكس */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
         
-        {/* العنوان والبيانات الأساسية على الصورة */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 flex flex-col items-center text-center">
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight drop-shadow-lg">{product.title}</h1>
-          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium">
-            <span className="text-[#F5C518]">WIND Series</span>
-            <span>•</span>
-            <span>{product.category || product.type || "أزياء"}</span>
-            <span>•</span>
-            <span className="border border-gray-500 px-1.5 rounded text-xs bg-black/50">WIND-24</span>
-          </div>
+        {/* التعديل الأول والثالث: أيقونات التفاعل بشكل طولي داخل الصورة + سهم التقليب */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10">
+          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <ImageIcon size={20} />
+            </div>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
+          </button>
+          
+          <button 
+            onClick={() => setIsWishlisted(!isWishlisted)} 
+            className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md"
+          >
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
+            </div>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
+          </button>
+          
+          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <Share2 size={20} />
+            </div>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
+          </button>
         </div>
-      </div>
 
-      {/* 2. شريط التفاعل (التريلر واللايكات) */}
-      <div className="flex justify-center items-center gap-6 py-4 border-b border-[#333]/50 text-sm font-bold text-gray-300">
-        <button className="flex items-center gap-2 hover:text-white transition-colors">
-          <ImageIcon size={18} />
-          <span>{gallery.length} صور الموديل</span>
-        </button>
+        {/* سهم التقليب الكبير على اليسار */}
         <button 
-          onClick={() => setIsWishlisted(!isWishlisted)} 
-          className="flex items-center gap-2 hover:text-white transition-colors"
+          onClick={handleNextImage}
+          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
         >
-          <Heart size={18} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
-          <span>{product.likes || "1.2K"}</span>
-        </button>
-        <button className="flex items-center gap-2 hover:text-white transition-colors">
-          <Share2 size={18} />
-          <span>مشاركة</span>
+          <ChevronLeft size={40} strokeWidth={1.5} />
         </button>
       </div>
 
       {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-6 max-w-4xl mx-auto" dir="rtl">
-        <div className="flex gap-4 items-start">
+        {/* التعديل الثاني: العناصر الثلاثة تحت اسم المنتج + نبذة الوصف */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-black text-white mb-2 tracking-tight">{product.title}</h1>
           
-          {/* البوستر المصغر */}
-          <div className="w-32 h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative">
-            <img src={getImageUrl(gallery[1] || activeImage)} className="w-full h-full object-cover" alt="poster" />
+          {/* العناصر التلاتة */}
+          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium mb-4">
+            <span className="text-[#F5C518]">WIND Series</span>
+            <span>•</span>
+            <span>{product.category || product.type || "أزياء"}</span>
+            <span>•</span>
+            <span className="border border-gray-500 px-1.5 rounded text-xs bg-[#1a1a1a]">WIND-24</span>
+          </div>
+
+          {/* نبذة الوصف مع التدرج اللوني والزرار */}
+          <div className="relative text-sm text-gray-400 leading-relaxed pr-2 border-r-2 border-[#333]">
+            <p className="inline bg-gradient-to-l from-gray-400 to-transparent bg-clip-text text-transparent">
+              {shortDescription}
+            </p>
+            <button 
+              onClick={() => setDescModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-[#F5C518] font-bold mr-2 hover:underline decoration-1 underline-offset-4"
+            >
+              المزيد عن المنتج <span className="w-4 h-4 rounded-full border border-[#F5C518] flex items-center justify-center text-[10px] font-black">!</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-4 items-start border-t border-[#333]/50 pt-6">
+          
+          {/* البوستر المصغر (التعديل الرابع والسابع: مرتبط باللون + عدسة مكبرة) */}
+          <div className="w-32 h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative group">
+            <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
             <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
               <Plus size={16} className="text-white" />
             </div>
-            {/* الزر الجديد داخل البوستر */}
+            
+            {/* أيقونة العدسة المكبرة */}
             <button 
-              onClick={() => setDescModalOpen(true)}
-              className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[80%] bg-black/80 border border-[#F5C518]/50 text-white hover:text-[#F5C518] hover:border-[#F5C518] transition-all text-[9px] font-bold py-1.5 rounded-sm text-center backdrop-blur-md"
+              onClick={() => setImageZoomModalOpen(true)}
+              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
             >
-              عرض تفاصيل المنتج
+              <div className="bg-black/60 p-3 rounded-full border border-[#F5C518]/50 text-white hover:text-[#F5C518] hover:scale-110 transition-all shadow-lg">
+                <Search size={24} />
+              </div>
             </button>
           </div>
 
@@ -247,37 +310,53 @@ export default function ProductPage() {
                   {selectedColor && <span className="text-[#F5C518] text-xs bg-[#222] border border-[#444] px-2 py-0.5 rounded-md">{selectedColor}</span>}
                 </h3>
               </div>
-              <div className="flex flex-wrap gap-4">
-                {safeColors.map((colorItem, idx) => {
-                  // استخراج اسم اللون
-                  const colorName = typeof colorItem === 'string' ? colorItem : colorItem.name;
-                  // جلب درجة اللون أو الصورة المرتبطة
-                  const hexOrImage = product.colorSwatches?.[colorName] || (typeof colorItem === 'object' ? colorItem.swatch : '#333333');
-                  const isImage = hexOrImage.startsWith('http') || hexOrImage.includes('/');
+              
+              {/* التعديل الخامس: شريط الألوان الأفقي */}
+              <div className="relative w-full">
+                <div 
+                  ref={colorsScrollRef}
+                  className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory hide-scrollbar-horizontal pr-2"
+                >
+                  {safeColors.map((colorItem, idx) => {
+                    // استخراج اسم اللون
+                    const colorName = typeof colorItem === 'string' ? colorItem : colorItem.name;
+                    // جلب درجة اللون أو الصورة المرتبطة
+                    const hexOrImage = product.colorSwatches?.[colorName] || (typeof colorItem === 'object' ? colorItem.swatch : '#333333');
+                    const isImage = hexOrImage.startsWith('http') || hexOrImage.includes('/');
 
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedColor(colorName);
-                        // 🔥 هنا السحر: التبديل الفوري للصورة الكبيرة عند الضغط على اللون 🔥
-                        if (isImage) {
-                          setActiveImage(hexOrImage);
-                        }
-                      }}
-                      className="flex flex-col items-center gap-2 group"
-                    >
-                      <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === colorName ? "border-2 border-[#F5C518] bg-[#F5C518]/10 scale-105" : "border border-[#333] hover:border-gray-500"}`}>
-                        {isImage ? (
-                          <img src={hexOrImage} className="w-full h-full rounded-full object-cover shadow-inner" alt={colorName} />
-                        ) : (
-                          <div style={{ backgroundColor: hexOrImage }} className="w-full h-full rounded-full shadow-inner border border-[#222]"></div>
-                        )}
-                      </div>
-                      <span className={`text-xs font-bold uppercase ${selectedColor === colorName ? "text-white" : "text-gray-500"}`}>{colorName}</span>
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedColor(colorName);
+                          if (isImage) {
+                            setActiveImage(hexOrImage);
+                          }
+                        }}
+                        className="flex flex-col items-center gap-2 group shrink-0 snap-start"
+                      >
+                        <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === colorName ? "border-2 border-[#F5C518] bg-[#F5C518]/10 scale-105" : "border border-[#333] hover:border-gray-500"}`}>
+                          {isImage ? (
+                            <img src={hexOrImage} className="w-full h-full rounded-full object-cover shadow-inner" alt={colorName} />
+                          ) : (
+                            <div style={{ backgroundColor: hexOrImage }} className="w-full h-full rounded-full shadow-inner border border-[#222]"></div>
+                          )}
+                        </div>
+                        <span className={`text-xs font-bold uppercase ${selectedColor === colorName ? "text-white" : "text-gray-500"}`}>{colorName}</span>
+                      </button>
+                    );
+                  })}
+                  
+                  {/* تريكة اللون المقطوع: مساحة فارغة في الآخر تعطي إيحاء بوجود المزيد لو كان العدد كبير */}
+                  {safeColors.length > 4 && <div className="w-4 shrink-0"></div>}
+                </div>
+                
+                {/* مؤشر السحب الجانبي لو الألوان كتير */}
+                {safeColors.length > 4 && (
+                  <div className="absolute left-0 top-0 bottom-6 w-8 bg-gradient-to-r from-[#121212] via-[#121212]/90 to-transparent flex items-center justify-start pointer-events-none border-l-2 border-[#333]">
+                    <ChevronLeft size={16} className="text-gray-500 mr-1 animate-pulse" />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -299,19 +378,22 @@ export default function ProductPage() {
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                {safeSizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`min-w-[60px] h-12 flex items-center justify-center text-sm font-black rounded-md border transition-all ${
-                      selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
+              {/* التعديل السادس: إخفاء أزرار المقاسات الكبيرة لو مقاس واحد */}
+              {safeSizes.length > 1 && (
+                <div className="flex flex-wrap gap-3">
+                  {safeSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`min-w-[60px] h-12 flex items-center justify-center text-sm font-black rounded-md border transition-all ${
+                        selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -373,6 +455,27 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {/* 🎬 مودال تكبير صورة اللون (الكارت المنبثق) */}
+      {isImageZoomModalOpen && (
+        <div 
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-[fadeIn_0.3s_ease-out]"
+          onClick={() => setImageZoomModalOpen(false)}
+        >
+          <div className="relative w-full max-w-lg aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover" alt="Zoomed Color" />
+            <button 
+              onClick={() => setImageZoomModalOpen(false)} 
+              className="absolute top-4 left-4 bg-black/60 hover:bg-black p-2 rounded-full text-white/70 hover:text-white transition-colors backdrop-blur-sm border border-white/20"
+            >
+              <X size={24} />
+            </button>
+            <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm border border-[#F5C518]/30">
+              <span className="text-[#F5C518] font-bold text-sm">{selectedColor}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🎬 مودال تفاصيل الوصف (الكارت السينمائي) */}
       {isDescModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
@@ -406,6 +509,18 @@ export default function ProductPage() {
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================== */
+        /* إخفاء شريط التمرير الأفقي للألوان مع الحفاظ على التمرير */
+        /* ========================================== */
+        .hide-scrollbar-horizontal::-webkit-scrollbar {
+          height: 0px;
+          background: transparent;
+        }
+        .hide-scrollbar-horizontal {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
         }
 
         /* ========================================== */
