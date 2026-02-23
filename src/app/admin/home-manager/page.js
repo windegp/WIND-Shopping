@@ -679,11 +679,14 @@ export default function HomeManagerPage() {
                             </button>
                             </div>
                           )} {/* نهاية شرط التبديل بين اليدوي والديناميكي */}
-                          </div>
+               </div>
                         )}
 
                       </div>
                     )}
+                  </div>
+                );
+              })}
 
               {/* رسالة توضيحية */}
               {layoutSections.length <= 1 && (
