@@ -151,20 +151,24 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
   
-  // دالة لتحويل الوصف من HTML لنص عادي لاقتطاع النبذة (مع تجاهل العناوين)
+  // دالة متطورة لحذف العناوين والكلمات الافتتاحية
   const stripHtml = (html) => {
     if (!html) return "";
-    // 1. نحذف أي عناوين (H1-H6) من النص عشان نشيل عنوان الوصف الأساسي
-    let noHeaders = html.replace(/<h[1-6]>.*?<\/h[1-6]>/gi, "");
-    const doc = new DOMParser().parseFromString(noHeaders, 'text/html');
+    // حذف العناوين Tags وما بينها
+    let clean = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
+    // تحويل الـ HTML لنص
+    const doc = new DOMParser().parseFromString(clean, 'text/html');
     let text = doc.body.textContent || "";
-    // 2. نحذف الكلمات الافتتاحية لو مكتوبة كنص عادي في أول السطر
-    text = text.replace(/^(عن المنتج|وصف المنتج|تفاصيل المنتج|وصف القطعة)[\s:-]*/gi, "");
+    // حذف الكلمات الافتتاحية مهما كانت طريقة كتابتها (عن المنتج، تفاصيل، الخ)
+    const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
+    keywordsToRemove.forEach(regex => {
+      text = text.replace(regex, "");
+    });
     return text.trim();
   };
   
-  // 110 حرف بتدينا تقريباً سطرين متناسقين في الموبايل
-  const shortDescription = stripHtml(product.description).substring(0, 110) + "... ";
+  // رفعنا عدد الحروف لـ 130 لضمان سطرين كاملين قبل الزرار
+  const shortDescription = stripHtml(product.description).substring(0, 130) + "... ";
 
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-32 font-sans selection:bg-[#F5C518] selection:text-black">
@@ -217,30 +221,31 @@ export default function ProductPage() {
 
       {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-6 max-w-4xl mx-auto" dir="rtl">
-        {/* التعديل الثاني: العناصر الثلاثة تحت اسم المنتج + نبذة الوصف */}
-        <div className="mb-4 pt-2">
-          {/* تصغير الخط لـ 26px وتقليل المسافة السفلية لرفعه لفوق */}
-          <h1 className="text-[26px] leading-tight font-black text-white mb-1.5 tracking-tight">{product.title}</h1>
+        {/* التعديل الثاني: العنوان والوصف المطور بدون تداخل */}
+        <div className="mb-4 pt-0.5"> {/* رفعناه للأعلى أقصى درجة ممكنة */}
+          <h1 className="text-[26px] leading-none font-black text-white mb-1.5 tracking-tight">
+            {product.title}
+          </h1>
           
-          {/* العناصر التلاتة */}
-          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium mb-3">
+          <div className="flex items-center gap-2 text-[13px] text-gray-400 font-medium mb-3">
             <span className="text-[#F5C518]">WIND Series</span>
-            <span>•</span>
+            <span className="text-gray-600">•</span>
             <span>{product.category || product.type || "أزياء"}</span>
-            <span>•</span>
-            <span className="border border-gray-500 px-1.5 rounded text-xs bg-[#1a1a1a]">WIND-24</span>
+            <span className="text-gray-600">•</span>
+            <span className="border border-gray-600 px-1.5 py-0.5 rounded text-[10px] bg-[#1a1a1a] leading-none">WIND-24</span>
           </div>
 
-          {/* نبذة الوصف مع التدرج اللوني والزرار في نفس السطر */}
-          <div className="relative text-sm leading-relaxed pr-2 border-r-2 border-[#333]">
-            <span className="bg-gradient-to-l from-gray-400 via-gray-400 to-[#121212] bg-clip-text text-transparent">
+          {/* النص والزرار بتنسيق نظيف يمنع تداخل العلامات */}
+          <div className="text-[14px] leading-[1.6] pr-3 border-r-2 border-[#333] text-gray-400">
+            <span className="opacity-90 align-middle">
               {shortDescription}
             </span>
             <button 
               onClick={() => setDescModalOpen(true)}
-              className="inline-flex items-center gap-1 text-[#F5C518] font-bold mr-1 hover:underline decoration-1 underline-offset-4 whitespace-nowrap align-bottom"
+              className="inline-flex items-center gap-1 text-[#F5C518] font-bold mr-1 hover:text-white transition-all align-middle group"
             >
-              المزيد عن المنتج <span className="w-3.5 h-3.5 rounded-full border border-[#F5C518] flex items-center justify-center text-[9px] font-black">!</span>
+              <span className="border-b border-[#F5C518]/30 group-hover:border-[#F5C518]">المزيد عن المنتج</span>
+              <span className="w-4 h-4 rounded-full border border-[#F5C518] flex items-center justify-center text-[10px] font-black shrink-0 ml-0.5">!</span>
             </button>
           </div>
         </div>
