@@ -152,11 +152,13 @@ export default function ProductPage() {
                 <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
               </div>
               
-              {/* السعر والخصم - تم تعديل الخط ليكون أكثر احترافية كالماركات العالمية */}
+              {/* السعر والخصم - تم تصحيح الخط لضمان ظهوره بشكل احترافي على كل الأجهزة */}
               <div className="flex items-end gap-2 mt-2">
-                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '0.5px' }} className="text-4xl font-normal text-white">{product.price}</span>
-                <span className="text-sm font-normal text-[#F5C518] mb-1.5">ج.م</span>
-                {product.oldPrice && (
+                <span className="text-4xl font-black text-white tracking-tighter drop-shadow-sm">
+                  {product?.price || "0"}
+                </span>
+                <span className="text-sm font-bold text-[#F5C518] mb-1.5">ج.م</span>
+                {product?.oldPrice && (
                   <span className="text-sm text-gray-500 line-through mb-1.5 mr-2">{product.oldPrice} ج.م</span>
                 )}
               </div>
@@ -189,7 +191,12 @@ export default function ProductPage() {
         <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
           {safeColors.length > 0 && (
             <div>
-              <h3 className="font-bold text-sm text-gray-400 mb-3 uppercase tracking-widest">اختر اللون:</h3>
+              <div className="flex items-center mb-3">
+                <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  اختر اللون: 
+                  {selectedColor && <span className="text-[#F5C518] text-xs bg-[#222] border border-[#444] px-2 py-0.5 rounded-md">{selectedColor}</span>}
+                </h3>
+              </div>
               <div className="flex flex-wrap gap-4">
                 {safeColors.map((color, idx) => (
                   <button
@@ -197,7 +204,7 @@ export default function ProductPage() {
                     onClick={() => setSelectedColor(color.name)}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === color.name ? "border-2 border-[#F5C518] bg-[#F5C518]/10" : "border border-[#333] hover:border-gray-500"}`}>
+                    <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === color.name ? "border-2 border-[#F5C518] bg-[#F5C518]/10 scale-105" : "border border-[#333] hover:border-gray-500"}`}>
                       <img src={color.swatch} className="w-full h-full rounded-full object-cover shadow-inner" alt={color.name} />
                     </div>
                     <span className={`text-xs font-bold ${selectedColor === color.name ? "text-white" : "text-gray-500"}`}>{color.name}</span>
@@ -210,7 +217,10 @@ export default function ProductPage() {
           {safeSizes.length > 0 && (
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest">اختر المقاس:</h3>
+                <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  اختر المقاس:
+                  {selectedSize && <span className="text-[#F5C518] text-xs bg-[#222] border border-[#444] px-2 py-0.5 rounded-md">{selectedSize}</span>}
+                </h3>
                 
                 {/* زر دليل المقاسات */}
                 <button 
@@ -227,7 +237,7 @@ export default function ProductPage() {
                     key={size}
                     onClick={() => setSelectedSize(size)}
                     className={`min-w-[60px] h-12 flex items-center justify-center text-sm font-black rounded-md border transition-all ${
-                      selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
+                      selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
                     }`}
                   >
                     {size}
@@ -285,7 +295,7 @@ export default function ProductPage() {
             className="flex-1 bg-[#F5C518] text-black font-black text-lg py-4 rounded-[4px] shadow-lg hover:bg-[#ffdb4d] transition-all flex justify-center items-center gap-2 group"
           >
             <Plus size={22} className="transition-transform group-hover:scale-125" />
-            أضف إلى حقيبتك ( {product.price} ج.م )
+            أضف إلى حقيبتك ( {product?.price || ""} ج.م )
           </button>
           
           {/* زر التفضيلات (Dropdown style from Netflix) */}
