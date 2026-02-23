@@ -140,8 +140,8 @@ export default function ProductPage() {
             </div>
           </div>
 
-        {/* تفاصيل القصة (الوصف) */}
-          <div className="flex-1 pt-1 flex flex-col justify-between h-40">
+          {/* تفاصيل السعر والبيانات البيعية */}
+          <div className="flex-1 pt-1 flex flex-col justify-between min-h-[160px]">
             <div>
               {/* التاجز زي تصنيف الأفلام */}
               <div className="flex flex-wrap gap-2 mb-2">
@@ -149,19 +149,43 @@ export default function ProductPage() {
                 <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
               </div>
               
-              {/* حاوية الوصف المختصر (البريفيو) - الكلاس ده بيخفي كل الأكورديون وبيسيب أول براجراف بس */}
-              <div 
-                className="text-gray-300 text-xs leading-relaxed line-clamp-4 preview-description"
-                dangerouslySetInnerHTML={{ __html: product.description }} 
-              />
+              {/* السعر والخصم */}
+              <div className="flex items-end gap-3 mt-3">
+                <span className="text-3xl font-black text-white tracking-tight">{product.price} <span className="text-sm font-normal text-[#F5C518]">ج.م</span></span>
+                {/* افتراض وجود سعر قديم للخصم، لو موجود هيظهر */}
+                {product.oldPrice && (
+                  <span className="text-sm text-gray-500 line-through mb-1.5">{product.oldPrice} ج.م</span>
+                )}
+              </div>
+
+              {/* حالة المخزون */}
+              <div className="flex items-center gap-2 mt-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span className="text-xs font-bold text-green-400">متوفر في المخزون</span>
+              </div>
+
+              {/* ملاحظة الشحن */}
+              <div className="text-[10px] text-gray-500 mt-1.5">
+                يتم احتساب مصاريف الشحن عند الدفع
+              </div>
+
+              {/* كلمات الثقة (Trust Badges) */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-[10px] text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">🛡️ دفع آمن</span>
+                <span className="text-[10px] text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">🔄 استرجاع مجاني</span>
+                <span className="text-[10px] text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">🚚 شحن سريع</span>
+              </div>
             </div>
             
             {/* زرار فتح تفاصيل الوصف كاملة */}
             <button 
               onClick={() => setDescModalOpen(true)}
-              className="text-left mt-1 text-[#F5C518] text-xs font-bold flex items-center gap-1 hover:brightness-125 w-fit"
+              className="text-left mt-4 text-[#F5C518] text-xs font-bold flex items-center justify-center gap-2 hover:brightness-125 w-full border border-[#F5C518]/30 px-3 py-2 rounded-md bg-[#F5C518]/10 transition-all"
             >
-              عرض التفاصيل الكاملة <Info size={12} />
+              عرض التفاصيل الكاملة للمنتج <Info size={14} />
             </button>
           </div>
         </div>
@@ -313,7 +337,7 @@ export default function ProductPage() {
         }
 
         /* ========================================== */
-        /* 1. تنسيقات إخفاء الأكورديون في العرض المصغر (جنب البوستر) */
+        /* 1. تنسيقات إخفاء الأكورديون في العرض المصغر (تم تعطيلها لأن الوصف أصبح في المودال فقط) */
         /* ========================================== */
         .preview-description .wind-tabs-container details:not(:first-child) { display: none !important; }
         .preview-description .wind-tabs-container summary { display: none !important; }
