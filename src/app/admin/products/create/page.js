@@ -127,11 +127,12 @@ function CreateProductForm() {
 
             entriesArray.forEach(entry => {
               if (typeof entry === 'string') {
-                // 1. هل الكلمة دي slug موجود فعلاً عندنا في صفحة الكولكشن؟
-                const isDirectSlug = availableCollections.find(c => c.slug === entry);
+                // 1. هل الكلمة دي slug موجود فعلاً عندنا في صفحة الكولكشن؟ (بنشيل السلاش للمطابقة)
+                const cleanEntry = entry.replace(/^\/+/, '');
+                const isDirectSlug = availableCollections.find(c => c.slug === cleanEntry);
                 if (isDirectSlug) {
-                  combinedSlugs.push(entry);
-                } 
+                  combinedSlugs.push(cleanEntry);
+                }
                 // 2. لو هي "جملة شوبيفاي الطويلة"، هندور جوه الجملة على أي اسم كولكشن من بتاعنا
                 else {
                   const matchInString = availableCollections.find(c => 
@@ -269,12 +270,15 @@ function CreateProductForm() {
       const handleToUse = urlHandle || productData.title.toLowerCase().trim().replace(/\s+/g, '-');
       const documentId = isEditing ? productId : handleToUse;
 
-      // --- الربط المصيري بين الأقسام والمنتج ---
-      // بنحفظ المصفوفة في categories (عشان المنيو) وفي collections (عشان توافق شوبيفاي)
+ // --- الربط المصيري بين الأقسام والمنتج ---
+      // السحر هنا: بنحفظ الـ slug مرتين (مرة عادي ومرة بسلاش / ) عشان يشتغل مع صفحة الكولكشن وشوبيفاي 100%
+      const finalCategories = (productData.selectedCollections || []).flatMap(slug => [slug, `/${slug}`]);
+      const { selectedCollections, ...cleanProductData } = productData; // عشان منخزنش الداتا المؤقتة في الفايربيس
+      
       const finalProduct = {
-        ...productData,
-        categories: productData.selectedCollections || [], 
-        collections: productData.selectedCollections || [], 
+        ...cleanProductData,
+        categories: finalCategories, 
+        collections: finalCategories, 
         images,
         chargeTax,
         inventoryTracked,
