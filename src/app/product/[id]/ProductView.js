@@ -139,7 +139,7 @@ export default function ProductPage() {
         <img 
           src={getImageUrl(activeImage)} 
           alt={product.title} 
-          className="w-full h-full object-cover object-top opacity-80"
+          className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
         />
         {/* تدرج لوني يعطي تأثير دمج مع الخلفية زي نتفليكس */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent"></div>
@@ -251,14 +251,20 @@ export default function ProductPage() {
                 {safeColors.map((colorItem, idx) => {
                   // استخراج اسم اللون
                   const colorName = typeof colorItem === 'string' ? colorItem : colorItem.name;
-                  // جلب درجة اللون من `colorSwatches` (لوحة التحكم) أو من النظام القديم، ولو مفيش يعطي رمادي
+                  // جلب درجة اللون أو الصورة المرتبطة
                   const hexOrImage = product.colorSwatches?.[colorName] || (typeof colorItem === 'object' ? colorItem.swatch : '#333333');
                   const isImage = hexOrImage.startsWith('http') || hexOrImage.includes('/');
 
                   return (
                     <button
                       key={idx}
-                      onClick={() => setSelectedColor(colorName)}
+                      onClick={() => {
+                        setSelectedColor(colorName);
+                        // 🔥 هنا السحر: التبديل الفوري للصورة الكبيرة عند الضغط على اللون 🔥
+                        if (isImage) {
+                          setActiveImage(hexOrImage);
+                        }
+                      }}
                       className="flex flex-col items-center gap-2 group"
                     >
                       <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === colorName ? "border-2 border-[#F5C518] bg-[#F5C518]/10 scale-105" : "border border-[#333] hover:border-gray-500"}`}>
