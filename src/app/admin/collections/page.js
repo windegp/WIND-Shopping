@@ -1,37 +1,36 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
-import { collection, addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, getDocs, writeBatch, where, documentId, arrayUnion, arrayRemove } from "firebase/firestore";
-import { Plus, Edit2, Trash2, ExternalLink, Loader2, X, Save, Image as ImageIcon, Search, Check, ArrowRight, AlertCircle } from "lucide-react";
+import { collection, doc, query, orderBy, onSnapshot, getDocs, writeBatch, where, arrayUnion, arrayRemove } from "firebase/firestore";
+import { Plus, Edit2, Trash2, ExternalLink, Loader2, X, Save, Image as ImageIcon, Search, ArrowRight, AlertCircle, CheckSquare, Square } from "lucide-react";
 
 export default function CollectionsPage() {
-    // --- State Management ---
-    const [view, setView] = useState('list'); // 'list' or 'editor'
+    const [view, setView] = useState('list');
     const [collections, setCollections] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
-    // --- Editor State ---
     const [activeId, setActiveId] = useState(null);
-    const [originalSlug, setOriginalSlug] = useState(""); // لحفظ الرابط القديم في حالة التغيير
-    const [originalProductIds, setOriginalProductIds] = useState([]); // لمقارنة المحذوفات
+    const [originalSlug, setOriginalSlug] = useState(""); 
+    const [originalProductIds, setOriginalProductIds] = useState([]); 
     
-    // Form Data
+    // --- 1. تحديث الـ Form Data ---
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
+        subtitle: '', // الوصف الفرعي الجديد
         description: '',
-        bottomDescription: '',
+        bottomDescription: '', // وصف الـ SEO السفلي
         image: ''
     });
 
-    // Product Management State
-    const [selectedProducts, setSelectedProducts] = useState([]); // المنتجات الموجودة حالياً في القسم
+    // --- 2. إدارة نافذة المنتجات العريضة (Modal) ---
+    const [selectedProducts, setSelectedProducts] = useState([]); 
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
+    const [allProducts, setAllProducts] = useState([]); // لحفظ كل المنتجات في المودال
     const [isSearching, setIsSearching] = useState(false);
 
-    // --- 1. Fetch Collections (Live) ---
     useEffect(() => {
         const q = query(collection(db, "collections"), orderBy("name"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -41,219 +40,134 @@ export default function CollectionsPage() {
         return () => unsubscribe();
     }, []);
 
-    // --- 2. Search Products Function ---
-    // دالة للبحث عن المنتجات في قاعدة البيانات لإضافتها
+    // جلب المنتجات للمودال
     useEffect(() => {
-        const searchProducts = async () => {
-            if (searchQuery.length < 2) {
-                setSearchResults([]);
-                return;
-            }
+        if (!isProductModalOpen) return;
+        const fetchAllProducts = async () => {
             setIsSearching(true);
             try {
-                // بحث بسيط (يمكن تطويره ليكون full-text search لو احتجت)
-                // هنا بنجيب كل المنتجات ونفلتر (لأن فايرستور محدودة في البحث بالنص الجزئي)
-                // الأفضل في الإنتاج استخدام Algolia، لكن هذا الكود كافي لعدد منتجات متوسط
                 const q = query(collection(db, "products")); 
                 const snapshot = await getDocs(q);
-                const results = snapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(p => p.title && p.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .slice(0, 10); // هات أول 10 نتايج بس
-                
-                setSearchResults(results);
+                setAllProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             } catch (error) {
-                console.error("Search error:", error);
+                console.error("Fetch products error:", error);
             } finally {
                 setIsSearching(false);
             }
         };
+        fetchAllProducts();
+    }, [isProductModalOpen]);
 
-        const timeoutId = setTimeout(searchProducts, 500); // Debounce
-        return () => clearTimeout(timeoutId);
-    }, [searchQuery]);
-
-
-    // --- 3. Handlers ---
-
-    // فتح المحرر
     const openEditor = async (collectionItem = null) => {
-        setSearchQuery("");
-        setSearchResults([]);
-        
         if (collectionItem) {
             setActiveId(collectionItem.id);
             setOriginalSlug(collectionItem.slug);
-            
             setFormData({
                 name: collectionItem.name || '',
                 slug: collectionItem.slug || '',
+                subtitle: collectionItem.subtitle || '',
                 description: collectionItem.description || '',
                 bottomDescription: collectionItem.bottomDescription || '',
                 image: collectionItem.image || ''
             });
 
-            // جلب المنتجات الموجودة بالفعل في هذا القسم
             setLoading(true);
             try {
-                // نبحث عن المنتجات اللي الـ categories بتاعها فيه ال slug ده
-                // ملاحظة: بنبحث بـ slug وبـ /slug لضمان التوافق
-                const q = query(
-                    collection(db, "products"), 
-                    where("categories", "array-contains-any", [collectionItem.slug, `/${collectionItem.slug}`])
-                );
+                const q = query(collection(db, "products"), where("categories", "array-contains-any", [collectionItem.slug, `/${collectionItem.slug}`]));
                 const snapshot = await getDocs(q);
                 const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
                 setSelectedProducts(products);
-                setOriginalProductIds(products.map(p => p.id)); // نحتفظ بالنسخة الأصلية عشان نعرف مين اتمسح
-            } catch (error) {
-                console.error("Error fetching collection products:", error);
-            } finally {
-                setLoading(false);
-            }
+                setOriginalProductIds(products.map(p => p.id)); 
+            } catch (error) { console.error(error); } 
+            finally { setLoading(false); }
         } else {
-            // New Collection
             setActiveId(null);
             setOriginalSlug("");
             setOriginalProductIds([]);
             setSelectedProducts([]);
-            setFormData({ name: '', slug: '', description: '', bottomDescription: '', image: '' });
+            setFormData({ name: '', slug: '', subtitle: '', description: '', bottomDescription: '', image: '' });
         }
         setView('editor');
     };
 
-    // إضافة منتج للقائمة
-    const addProductToCollection = (product) => {
-        // التأكد إنه مش موجود أصلاً
-        if (!selectedProducts.find(p => p.id === product.id)) {
+    // دالة التحديد والـ Checkbox
+    const toggleProductSelection = (product) => {
+        const isSelected = selectedProducts.find(p => p.id === product.id);
+        if (isSelected) {
+            setSelectedProducts(selectedProducts.filter(p => p.id !== product.id));
+        } else {
             setSelectedProducts([...selectedProducts, product]);
         }
-        setSearchQuery(""); // تصفير البحث
-        setSearchResults([]);
     };
 
-    // حذف منتج من القائمة (UI Only - الحفظ الفعلي عند الضغط على Save)
-    const removeProductFromCollection = (productId) => {
-        setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
-    };
-
-    // --- 4. THE SAVE LOGIC (القلب النابض) ---
     const handleSave = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         try {
-            // 1. Clean Slug
             let cleanSlug = formData.slug.trim().toLowerCase().replace(/\s+/g, '-');
             if (!cleanSlug) cleanSlug = formData.name.trim().toLowerCase().replace(/\s+/g, '-');
-            cleanSlug = cleanSlug.replace(/^\/+/, ''); // إزالة السلاش من البداية
+            cleanSlug = cleanSlug.replace(/^\/+/, '');
 
             const collectionPayload = {
                 name: formData.name.trim(),
                 slug: cleanSlug,
+                subtitle: formData.subtitle.trim(),
                 description: formData.description,
                 bottomDescription: formData.bottomDescription,
                 image: formData.image,
                 updatedAt: new Date(),
-                productCount: selectedProducts.length // تحديث العداد بناء على القائمة الحالية
+                productCount: selectedProducts.length
             };
 
             const batch = writeBatch(db);
+            let targetRef = activeId ? doc(db, "collections", activeId) : doc(collection(db, "collections"));
+            activeId ? batch.update(targetRef, collectionPayload) : batch.set(targetRef, collectionPayload);
 
-            // 2. Update/Create Collection Doc
-            let targetRef;
-            if (activeId) {
-                targetRef = doc(db, "collections", activeId);
-                batch.update(targetRef, collectionPayload);
-            } else {
-                targetRef = doc(collection(db, "collections"));
-                batch.set(targetRef, collectionPayload);
-            }
-
-            // 3. Smart Product Updating (الإضافة والحذف)
-            
-           // أ) المنتجات الجديدة (إضافة الـ slug الجديد)
             const productsToAdd = selectedProducts.filter(p => !originalProductIds.includes(p.id));
-            
             productsToAdd.forEach(product => {
-                const productRef = doc(db, "products", product.id);
-                // نضيف الـ slug والـ /slug عشان التوافق
-                batch.update(productRef, {
-                    categories: arrayUnion(cleanSlug, `/${cleanSlug}`) 
-                });
+                batch.update(doc(db, "products", product.id), { categories: arrayUnion(cleanSlug, `/${cleanSlug}`) });
             });
 
-            // ب) المنتجات المحذوفة أو في حالة تغير الـ Slug بالكامل
             if (originalSlug) {
-                // هنجيب كل المنتجات اللي كانت في القسم ده أصلاً وننضفها
                 const productsToCleanIds = [...new Set([...originalProductIds, ...selectedProducts.map(p => p.id)])];
-                
                 productsToCleanIds.forEach(id => {
                     const productRef = doc(db, "products", id);
                     const isStillSelected = selectedProducts.find(p => p.id === id);
-                    
-                    // مسح الروابط القديمة دائماً لتجنب التكرار أو الروابط الميتة
-                    batch.update(productRef, {
-                        categories: arrayRemove(originalSlug, `/${originalSlug}`)
-                    });
-
-                    // لو المنتج لسه معانا في القائمة، نأكد عليه الرابط الجديد (لو كان اتغير)
-                    if (isStillSelected) {
-                        batch.update(productRef, {
-                            categories: arrayUnion(cleanSlug, `/${cleanSlug}`)
-                        });
-                    }
+                    batch.update(productRef, { categories: arrayRemove(originalSlug, `/${originalSlug}`) });
+                    if (isStillSelected) batch.update(productRef, { categories: arrayUnion(cleanSlug, `/${cleanSlug}`) });
                 });
             } else {
-                // لو مفيش originalSlug (قسم جديد تماماً)، نتأكد من المنتجات المحذوفة يدوياً من القائمة
                 const productsToRemoveIds = originalProductIds.filter(id => !selectedProducts.find(p => p.id === id));
-                
                 productsToRemoveIds.forEach(id => {
-                    const productRef = doc(db, "products", id);
-                    batch.update(productRef, {
-                        categories: arrayRemove(cleanSlug, `/${cleanSlug}`)
-                    });
+                    batch.update(doc(db, "products", id), { categories: arrayRemove(cleanSlug, `/${cleanSlug}`) });
                 });
             }
 
-            // تنفيذ العمليات دفعة واحدة
             await batch.commit();
-
             setView('list');
-            alert("تم تحديث القسم والمنتجات بنجاح!");
-        } catch (error) {
-            console.error("Save Error:", error);
-            alert("حدث خطأ أثناء الحفظ، راجع الكونسول");
-        } finally {
-            setIsSaving(false);
-        }
+            alert("تم التحديث بنجاح!");
+        } catch (error) { alert("حدث خطأ أثناء الحفظ"); } 
+        finally { setIsSaving(false); }
     };
 
-  const handleDeleteCollection = async (id, slug) => {
+    const handleDeleteCollection = async (id, slug) => {
         if (confirm("تحذير: سيتم حذف القسم وإزالة ارتباطه بكافة المنتجات. هل أنت متأكد؟")) {
             try {
                 const batch = writeBatch(db);
                 batch.delete(doc(db, "collections", id));
-
-                // تنظيف المنتجات من الـ slug المحذوف
                 const q = query(collection(db, "products"), where("categories", "array-contains-any", [slug, `/${slug}`]));
                 const snapshot = await getDocs(q);
                 snapshot.docs.forEach(productDoc => {
-                    batch.update(doc(db, "products", productDoc.id), {
-                        categories: arrayRemove(slug, `/${slug}`)
-                    });
+                    batch.update(doc(db, "products", productDoc.id), { categories: arrayRemove(slug, `/${slug}`) });
                 });
-
                 await batch.commit();
-                alert("تم حذف القسم بنجاح");
-            } catch (err) {
-                alert("خطأ في الحذف");
-            }
+            } catch (err) { alert("خطأ في الحذف"); }
         }
     };
 
+    // تصفية المنتجات في المودال بناءً على البحث
+    const filteredProducts = allProducts.filter(p => p.title?.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // --- Views ---
     if (loading && view === 'list') return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-[#121212] text-[#F5C518]">
             <Loader2 className="animate-spin mb-4" size={40} />
@@ -261,185 +175,158 @@ export default function CollectionsPage() {
         </div>
     );
 
-    // --- EDITOR VIEW ---
     if (view === 'editor') {
         return (
             <div className="min-h-screen bg-[#121212] text-white pb-20" dir="rtl">
                 {/* Navbar */}
-                <div className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-[#333] px-6 py-4 flex justify-between items-center shadow-lg">
+                <div className="sticky top-0 z-40 bg-[#1a1a1a] border-b border-[#333] px-6 py-4 flex justify-between items-center shadow-lg">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setView('list')} className="text-gray-400 hover:text-white transition">
-                            <ArrowRight size={24} />
-                        </button>
-                        <h1 className="text-xl font-bold text-white">
-                            {activeId ? `تعديل: ${formData.name}` : 'إضافة قسم جديد'}
-                        </h1>
+                        <button onClick={() => setView('list')} className="text-gray-400 hover:text-white transition"><ArrowRight size={24} /></button>
+                        <h1 className="text-xl font-bold">{activeId ? `تعديل: ${formData.name}` : 'إضافة قسم جديد'}</h1>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => setView('list')} className="px-6 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white transition">
-                            إلغاء
-                        </button>
-                        <button 
-                            onClick={handleSave} 
-                            disabled={isSaving}
-                            className="bg-[#F5C518] text-black px-8 py-2 rounded-lg font-black flex items-center gap-2 hover:bg-white transition disabled:opacity-50"
-                        >
-                            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                            حفظ التغييرات
+                        <button onClick={handleSave} disabled={isSaving} className="bg-[#F5C518] text-black px-8 py-2 rounded-lg font-black flex items-center gap-2 hover:bg-white transition disabled:opacity-50">
+                            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} حفظ التغييرات
                         </button>
                     </div>
                 </div>
 
                 <div className="max-w-6xl mx-auto mt-8 px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    {/* Right Column: Collection Info & Products */}
+                    {/* Right Column */}
                     <div className="lg:col-span-2 space-y-6">
                         
                         {/* 1. Basic Details */}
                         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-                            <h3 className="text-lg font-bold mb-4 text-[#F5C518]">بيانات القسم</h3>
+                            <h3 className="text-lg font-bold mb-4 text-[#F5C518]">البيانات الأساسية</h3>
                             <div className="space-y-4">
-                                <input 
-                                    type="text" 
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none placeholder-gray-600"
-                                    placeholder="عنوان القسم (مثلاً: خصومات الشتاء)"
-                                />
-                                <textarea 
-                                    rows={3}
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none resize-none placeholder-gray-600"
-                                    placeholder="وصف مختصر يظهر تحت العنوان..."
-                                />
+                                <div>
+                                    <label className="text-xs text-gray-400 mb-1 block">عنوان القسم الرئيسي</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none" placeholder="مثلاً: الشيلان" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400 mb-1 block">الوصف الفرعي (تحت العنوان)</label>
+                                    <input type="text" value={formData.subtitle} onChange={(e) => setFormData({...formData, subtitle: e.target.value})} className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none" placeholder="مثلاً: WIND ESSENTIALS" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400 mb-1 block">الوصف المختصر</label>
+                                    <textarea rows={2} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none resize-none" placeholder="يظهر أسفل العنوان الرئيسي..." />
+                                </div>
                             </div>
                         </div>
 
-                        {/* 2. Products Management (Search & Add) */}
+                        {/* 2. SEO Bottom Description */}
                         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-bold text-[#F5C518]">المنتجات ({selectedProducts.length})</h3>
-                                <span className="text-xs text-gray-400">ابحث وأضف</span>
-                            </div>
+                            <h3 className="text-lg font-bold mb-2 text-[#F5C518]">وصف الـ SEO (أسفل الصفحة)</h3>
+                            <p className="text-xs text-gray-500 mb-4">هذا النص سيظهر في أسفل صفحة القسم لتحسين محركات البحث، وسيتم طيه تلقائياً بزر "اقرأ المزيد".</p>
+                            <textarea 
+                                rows={6} 
+                                value={formData.bottomDescription} 
+                                onChange={(e) => setFormData({...formData, bottomDescription: e.target.value})} 
+                                className="w-full bg-black border border-[#333] rounded-lg p-4 text-sm text-gray-300 focus:border-[#F5C518] outline-none resize-y" 
+                                placeholder="اكتب وصفاً طويلاً يحتوي على الكلمات المفتاحية هنا..." 
+                            />
+                        </div>
 
-                            {/* Search Bar */}
-                            <div className="relative mb-6">
-                                <Search className="absolute right-3 top-3 text-gray-500" size={18} />
-                                <input 
-                                    type="text" 
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-black border border-[#333] rounded-lg py-3 pr-10 pl-4 text-white focus:border-[#F5C518] outline-none"
-                                    placeholder="ابحث عن منتج للإضافة..."
-                                />
-                                {/* Search Results Dropdown */}
-                                {searchQuery.length >= 2 && (
-                                    <div className="absolute w-full bg-[#222] border border-[#444] rounded-lg mt-1 z-10 max-h-60 overflow-y-auto shadow-2xl">
-                                        {isSearching ? (
-                                            <div className="p-4 text-center text-gray-400"><Loader2 className="animate-spin inline mr-2"/> جاري البحث...</div>
-                                        ) : searchResults.length > 0 ? (
-                                            searchResults.map(prod => {
-                                                const isAlreadyAdded = selectedProducts.find(p => p.id === prod.id);
-                                                return (
-                                                    <div 
-                                                        key={prod.id}
-                                                        onClick={() => !isAlreadyAdded && addProductToCollection(prod)}
-                                                        className={`p-3 border-b border-[#333] flex items-center gap-3 cursor-pointer transition ${isAlreadyAdded ? 'opacity-50 cursor-not-allowed bg-black/50' : 'hover:bg-[#333]'}`}
-                                                    >
-                                                        <img src={prod.images?.[0] || '/placeholder.png'} className="w-8 h-8 rounded object-cover" alt="" />
-                                                        <div className="flex-1">
-                                                            <p className="text-sm font-bold text-gray-200">{prod.title}</p>
-                                                            <p className="text-xs text-[#F5C518]">{prod.price} EGP</p>
-                                                        </div>
-                                                        {isAlreadyAdded ? <span className="text-xs text-green-500 font-bold">مضاف</span> : <Plus size={16} />}
-                                                    </div>
-                                                )
-                                            })
-                                        ) : (
-                                            <div className="p-4 text-center text-gray-500">لا توجد نتائج</div>
-                                        )}
-                                    </div>
-                                )}
+                        {/* 3. Products Summary Card */}
+                        <div className="bg-gradient-to-r from-[#1a1a1a] to-[#222] border border-[#333] rounded-xl p-6 flex justify-between items-center shadow-lg">
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-1">المنتجات المرتبطة</h3>
+                                <p className="text-sm text-gray-400">القسم يحتوي حالياً على <span className="text-[#F5C518] font-bold">{selectedProducts.length}</span> منتج.</p>
                             </div>
-
-                            {/* Selected Products List */}
-                            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-                                {selectedProducts.length > 0 ? selectedProducts.map(prod => (
-                                    <div key={prod.id} className="flex items-center justify-between bg-black/40 border border-[#333] p-3 rounded-lg group hover:border-gray-600 transition">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded overflow-hidden bg-gray-800">
-                                                <img src={prod.images?.[0] || '/placeholder.png'} alt="" className="w-full h-full object-cover" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-gray-200">{prod.title}</p>
-                                                <p className="text-xs text-gray-500">{prod.category || 'عام'}</p>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={() => removeProductFromCollection(prod.id)}
-                                            className="text-gray-600 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-full transition"
-                                            title="إزالة من القسم"
-                                        >
-                                            <X size={18} />
-                                        </button>
-                                    </div>
-                                )) : (
-                                    <div className="text-center py-10 border border-dashed border-[#333] rounded-lg">
-                                        <p className="text-gray-500 text-sm">لم يتم إضافة منتجات لهذا القسم بعد.</p>
-                                    </div>
-                                )}
-                            </div>
+                            <button 
+                                onClick={() => setIsProductModalOpen(true)}
+                                className="bg-[#333] border border-[#444] text-white hover:text-black hover:bg-[#F5C518] px-6 py-3 rounded-lg font-bold transition-all"
+                            >
+                                إدارة المنتجات
+                            </button>
                         </div>
                     </div>
 
                     {/* Left Column: Settings */}
                     <div className="space-y-6">
-                        {/* Image */}
                         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">صورة الكولكشن</h3>
-                            <div className="border-2 border-dashed border-[#333] rounded-lg p-2 flex flex-col items-center justify-center min-h-[150px] bg-black mb-3 overflow-hidden relative">
-                                {formData.image ? (
-                                    <img src={formData.image} alt="Preview" className="w-full h-full object-cover rounded" />
-                                ) : (
-                                    <div className="text-center text-gray-500">
-                                        <ImageIcon size={30} className="mx-auto mb-2 opacity-50" />
-                                        <p className="text-[10px]">Preview</p>
-                                    </div>
-                                )}
+                            <div className="border-2 border-dashed border-[#333] rounded-lg flex flex-col items-center justify-center h-48 bg-black mb-3 overflow-hidden">
+                                {formData.image ? <img src={formData.image} alt="Preview" className="w-full h-full object-cover rounded" /> : <ImageIcon size={30} className="text-gray-600" />}
                             </div>
-                            <input 
-                                type="url" 
-                                value={formData.image}
-                                onChange={(e) => setFormData({...formData, image: e.target.value})}
-                                className="w-full bg-black border border-[#333] rounded p-2 text-xs text-white focus:border-[#F5C518] outline-none font-mono text-left"
-                                placeholder="https://i.ibb.co/..."
-                                dir="ltr"
-                            />
+                            <input type="url" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} className="w-full bg-black border border-[#333] rounded p-2 text-xs text-white outline-none font-mono" placeholder="رابط الصورة..." dir="ltr" />
                         </div>
 
-                        {/* Slug */}
                         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">رابط الصفحة (Slug)</h3>
-                            <input 
-                                type="text" 
-                                value={formData.slug}
-                                onChange={(e) => setFormData({...formData, slug: e.target.value})}
-                                className="w-full bg-black border border-[#333] rounded p-2 text-sm text-white focus:border-[#F5C518] outline-none font-mono text-left"
-                                placeholder="new-arrivals"
-                                dir="ltr"
-                            />
-                            {originalSlug && formData.slug !== originalSlug && (
-                                <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-700/50 rounded flex gap-2 items-start">
-                                    <AlertCircle size={14} className="text-yellow-500 mt-0.5 shrink-0" />
-                                    <p className="text-[10px] text-yellow-500/80 leading-tight">
-                                        تغيير الرابط سيؤدي لتحديث كل المنتجات المضافة للرابط القديم {originalSlug}.
-                                    </p>
-                                </div>
-                            )}
+                            <input type="text" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} className="w-full bg-black border border-[#333] rounded p-2 text-sm text-white focus:border-[#F5C518] outline-none font-mono" dir="ltr" />
                         </div>
                     </div>
                 </div>
+
+                {/* --- نافذة إدارة المنتجات (Modal) --- */}
+                {isProductModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsProductModalOpen(false)}></div>
+                        <div className="bg-[#111] border border-[#333] w-full max-w-5xl h-[85vh] rounded-2xl relative z-10 flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+                            
+                            {/* Header المودال */}
+                            <div className="p-6 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] rounded-t-2xl">
+                                <div>
+                                    <h2 className="text-2xl font-black text-[#F5C518]">اختيار المنتجات</h2>
+                                    <p className="text-sm text-gray-400 mt-1">تم اختيار {selectedProducts.length} منتج</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative w-64 md:w-80">
+                                        <Search className="absolute right-3 top-2.5 text-gray-500" size={18} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="ابحث عن منتج..." 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-black border border-[#444] rounded-lg py-2 pr-10 pl-4 text-sm text-white focus:border-[#F5C518] outline-none"
+                                        />
+                                    </div>
+                                    <button onClick={() => setIsProductModalOpen(false)} className="bg-[#333] hover:bg-white hover:text-black p-2 rounded-lg transition-colors"><X size={20}/></button>
+                                </div>
+                            </div>
+
+                            {/* شبكة المنتجات مع Checkboxes */}
+                            <div className="flex-1 overflow-y-auto p-6 bg-[#0a0a0a]">
+                                {isSearching ? (
+                                    <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-[#F5C518]" size={40} /></div>
+                                ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                        {/* نعرض المنتجات المختارة في الأول لو مفيش بحث */}
+                                        {(searchQuery ? filteredProducts : allProducts).map(prod => {
+                                            const isSelected = selectedProducts.find(p => p.id === prod.id);
+                                            return (
+                                                <div 
+                                                    key={prod.id} 
+                                                    onClick={() => toggleProductSelection(prod)}
+                                                    className={`cursor-pointer group relative border-2 rounded-xl overflow-hidden transition-all duration-200 ${isSelected ? 'border-[#F5C518] bg-[#F5C518]/10' : 'border-[#333] bg-[#1a1a1a] hover:border-gray-500'}`}
+                                                >
+                                                    <div className="h-40 bg-black relative">
+                                                        <img src={prod.images?.[0] || '/placeholder.png'} className={`w-full h-full object-cover transition-opacity ${isSelected ? 'opacity-100' : 'opacity-60 group-hover:opacity-80'}`} alt="" />
+                                                        <div className="absolute top-2 right-2 bg-black/50 rounded-lg p-1">
+                                                            {isSelected ? <CheckSquare className="text-[#F5C518]" size={20} /> : <Square className="text-gray-400" size={20} />}
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-3">
+                                                        <p className="text-xs font-bold text-white truncate">{prod.title}</p>
+                                                        <p className="text-[10px] text-[#F5C518] mt-1">{prod.price} EGP</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer المودال */}
+                            <div className="p-4 border-t border-[#333] bg-[#1a1a1a] rounded-b-2xl text-left">
+                                <button onClick={() => setIsProductModalOpen(false)} className="bg-[#F5C518] text-black px-8 py-2 rounded-lg font-black hover:bg-white transition-colors">
+                                    تأكيد وإغلاق
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -448,57 +335,30 @@ export default function CollectionsPage() {
     return (
         <div className="p-6 bg-[#121212] min-h-screen text-white font-sans" dir="rtl">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
                 <div className="flex justify-between items-end mb-10">
                     <div>
-                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Mina Collections</h1>
+                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Collections</h1>
                         <p className="text-[#F5C518] font-bold tracking-[0.3em] text-xs mt-2">WIND CONTROL PANEL</p>
                     </div>
-                    <button 
-                        onClick={() => openEditor(null)}
-                        className="bg-[#F5C518] text-black px-8 py-3 rounded-full font-black flex items-center gap-2 hover:bg-white transition shadow-[0_0_20px_rgba(245,197,24,0.3)]"
-                    >
+                    <button onClick={() => openEditor(null)} className="bg-[#F5C518] text-black px-8 py-3 rounded-full font-black flex items-center gap-2 hover:bg-white transition shadow-lg">
                         <Plus size={20} /> كولكشن جديد
                     </button>
                 </div>
-
-             {/* Collections Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {collections.map((item) => (
-                        <div key={item.id} className="bg-[#1a1a1a] border border-[#333] rounded-2xl overflow-hidden group hover:border-[#F5C518] transition-all duration-300 flex flex-col">
-                            {/* Image Header */}
-                            <div className="h-40 bg-black relative overflow-hidden">
-                                {item.image ? (
-                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition duration-500" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-[#222]">
-                                        <ImageIcon className="text-gray-600" size={30} />
-                                    </div>
-                                )}
-                                <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono border border-white/10">
-                                    {item.productCount || 0} ITEMS
-                                </div>
+                        <div key={item.id} className="bg-[#1a1a1a] border border-[#333] rounded-2xl overflow-hidden group hover:border-[#F5C518] flex flex-col">
+                            <div className="h-40 bg-black relative">
+                                {item.image ? <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition" /> : <div className="w-full h-full flex items-center justify-center bg-[#222]"><ImageIcon className="text-gray-600" size={30} /></div>}
                             </div>
-
-                            {/* Body */}
                             <div className="p-5 flex-1 flex flex-col">
                                 <h3 className="text-xl font-bold text-white mb-2">{item.name}</h3>
-                                <p className="text-gray-500 text-xs line-clamp-2 mb-4 flex-1">
-                                    {item.description || "لا يوجد وصف..."}
-                                </p>
-                                
-                                <div className="flex items-center justify-between pt-4 border-t border-[#333] mt-auto">
+                                <p className="text-gray-500 text-xs line-clamp-2 mb-4 flex-1">{item.description}</p>
+                                <div className="flex items-center justify-between pt-4 border-t border-[#333]">
                                     <div className="flex gap-2">
-                                        <button onClick={() => openEditor(item)} className="p-2 bg-[#222] rounded-lg hover:bg-[#F5C518] hover:text-black transition text-gray-400">
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDeleteCollection(item.id, item.slug)} className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400">
-                                            <Trash2 size={16} />
-                                        </button>
+                                        <button onClick={() => openEditor(item)} className="p-2 bg-[#222] rounded-lg hover:bg-[#F5C518] hover:text-black transition text-gray-400"><Edit2 size={16} /></button>
+                                        <button onClick={() => handleDeleteCollection(item.id, item.slug)} className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400"><Trash2 size={16} /></button>
                                     </div>
-                                    <a href={`https://wind-wsp-o6al.vercel.app/collections/${item.slug}`} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-[#F5C518] flex items-center gap-1">
-                                        عرض <ExternalLink size={10} />
-                                    </a>
+                                    <a href={`/collections/${item.slug}`} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-[#F5C518] flex items-center gap-1">عرض <ExternalLink size={10} /></a>
                                 </div>
                             </div>
                         </div>
