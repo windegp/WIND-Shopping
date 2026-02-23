@@ -7,7 +7,7 @@ import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import SizeChartModal from '@/components/SizeChartModal';
 // استدعاء أيقونات احترافية لتعزيز التجربة السينمائية
-import { Play, Plus, Star, Info, Share2, Heart, ImageIcon, ChevronDown } from "lucide-react";
+import { Play, Plus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X } from "lucide-react";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -20,6 +20,7 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState("");
   const [isSizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isDescModalOpen, setDescModalOpen] = useState(false); // حالة مودال الوصف السينمائي
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -139,19 +140,29 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* تفاصيل القصة (الوصف) */}
-          <div className="flex-1 pt-1">
-            {/* التاجز زي تصنيف الأفلام */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <span className="border border-gray-600 rounded-full px-3 py-1 text-xs font-bold text-gray-300">Premium Quality</span>
-              <span className="border border-gray-600 rounded-full px-3 py-1 text-xs font-bold text-gray-300">Oversized</span>
-              <span className="border border-gray-600 rounded-full px-3 py-1 text-xs font-bold text-gray-300">Winter</span>
+        {/* تفاصيل القصة (الوصف) */}
+          <div className="flex-1 pt-1 flex flex-col justify-between h-40">
+            <div>
+              {/* التاجز زي تصنيف الأفلام */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Premium</span>
+                <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
+              </div>
+              
+              {/* حاوية الوصف المختصر (البريفيو) - الكلاس ده بيخفي كل الأكورديون وبيسيب أول براجراف بس */}
+              <div 
+                className="text-gray-300 text-xs leading-relaxed line-clamp-4 preview-description"
+                dangerouslySetInnerHTML={{ __html: product.description }} 
+              />
             </div>
             
-            <div 
-              className="text-gray-200 text-sm leading-relaxed line-clamp-4 ql-editor-display"
-              dangerouslySetInnerHTML={{ __html: product.description }} 
-            />
+            {/* زرار فتح تفاصيل الوصف كاملة */}
+            <button 
+              onClick={() => setDescModalOpen(true)}
+              className="text-left mt-1 text-[#F5C518] text-xs font-bold flex items-center gap-1 hover:brightness-125 w-fit"
+            >
+              عرض التفاصيل الكاملة <Info size={12} />
+            </button>
           </div>
         </div>
 
@@ -266,6 +277,28 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {/* 🎬 مودال تفاصيل الوصف (الكارت السينمائي) */}
+      {isDescModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
+          <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
+            {/* رأس المودال */}
+            <div className="p-4 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] sticky top-0 z-10">
+              <h3 className="font-black text-lg text-white flex items-center gap-2">
+                <div className="w-1.5 h-5 bg-[#F5C518] rounded-full"></div>
+                معلومات المنتج والتفاصيل
+              </h3>
+              <button onClick={() => setDescModalOpen(false)} className="bg-[#242424] hover:bg-[#333] p-1.5 rounded-full text-gray-400 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            {/* محتوى الوصف بكامل تصميمه لكن الكلاس dark-wind-tabs بيعكس ألوانه */}
+            <div className="p-5 overflow-y-auto ql-editor-display dark-wind-tabs" dir="rtl">
+              <div dangerouslySetInnerHTML={{ __html: product.description }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       <SizeChartModal 
         isOpen={isSizeGuideOpen} 
         onClose={() => setSizeGuideOpen(false)} 
@@ -273,6 +306,77 @@ export default function ProductPage() {
       />
 
       <style jsx global>{`
+        /* أنيميشن الدخول */
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================== */
+        /* 1. تنسيقات إخفاء الأكورديون في العرض المصغر (جنب البوستر) */
+        /* ========================================== */
+        .preview-description .wind-tabs-container details:not(:first-child) { display: none !important; }
+        .preview-description .wind-tabs-container summary { display: none !important; }
+        .preview-description .wind-tabs-container .read-more-wrapper { display: none !important; }
+        .preview-description .wind-tabs-container { background: transparent !important; }
+        .preview-description .wind-tabs-container div { 
+          color: #d1d5db !important;
+          font-size: 11px !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        /* ========================================== */
+        /* 2. تحويل ألوان تصميمك للوضع الليلي داخل المودال (Dark Mode) */
+        /* ========================================== */
+        .dark-wind-tabs .wind-tabs-container {
+          background: transparent !important;
+        }
+        .dark-wind-tabs .wind-tabs-container details {
+          background: #1a1a1a !important;
+          border-bottom: 1px solid #333 !important;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          padding: 0 15px !important;
+          transition: all 0.3s ease;
+        }
+        .dark-wind-tabs .wind-tabs-container details[open] {
+          border-color: #F5C518 !important;
+        }
+        .dark-wind-tabs .wind-tabs-container summary {
+          color: #fff !important;
+          border: none !important;
+        }
+        /* تلوين أسهم الفتح والقفل باللون الأصفر */
+        .dark-wind-tabs .wind-tabs-container summary svg path {
+          stroke: #F5C518 !important; 
+        }
+        /* تلوين النصوص الداخلية */
+        .dark-wind-tabs .wind-tabs-container div {
+          color: #a1a1aa !important;
+        }
+        /* تغيير اللون العنابي (أحمر ويند القديم) للأصفر السينمائي */
+        .dark-wind-tabs .wind-tabs-container span[style*="color: #800020"] {
+          color: #F5C518 !important;
+        }
+        /* خطوط الفواصل الداخلية في المواصفات */
+        .dark-wind-tabs .wind-tabs-container div[style*="border-bottom: 1px solid #f3f4f6"] {
+          border-bottom: 1px solid #333 !important;
+        }
+        /* العناوين الداخلية (زي الخامة، التصميم) */
+        .dark-wind-tabs .wind-tabs-container div[style*="color: #111827"],
+        .dark-wind-tabs .wind-tabs-container strong[style*="color: #111827"] {
+          color: #e5e7eb !important;
+        }
+        /* الأزرار (دليل القياسات / اقرأ المزيد) */
+        .dark-wind-tabs .wind-tabs-container button,
+        .dark-wind-tabs .wind-tabs-container .read-more-wrapper summary {
+          color: #F5C518 !important;
+        }
+        .dark-wind-tabs .wind-tabs-container summary:hover {
+          background-color: transparent !important;
+        }
+
         /* إخفاء شريط التمرير لمعرض الصور */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
