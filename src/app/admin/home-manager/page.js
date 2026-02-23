@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 // --- خريطة الأقسام الأساسية فقط ---
@@ -23,6 +23,9 @@ export default function HomeManagerPage() {
 
   // --- 4. حالة واجهة المستخدم (الأكورديون) ---
   const [expandedSections, setExpandedSections] = useState({});
+  
+  // --- 5. الأقسام الديناميكية المتاحة ---
+  const [availableCollections, setAvailableCollections] = useState([]);
 
   // حالات التحميل والحفظ
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,18 @@ export default function HomeManagerPage() {
 
   // جلب جميع البيانات عند فتح الصفحة
   useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        const colsSnap = await getDocs(collection(db, "collections"));
+        setAvailableCollections(colsSnap.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name,
+          slug: doc.data().slug
+        })));
+      } catch (error) { console.error("Error fetching collections:", error); }
+    };
+    fetchCollections();
+
     const fetchCurrentData = async () => {
       try {
         const layoutRef = doc(db, "homepage", "layout_config");
@@ -82,7 +97,11 @@ export default function HomeManagerPage() {
 
     if (config.hasTitle) initialData.title = config.label || "";
     if (config.hasSubTitle) initialData.subTitle = "";
-    if (config.hasFeaturedCards) initialData.cards = [];
+    if (config.hasFeaturedCards) {
+      initialData.cards = [];
+      initialData.dataSource = "manual"; // افتراضي يدوي
+      initialData.collectionSlug = "";   // فارغ في البداية
+    }
     if (config.hasViewAllLink) initialData.viewAllLink = "";
 
     updated[index].data = initialData;
@@ -101,7 +120,7 @@ export default function HomeManagerPage() {
     setLayoutSections([...layoutSections, {
       category: defaultCategory,
       designId: SECTION_TYPES[defaultCategory].designId,
-      data: { title: "المميز اليوم", subTitle: "", cards: [] }
+      data: { title: "المميز اليوم", subTitle: "", cards: [], dataSource: "manual", collectionSlug: "" }
     }]);
     setExpandedSections(prev => ({ ...prev, [layoutSections.length]: true }));
   };
@@ -482,12 +501,49 @@ export default function HomeManagerPage() {
                           </div>
                         )}
 
-                        {/* 2. محرر البطاقات */}
+                       {/* 2. محرر البطاقات أو القسم الديناميكي */}
                         {config?.hasFeaturedCards && (
-                          <div className="border-t border-[#444] pt-4">
-                            <h4 className="text-[#F5C518] font-bold mb-4">البطاقات المخصصة (Cards):</h4>
-                            <div className="space-y-6">
-                              {(section.data?.cards || []).map((card, cardIndex) => (
+                          <div className="border-t border-[#444] pt-4 mt-4">
+                            
+                            {/* --- أزرار التبديل بين اليدوي والديناميكي --- */}
+                            <div className="flex justify-between items-center mb-6 bg-[#121212] p-2 rounded-xl border border-[#333]">
+                              <h4 className="text-[#F5C518] font-bold text-sm px-2">مصدر عرض المنتجات:</h4>
+                              <div className="flex bg-[#1a1a1a] rounded-lg p-1 border border-[#444]">
+                                <button
+                                  onClick={() => handleLayoutDataChange(sectionIndex, 'dataSource', 'manual')}
+                                  className={`px-6 py-2 text-xs font-bold rounded-md transition-all ${(!section.data?.dataSource || section.data.dataSource === 'manual') ? 'bg-[#F5C518] text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
+                                >إدخال يدوي</button>
+                                <button
+                                  onClick={() => handleLayoutDataChange(sectionIndex, 'dataSource', 'dynamic')}
+                                  className={`px-6 py-2 text-xs font-bold rounded-md transition-all ${section.data?.dataSource === 'dynamic' ? 'bg-[#F5C518] text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
+                                >سحب ديناميكي (تلقائي)</button>
+                              </div>
+                            </div>
+
+                            {/* --- الحالة الأولى: ديناميكي (تلقائي من الأقسام) --- */}
+                            {section.data?.dataSource === 'dynamic' ? (
+                              <div className="p-8 bg-[#1a1a1a] border border-[#F5C518]/30 rounded-xl mb-4 text-center shadow-inner">
+                                <label className="block text-sm font-bold text-[#F5C518] mb-4">اختر القسم (Collection) ليتم سحب أحدث منتجاته تلقائياً</label>
+                                <select
+                                  value={section.data?.collectionSlug || ""}
+                                  onChange={(e) => handleLayoutDataChange(sectionIndex, 'collectionSlug', e.target.value)}
+                                  className="w-full max-w-md mx-auto p-4 border border-[#444] rounded-lg bg-[#121212] text-white focus:border-[#F5C518] outline-none font-bold text-center block"
+                                >
+                                  <option value="">-- اضغط هنا لاختيار القسم --</option>
+                                  {availableCollections.map(cat => (
+                                    <option key={cat.id} value={cat.slug}>{cat.name} (Slug: {cat.slug})</option>
+                                  ))}
+                                </select>
+                                <p className="text-xs text-gray-400 mt-4 leading-relaxed max-w-lg mx-auto">
+                                  * سيقوم الموقع تلقائياً بجلب المنتجات المرتبطة بهذا القسم وعرضها للعملاء بتصميم <span className="text-[#F5C518]">{config.label}</span> وبدون الحاجة لإدخال أي بيانات يدوية.
+                                </p>
+                              </div>
+                            ) : (
+                            
+                            {/* --- الحالة الثانية: الإدخال اليدوي (الكود القديم بتاعك كامل) --- */}
+                            <div>
+                              <div className="space-y-6">
+                                {(section.data?.cards || []).map((card, cardIndex) => (
                                 <div key={cardIndex} className="p-5 border border-[#555] rounded-xl bg-[#1a1a1a] relative shadow-inner">
                                   <div className="flex justify-between items-center mb-4 border-b border-[#333] pb-2">
                                     <span className="font-bold text-gray-300 text-sm">البطاقة الرئيسية #{cardIndex + 1}</span>
@@ -612,7 +668,7 @@ export default function HomeManagerPage() {
                             </div>
 
                             {/* ✅ زرار إضافة بطاقة جديدة مع template مختلف حسب نوع القسم */}
-                            <button
+                         <button
                               onClick={() => addArrayItem(sectionIndex, 'cards',
                                 section.category === 'TOP_TEN_SECTION'
                                   ? { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" }
@@ -622,14 +678,13 @@ export default function HomeManagerPage() {
                             >
                               + إضافة بطاقة جديدة
                             </button>
+                            </div>
+                          )} {/* نهاية شرط التبديل بين اليدوي والديناميكي */}
                           </div>
                         )}
 
                       </div>
                     )}
-                  </div>
-                );
-              })}
 
               {/* رسالة توضيحية */}
               {layoutSections.length <= 1 && (
