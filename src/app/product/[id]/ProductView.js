@@ -6,8 +6,8 @@ import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import SizeChartModal from '@/components/SizeChartModal';
-// استدعاء أيقونات احترافية لتعزيز التجربة السينمائية
-import { Play, Plus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X } from "lucide-react";
+// استدعاء الأيقونات الاحترافية لتعزيز التجربة السينمائية وكلمات الثقة
+import { Play, Plus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck } from "lucide-react";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -124,24 +124,27 @@ export default function ProductPage() {
         </button>
       </div>
 
-      {/* 3. منطقة الحبكة (Mini Poster & Synopsis) */}
+      {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-6 max-w-4xl mx-auto" dir="rtl">
         <div className="flex gap-4 items-start">
           
           {/* البوستر المصغر */}
-          <div className="w-28 h-40 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative">
+          <div className="w-32 h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative">
             <img src={getImageUrl(gallery[1] || activeImage)} className="w-full h-full object-cover" alt="poster" />
             <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
               <Plus size={16} className="text-white" />
             </div>
-            {/* الشعار السينمائي */}
-            <div className="absolute bottom-1 w-full text-center">
-              <span className="text-[8px] font-black tracking-widest uppercase text-[#F5C518] drop-shadow-md">WIND EXCLUSIVE</span>
-            </div>
+            {/* الزر الجديد داخل البوستر */}
+            <button 
+              onClick={() => setDescModalOpen(true)}
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[80%] bg-black/80 border border-[#F5C518]/50 text-white hover:text-[#F5C518] hover:border-[#F5C518] transition-all text-[9px] font-bold py-1.5 rounded-sm text-center backdrop-blur-md"
+            >
+              عرض تفاصيل المنتج
+            </button>
           </div>
 
           {/* تفاصيل السعر والبيانات البيعية */}
-          <div className="flex-1 pt-1 flex flex-col justify-between min-h-[160px]">
+          <div className="flex-1 flex flex-col justify-between min-h-[192px]">
             <div>
               {/* التاجز زي تصنيف الأفلام */}
               <div className="flex flex-wrap gap-2 mb-2">
@@ -149,17 +152,17 @@ export default function ProductPage() {
                 <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
               </div>
               
-              {/* السعر والخصم */}
-              <div className="flex items-end gap-3 mt-3">
-                <span className="text-3xl font-black text-white tracking-tight">{product.price} <span className="text-sm font-normal text-[#F5C518]">ج.م</span></span>
-                {/* افتراض وجود سعر قديم للخصم، لو موجود هيظهر */}
+              {/* السعر والخصم - تم تعديل الخط ليكون أكثر احترافية كالماركات العالمية */}
+              <div className="flex items-end gap-2 mt-2">
+                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '0.5px' }} className="text-4xl font-normal text-white">{product.price}</span>
+                <span className="text-sm font-normal text-[#F5C518] mb-1.5">ج.م</span>
                 {product.oldPrice && (
-                  <span className="text-sm text-gray-500 line-through mb-1.5">{product.oldPrice} ج.م</span>
+                  <span className="text-sm text-gray-500 line-through mb-1.5 mr-2">{product.oldPrice} ج.م</span>
                 )}
               </div>
 
               {/* حالة المخزون */}
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-1">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
@@ -172,22 +175,67 @@ export default function ProductPage() {
                 يتم احتساب مصاريف الشحن عند الدفع
               </div>
 
-              {/* كلمات الثقة (Trust Badges) */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                <span className="text-[10px] text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">🛡️ دفع آمن</span>
-                <span className="text-[10px] text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">🔄 استرجاع مجاني</span>
-                <span className="text-[10px] text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">🚚 شحن سريع</span>
+              {/* كلمات الثقة (Trust Badges) - سطر واحد وأيقونات شفافة */}
+              <div className="flex items-center justify-between gap-1 mt-4 w-full bg-[#1a1a1a] p-2.5 rounded border border-[#333]">
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><Truck size={14} className="text-[#F5C518]" /> شحن سريع</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><Eye size={14} className="text-[#F5C518]" /> معاينة المنتجات</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><ShieldCheck size={14} className="text-[#F5C518]" /> دفع آمن</div>
               </div>
             </div>
-            
-            {/* زرار فتح تفاصيل الوصف كاملة */}
-            <button 
-              onClick={() => setDescModalOpen(true)}
-              className="text-left mt-4 text-[#F5C518] text-xs font-bold flex items-center justify-center gap-2 hover:brightness-125 w-full border border-[#F5C518]/30 px-3 py-2 rounded-md bg-[#F5C518]/10 transition-all"
-            >
-              عرض التفاصيل الكاملة للمنتج <Info size={14} />
-            </button>
           </div>
+        </div>
+
+        {/* مدخل الألوان والمقاسات - تم نقلها أسفل منطقة الثقة مباشرة */}
+        <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
+          {safeColors.length > 0 && (
+            <div>
+              <h3 className="font-bold text-sm text-gray-400 mb-3 uppercase tracking-widest">اختر اللون:</h3>
+              <div className="flex flex-wrap gap-4">
+                {safeColors.map((color, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedColor(color.name)}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === color.name ? "border-2 border-[#F5C518] bg-[#F5C518]/10" : "border border-[#333] hover:border-gray-500"}`}>
+                      <img src={color.swatch} className="w-full h-full rounded-full object-cover shadow-inner" alt={color.name} />
+                    </div>
+                    <span className={`text-xs font-bold ${selectedColor === color.name ? "text-white" : "text-gray-500"}`}>{color.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {safeSizes.length > 0 && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest">اختر المقاس:</h3>
+                
+                {/* زر دليل المقاسات */}
+                <button 
+                  onClick={() => setSizeGuideOpen(true)}
+                  className="text-xs text-[#F5C518] flex items-center gap-1.5 hover:bg-[#F5C518]/10 transition-all px-3 py-1.5 rounded-full border border-[#F5C518]/30"
+                >
+                  <Info size={14} /> دليل القياسات
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {safeSizes.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`min-w-[60px] h-12 flex items-center justify-center text-sm font-black rounded-md border transition-all ${
+                      selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* التقييم وفريق العمل (الخامات) */}
@@ -226,60 +274,6 @@ export default function ProductPage() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* 5. الاختيارات (الألوان والمقاسات) */}
-      <div className="px-4 py-6 max-w-4xl mx-auto space-y-6 border-t border-[#333]/50" dir="rtl">
-        
-        {safeColors.length > 0 && (
-          <div>
-            <h3 className="font-bold text-sm text-gray-400 mb-3 uppercase tracking-widest">اختر اللون (Color)</h3>
-            <div className="flex flex-wrap gap-4">
-              {safeColors.map((color, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedColor(color.name)}
-                  className="flex flex-col items-center gap-2 group"
-                >
-                  <div className={`w-14 h-14 rounded-full p-1 transition-all ${selectedColor === color.name ? "border-2 border-[#F5C518] bg-[#F5C518]/10" : "border border-[#333]"}`}>
-                    <img src={color.swatch} className="w-full h-full rounded-full object-cover" alt={color.name} />
-                  </div>
-                  <span className={`text-xs font-bold ${selectedColor === color.name ? "text-white" : "text-gray-500"}`}>{color.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {safeSizes.length > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest">اختر المقاس (Size)</h3>
-              
-              {/* زر دليل المقاسات */}
-              <button 
-                onClick={() => setSizeGuideOpen(true)}
-                className="text-xs text-[#F5C518] flex items-center gap-1.5 hover:bg-[#F5C518]/10 transition-all px-3 py-1.5 rounded-full border border-[#F5C518]/30"
-              >
-                <Info size={14} /> دليل القياسات
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              {safeSizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`min-w-[60px] h-12 flex items-center justify-center text-sm font-black rounded-md border transition-all ${
-                    selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 6. الزر السينمائي (Add to Cart / Watchlist) */}
