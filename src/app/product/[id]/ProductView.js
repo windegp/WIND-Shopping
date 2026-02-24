@@ -20,7 +20,7 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState("");
   const [isSizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isDescModalOpen, setDescModalOpen] = useState(false); // حالة مودال الوصف السينمائي
+  // const [isDescModalOpen, setDescModalOpen] = useState(false); // تم إيقاف استخدام مودال الوصف
   const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); // حالة مودال تكبير الصورة
   
   // حالات تتبع السحب باللمس (Touch Swipe)
@@ -172,20 +172,7 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
   
-  // دالة حذف العناوين
-  const stripHtml = (html) => {
-    if (!html) return "";
-    let clean = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
-    const doc = new DOMParser().parseFromString(clean, 'text/html');
-    let text = doc.body.textContent || "";
-    const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
-    keywordsToRemove.forEach(regex => {
-      text = text.replace(regex, "");
-    });
-    return text.trim();
-  };
-  
-  const shortDescription = stripHtml(product.description).substring(0, 110) + "... ";
+  // تم حذف دالة stripHtml والمتغير shortDescription لعدم الحاجة إليهما بعد الآن
 
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-32 font-sans selection:bg-[#F5C518] selection:text-black overflow-x-hidden">
@@ -205,7 +192,10 @@ export default function ProductPage() {
         {/* تدرج لوني أعمق للتركيز على السعر والعنوان */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/50 to-transparent pointer-events-none"></div>
         
-        {/* أيقونات التفاعل */}
+        {/* سهم التقليب الكبير الاحترافي على اليسار */}
+        <ChevronLeft size={50} strokeWidth={1} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 z-20 pointer-events-none animate-pulse" />
+
+        {/* أيقونات التفاعل (يمين) */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-5 z-10">
           <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
             <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
@@ -232,110 +222,82 @@ export default function ProductPage() {
           </button>
         </div>
 
-        {/* سهم التقليب الكبير على اليسار */}
-        <button 
-          onClick={handleNextImage}
-          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
-        >
-          <ChevronLeft size={40} strokeWidth={1.5} />
-        </button>
+        {/* سهم التقليب الكبير على اليسار (تم استبداله بالأيقونة أعلاه) */}
+        {/* <button onClick={handleNextImage} ... ><ChevronLeft ... /></button> */}
 
-        {/* السعر، العنوان والتاجز مدمجين بوضوح واحترافية أسفل الصورة */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 flex flex-col items-center text-center z-10 pointer-events-none">
-          {/* تصغير حجم اسم المنتج */}
-          <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight drop-shadow-md leading-tight">
-            {product.title}
-          </h1>
+        {/* هيكلة جديدة لأسفل الصورة: اليمين (عنوان)، اليسار (سعر ومخزون) */}
+        <div className="absolute bottom-6 left-0 right-0 px-6 flex justify-between items-end z-20 pointer-events-none">
           
-          {/* إظهار السعر بشكل بارز داخل الصورة */}
-          <div className="flex items-end gap-2 mb-3 bg-black/40 px-5 py-2 rounded-full backdrop-blur-md border border-white/10 shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
-            <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '0.5px' }} className="text-3xl font-normal text-white">
-              {product.price}
-            </span>
-            <span className="text-sm font-bold text-[#F5C518] mb-1">ج.م</span>
-            {product.compareAtPrice && (
-              <span className="text-sm text-gray-400 line-through mb-1 mr-2">{product.compareAtPrice} ج.م</span>
-            )}
+          {/* اليسار: السعر، الخصم، وحالة المخزون في سطر واحد */}
+          <div className="flex items-center gap-3 drop-shadow-md bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm border border-white/10">
+             <div className="flex items-end gap-2">
+                <span style={{ fontFamily: 'Impact, sans-serif' }} className="text-2xl font-normal text-white">{product.price}</span>
+                <span className="text-xs font-bold text-[#F5C518] mb-0.5">ج.م</span>
+                {product.compareAtPrice && <span className="text-xs text-gray-400 line-through mb-0.5">{product.compareAtPrice}</span>}
+             </div>
+             <div className="h-4 w-px bg-white/20"></div> {/* فاصل */}
+             <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                {product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر" : "غير متوفر"}
+             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-gray-200 font-medium drop-shadow-md">
-            <span className="text-[#F5C518]">WIND Series</span>
-            <span>•</span>
-            <span>{product.category || product.type || "أزياء"}</span>
-            <span>•</span>
-            <span className="border border-white/30 px-1.5 rounded text-[10px] bg-black/40 backdrop-blur-sm">WIND-24</span>
+          {/* اليمين: اسم المنتج أصغر وتحته الكلمات الـ3 */}
+          <div className="flex flex-col items-end text-right drop-shadow-md">
+            <h1 className="text-xl md:text-2xl font-black text-white mb-1 tracking-tight">{product.title}</h1>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-300 bg-black/40 px-2 py-1 rounded backdrop-blur-sm">
+              <span className="border border-white/20 px-1.5 rounded">WIND-24</span>
+              <span>•</span>
+              <span>{product.category || product.type || "أزياء"}</span>
+              <span>•</span>
+              <span className="text-[#F5C518]">WIND Series</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. مساحة الحبكة المختصرة والتفاصيل (توفير المساحات) */}
-      <div className="px-4 py-5 max-w-4xl mx-auto" dir="rtl">
+      {/* 3. منطقة البوستر والوصف التفصيلي (تم إعادة الهيكلة) */}
+      <div className="px-4 py-8 max-w-5xl mx-auto" dir="rtl">
         
-        {/* نبذة الوصف مباشرة بعد الصورة لتوفير المساحة */}
-        <div className="mb-5">
-          <div className="text-[14px] leading-[1.6] pr-3 border-r-2 border-[#333] text-gray-400">
-            <span className="opacity-90 align-middle">
-              {shortDescription}
-            </span>
-            <button 
-              onClick={() => setDescModalOpen(true)}
-              className="inline-flex items-center gap-1 text-[#F5C518] font-bold mr-1 hover:text-white transition-all align-middle group"
-            >
-              <span className="border-b border-[#F5C518]/30 group-hover:border-[#F5C518]">المزيد عن المنتج</span>
-              <span className="w-4 h-4 rounded-full border border-[#F5C518] flex items-center justify-center text-[10px] font-black shrink-0 ml-0.5">!</span>
-            </button>
-          </div>
-        </div>
+        {/* تم حذف قسم النبذة المختصرة وزر المزيد من هنا */}
 
-        {/* منطقة البوستر والتفاصيل مصغرة ومرتبة */}
-        <div className="flex gap-4 items-center border-t border-[#333]/50 pt-5">
+        <div className="flex flex-col md:flex-row gap-8 items_start">
           
-          {/* البوستر المصغر مع العدسة الرمادية الواضحة */}
-          <div className="w-24 h-36 flex-shrink-0 rounded-lg overflow-hidden border border-[#333] shadow-lg relative group">
-            <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
-            <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-lg z-10">
-              <Plus size={14} className="text-white" />
-            </div>
-            
-            <button 
-              onClick={() => setImageZoomModalOpen(true)}
-              className="absolute inset-0 bg-black/10 flex items-center justify-center transition-all backdrop-blur-[1px] opacity-100 md:opacity-0 group-hover:opacity-100"
-            >
-              <div className="bg-white/95 p-2 rounded-full text-gray-600 hover:text-black shadow-[0_0_10px_rgba(0,0,0,0.5)] transition-all">
-                <Search size={20} strokeWidth={2.5} />
+          {/* العمود الأيمن: البوستر الصغير وأيقونة التكبير تحته */}
+          <div className="flex flex-col items-center gap-3 shrink-0 mx-auto md:mx-0">
+             <div className="w-32 h-48 rounded-lg overflow-hidden border border-[#333] shadow-2xl relative z-10">
+                {/* الصورة واضحة تماماً بدون أيقونات فوقها */}
+                <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover" alt="poster" />
+             </div>
+             {/* زر التكبير أسفل البوستر */}
+             <button 
+               onClick={() => setImageZoomModalOpen(true)}
+               className="flex items-center gap-2 text-gray-400 hover:text-[#F5C518] transition-colors group"
+             >
+                <Search size={18} />
+                <span className="text-xs font-bold">تكبير الصورة</span>
+             </button>
+          </div>
+
+          {/* العمود الأيسر: صندوق الوصف التفصيلي (بدلاً من المودال) */}
+          <div className="flex-1 w-full bg-[#1a1a1a]/50 rounded-xl border border-[#333] overflow-hidden p-4">
+              <h3 className="font-black text-lg text-white flex items-center gap-2 mb-4 border-b border-[#333] pb-3">
+                <div className="w-1.5 h-5 bg-[#F5C518] rounded-full"></div>
+                تفاصيل المنتج
+              </h3>
+              {/* محتوى الوصف بنفس تنسيقات المودال السابقة */}
+              <div className="ql-editor-display dark-wind-tabs max-h-[500px] overflow-y-auto scrollbar-hide">
+                <div dangerouslySetInnerHTML={{ __html: product.description }} />
               </div>
-            </button>
           </div>
 
-          {/* تفاصيل مصغرة للمخزون والشحن (تم إزالة السعر لأنه في الصورة الكبيرة) */}
-          <div className="flex-1 flex flex-col justify-center gap-2.5">
-            <div className="flex flex-wrap gap-2">
-              <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Premium</span>
-              <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-1">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-              </span>
-              <span className="text-xs font-bold text-green-400">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
-            </div>
-
-            <div className="text-[10px] text-gray-500">
-              يتم احتساب مصاريف الشحن عند الدفع
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-1 mt-1 w-full bg-[#1a1a1a] p-2 rounded-lg border border-[#333]">
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><Truck size={12} className="text-[#F5C518]" /> شحن سريع</div>
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><Eye size={12} className="text-[#F5C518]" /> معاينة</div>
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><ShieldCheck size={12} className="text-[#F5C518]" /> دفع آمن</div>
-            </div>
-          </div>
         </div>
 
         {/* مدخل الألوان والمقاسات */}
-        <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
+        <div className="mt-8 space-y-6 border-t border-[#333]/50 pt-6">
           {safeColors.length > 0 && (
             <div>
               <div className="flex items-center mb-3">
@@ -502,25 +464,7 @@ export default function ProductPage() {
         </div>
       )}
 
-      {/* 🎬 مودال تفاصيل الوصف */}
-      {isDescModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
-          <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
-            <div className="p-4 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] sticky top-0 z-10">
-              <h3 className="font-black text-lg text-white flex items-center gap-2">
-                <div className="w-1.5 h-5 bg-[#F5C518] rounded-full"></div>
-                معلومات المنتج والتفاصيل
-              </h3>
-              <button onClick={() => setDescModalOpen(false)} className="bg-[#242424] hover:bg-[#333] p-1.5 rounded-full text-gray-400 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-5 overflow-y-auto ql-editor-display dark-wind-tabs" dir="rtl">
-              <div dangerouslySetInnerHTML={{ __html: product.description }} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* تم إلغاء مودال الوصف المنبثق (isDescModalOpen) لأن الوصف أصبح معروضاً في الصفحة */}
 
       <SizeChartModal 
         isOpen={isSizeGuideOpen} 
@@ -543,30 +487,20 @@ export default function ProductPage() {
           scrollbar-width: none;
         }
 
-        .preview-description .wind-tabs-container details:not(:first-child) { display: none !important; }
-        .preview-description .wind-tabs-container summary { display: none !important; }
-        .preview-description .wind-tabs-container .read-more-wrapper { display: none !important; }
-        .preview-description .wind-tabs-container { background: transparent !important; }
-        .preview-description .wind-tabs-container div { 
-          color: #d1d5db !important;
-          font-size: 11px !important;
-          padding: 0 !important;
-          margin: 0 !important;
-        }
-
+        /* تنسيقات الوصف داخل الصندوق الجديد */
         .dark-wind-tabs .wind-tabs-container { background: transparent !important; }
         .dark-wind-tabs .wind-tabs-container details {
-          background: #1a1a1a !important;
-          border-bottom: 1px solid #333 !important;
+          background: #222 !important;
+          border: 1px solid #333 !important;
           border-radius: 8px;
           margin-bottom: 8px;
-          padding: 0 15px !important;
+          padding: 5px 15px !important;
           transition: all 0.3s ease;
         }
         .dark-wind-tabs .wind-tabs-container details[open] { border-color: #F5C518 !important; }
-        .dark-wind-tabs .wind-tabs-container summary { color: #fff !important; border: none !important; }
+        .dark-wind-tabs .wind-tabs-container summary { color: #fff !important; border: none !important; font-weight: bold; }
         .dark-wind-tabs .wind-tabs-container summary svg path { stroke: #F5C518 !important; }
-        .dark-wind-tabs .wind-tabs-container div { color: #a1a1aa !important; }
+        .dark-wind-tabs .wind-tabs-container div { color: #aaa !important; line-height: 1.6; }
         .dark-wind-tabs .wind-tabs-container span[style*="color: #800020"] { color: #F5C518 !important; }
         .dark-wind-tabs .wind-tabs-container div[style*="border-bottom: 1px solid #f3f4f6"] { border-bottom: 1px solid #333 !important; }
         .dark-wind-tabs .wind-tabs-container div[style*="color: #111827"],
