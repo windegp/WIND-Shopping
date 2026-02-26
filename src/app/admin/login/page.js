@@ -31,35 +31,51 @@ export default function AdminLogin() {
   const logout = () => signOut(auth);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4" dir="rtl">
-      <div className="max-w-md w-full bg-[#111] border border-[#222] p-8 rounded-3xl text-center shadow-2xl">
-        <h1 className="text-3xl font-black text-white mb-6 italic">WIND <span className="text-[#F5C518]">ADMIN</span></h1>
+    <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center p-4 font-sans" dir="rtl">
+      <div className="max-w-md w-full bg-white border border-gray-200 p-8 rounded-2xl text-center shadow-sm">
+        
+        {/* الشعار */}
+        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-200">
+          <h1 className="text-xl font-black text-[#202223] tracking-tighter">WIND</h1>
+        </div>
+        <h2 className="text-xl font-bold text-[#202223] mb-6">لوحة الإدارة</h2>
         
         {user ? (
-          <div className="space-y-4">
-            <p className="text-gray-400">مرحباً، {user.displayName}</p>
-            <p className="text-xs text-gray-600 break-all">{user.uid}</p>
+          <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+            <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl">
+              <p className="text-[#202223] font-medium text-sm">مرحباً، {user.displayName}</p>
+              <p className="text-xs text-gray-500 break-all mt-1">{user.uid}</p>
+            </div>
+            
             <button 
               onClick={() => router.push("/admin")}
-              className="w-full py-4 bg-[#F5C518] text-black font-bold rounded-2xl hover:scale-[1.02] transition-transform"
+              className="w-full py-3 bg-[#1a1a1a] text-white font-bold rounded-xl hover:bg-black shadow-sm transition-colors"
             >
               الذهاب للوحة التحكم
             </button>
-            <button onClick={logout} className="text-red-500 text-sm hover:underline">تسجيل الخروج</button>
+            <button onClick={logout} className="text-red-600 font-bold text-sm hover:underline mt-2 inline-block">تسجيل الخروج</button>
           </div>
         ) : (
-          <div className="space-y-6">
-            <p className="text-gray-400 text-sm">يجب تسجيل الدخول بصفتك المدير لتتمكن من تعديل البيانات.</p>
+          <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
+            <p className="text-gray-500 text-sm leading-relaxed">يجب تسجيل الدخول بصفتك المدير لتتمكن من إدارة المتجر وتعديل البيانات.</p>
+            
             <button 
               onClick={loginWithGoogle}
-              className="w-full py-4 bg-white text-black font-bold rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-colors"
+              className="w-full py-3 bg-white border border-gray-300 text-[#202223] font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 shadow-sm transition-colors"
             >
               <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="google" />
-              الدخول باستخدام Google
+              الدخول باستخدام حساب Google
             </button>
           </div>
         )}
       </div>
+      
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
