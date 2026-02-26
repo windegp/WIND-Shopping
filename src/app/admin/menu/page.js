@@ -97,47 +97,74 @@ export default function ProfessionalMenuManager() {
     setItems(newItems);
   };
 
-  // --- مكون الشجرة (الأكورديون) ---
+ // --- مكون الشجرة (الأكورديون) ---
   const RenderMenuTree = ({ list, path = [], depth = 0 }) => {
     return (
-      <div className={`space-y-3 ${depth > 0 ? 'mt-3 mr-3 sm:mr-8 border-r-2 border-gray-100 pr-3 sm:pr-5' : ''}`}>
+      <div className={`space-y-3 ${depth > 0 ? 'mt-3 mr-4 sm:mr-8 border-r-2 border-gray-200 pr-4 sm:pr-6 relative' : ''}`}>
         {list.map((item, index) => {
           const currentPath = [...path, index];
           const isExpanded = expandedItems.has(item.id);
           const hasChildren = item.children && item.children.length > 0;
 
+          // تدرج لوني ذكي حسب العمق
+          const depthBgClass = 
+            depth === 0 ? "bg-white border-gray-200 shadow-sm" : 
+            depth === 1 ? "bg-[#fafafa] border-gray-200" : 
+            depth === 2 ? "bg-[#f4f6f8] border-gray-300" : 
+            "bg-[#eeeeee] border-gray-300";
+
           return (
             <div key={item.id} className="relative animate-[fadeIn_0.2s_ease-out]">
+              
+              {/* خط التوصيل الأفقي للأبناء (عشان يبان إنه متفرع من اللي فوقه) */}
+              {depth > 0 && (
+                <div className="absolute top-8 -right-4 sm:-right-6 w-4 sm:w-6 h-[2px] bg-gray-200"></div>
+              )}
+
               <div className={`
-                bg-white border ${isExpanded ? 'border-gray-300 shadow-md ring-1 ring-gray-100' : 'border-gray-200 shadow-sm'} 
-                p-4 sm:p-5 rounded-xl flex flex-col lg:flex-row lg:items-center gap-4 transition-all duration-200 hover:border-gray-300 relative z-10
+                border ${depthBgClass} 
+                p-4 sm:p-5 rounded-xl transition-all duration-200 hover:border-[#008060]/50 relative z-10
+                ${isExpanded && depth === 0 ? 'ring-1 ring-gray-200 shadow-md' : ''}
               `}>
                 
-                {/* 1. أيقونة الأكورديون + السحب (بصرياً) */}
-                <div className="flex items-center gap-3">
-                  {hasChildren ? (
-                    <button 
-                      onClick={() => toggleAccordion(item.id)} 
-                      className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-gray-200 text-[#202223]' : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'}`}
-                      title={isExpanded ? "طي القائمة" : "إظهار القائمة الفرعية"}
-                    >
-                      {isExpanded ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
-                    </button>
-                  ) : (
-                    <div className="w-8 h-8 flex items-center justify-center text-gray-300">
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
-                    </div>
-                  )}
+                {/* 1. رأس الكارت (مؤشر المستوى + أزرار الطي والحذف) */}
+                <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200/60">
+                  <div className="flex items-center gap-3">
+                    {hasChildren ? (
+                      <button 
+                        onClick={() => toggleAccordion(item.id)} 
+                        className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-[#008060] text-white shadow-sm' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                        title={isExpanded ? "طي القائمة" : "إظهار القوائم الفرعية"}
+                      >
+                        {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                      </button>
+                    ) : (
+                      <div className="w-7 h-7 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                      </div>
+                    )}
+                    <span className="bg-gray-100 text-gray-500 font-bold text-[10px] px-2 py-1 rounded border border-gray-200">
+                      مستوى {depth + 1}
+                    </span>
+                    <h3 className="text-sm font-bold text-[#202223] truncate max-w-[150px] sm:max-w-xs">{item.title || "بند جديد"}</h3>
+                  </div>
+
+                  <button 
+                    onClick={() => deleteItem(currentPath)} 
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-500 hover:text-white rounded-lg transition-colors border border-red-100"
+                    title="حذف هذا القسم بالكامل"
+                  >
+                    <Trash2 size={14} /> <span className="hidden sm:inline">حذف</span>
+                  </button>
                 </div>
 
-                {/* 2. منطقة الإدخال (ربط القسم والعنوان) */}
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                  
+                {/* 2. منطقة الإدخال (الربط والعنوان) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* ربط الكولكشن */}
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">ربط بقسم (اختياري)</label>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase">ربط بقسم موجود (اختياري)</label>
                     <select 
-                      className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-lg text-sm text-[#202223] outline-none focus:bg-white focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all cursor-pointer"
+                      className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm text-[#202223] outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all cursor-pointer"
                       value={availableCollections.find(c => `/collections/${c.slug}` === item.link)?.slug || ""}
                       onChange={(e) => {
                         const selected = availableCollections.find(c => c.slug === e.target.value);
@@ -154,7 +181,7 @@ export default function ProfessionalMenuManager() {
 
                   {/* العنوان */}
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">عنوان البند (الذي يظهر للعميل)</label>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase">عنوان القسم (لظهوره للعميل)</label>
                     <input 
                       type="text" 
                       value={item.title} 
@@ -165,35 +192,25 @@ export default function ProfessionalMenuManager() {
                   </div>
                 </div>
 
-                {/* 3. الرابط (يظهر في الشاشات الكبيرة) */}
-                <div className="hidden xl:flex flex-col flex-1 max-w-[200px]">
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase">الرابط الوجهة</label>
-                  <div className="flex items-center gap-2 bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-200">
+                {/* 3. الرابط (عرض فقط للتأكيد) وزر التفريع */}
+                <div className="mt-4 pt-4 border-t border-gray-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex-1 w-full sm:w-auto flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200">
                     <LinkIcon size={14} className="text-gray-400 shrink-0" />
-                    <span className="text-[11px] text-gray-500 font-mono truncate" dir="ltr" title={item.link}>{item.link}</span>
+                    <span className="text-[11px] text-gray-500 font-mono truncate w-full" dir="ltr" title={item.link}>{item.link}</span>
                   </div>
-                </div>
-
-                {/* 4. أزرار الإجراءات */}
-                <div className="flex items-center gap-2 w-full lg:w-auto justify-end border-t lg:border-t-0 border-gray-100 pt-3 lg:pt-0 mt-2 lg:mt-0">
+                  
+                  {/* الزر السحري الخاص بإضافة أبناء لهذا القسم فقط */}
                   <button 
                     onClick={() => addItem(currentPath)} 
-                    className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-300 text-[#202223] text-xs font-bold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
-                    title="إضافة قائمة فرعية متفرعة من هذا البند"
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-[#202223] text-white text-xs font-bold rounded-lg hover:bg-black transition-all shadow-sm"
                   >
-                    <Plus size={14} /> <span>تفريع</span>
-                  </button>
-                  <button 
-                    onClick={() => deleteItem(currentPath)} 
-                    className="p-2 text-red-500 bg-red-50 hover:bg-red-500 hover:text-white border border-red-100 rounded-lg transition-colors"
-                    title="حذف هذا البند"
-                  >
-                    <Trash2 size={16} />
+                    <Plus size={14} /> إضافة تفريع داخلي
                   </button>
                 </div>
+
               </div>
 
-              {/* منطقة الأبناء (تفتح وتقفل) */}
+              {/* منطقة الأبناء (تفتح وتقفل بناءً على الأكورديون) */}
               {hasChildren && isExpanded && (
                 <div className="animate-[slideDown_0.3s_ease-out]">
                   <RenderMenuTree list={item.children} path={currentPath} depth={depth + 1} />
@@ -210,61 +227,64 @@ export default function ProfessionalMenuManager() {
     return (
       <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center text-[#202223]">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#202223] mb-4"></div>
-        <p className="font-bold text-sm text-gray-500">جاري تحميل شجرة القوائم...</p>
+        <p className="font-bold text-sm text-gray-500">جاري تحميل هيكل المتجر...</p>
       </div>
     );
   }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-[#f4f6f8] min-h-screen text-[#202223] font-sans" dir="rtl">
-      <div className="max-w-5xl mx-auto pb-24">
+      <div className="max-w-4xl mx-auto pb-24">
         
         {/* الهيدر العلوي */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-5 md:p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
           
           <div className="flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-[#202223]">
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-[#008060]">
               <Layers size={28}/>
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#202223]">القوائم (Navigation)</h1>
-              <p className="text-xs text-gray-500 mt-1">نظام إدارة الأقسام الشجرية المترابطة (Menu)</p>
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#202223]">القوائم الرئيسية (Navigation)</h1>
+              <p className="text-xs text-gray-500 mt-1">نظام إدارة الأقسام الشجرية المترابطة</p>
             </div>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto relative z-10">
+            {/* الزر ده مخصص للقسم الرئيسي فقط (مستوى 1) */}
             <button 
               onClick={() => addItem()} 
               className="w-full sm:w-auto bg-white border border-gray-300 text-[#202223] px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
             >
-              <Plus size={16}/> قائمة رئيسية
+              <Plus size={16}/> إضافة قائمة رئيسية
             </button>
             <button 
               onClick={async () => {
                 setSaving(true);
                 await setDoc(doc(db, "settings", "navigation"), { menuItems: items });
                 setSaving(false);
-                alert("تم الحفظ بنجاح! ✨");
+                alert("تم حفظ الهيكل بنجاح! سيتم تحديث قائمة المتجر للمستخدمين.");
               }} 
               disabled={saving}
               className={`w-full sm:w-auto px-8 py-2.5 rounded-xl font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all ${
-                saving ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-[#1a1a1a] text-white hover:bg-black'
+                saving ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-[#008060] text-white hover:bg-[#006e52]'
               }`}
             >
               {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-              {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
+              {saving ? "جاري الحفظ..." : "حفظ الهيكل"}
             </button>
           </div>
         </header>
 
         {/* مساحة عرض الشجرة */}
-        <div className="bg-white p-5 md:p-8 rounded-2xl border border-gray-200 shadow-sm min-h-[50vh]">
+        <div className="bg-white p-4 sm:p-8 rounded-2xl border border-gray-200 shadow-sm min-h-[50vh]">
           {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-60">
-              <Menu size={48} className="text-gray-300 mb-4" />
-              <h3 className="text-lg font-bold text-gray-500">القائمة فارغة</h3>
-              <p className="text-sm text-gray-400 mt-1">ابدأ بإضافة قائمة رئيسية لمتجرك لترتيب الأقسام.</p>
-              <button onClick={() => addItem()} className="mt-6 text-[#008060] font-bold text-sm hover:underline flex items-center gap-1"><Plus size={16}/> أضف قائمتك الأولى</button>
+            <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-80">
+              <Menu size={56} className="text-gray-300 mb-4" />
+              <h3 className="text-lg font-bold text-[#202223]">القائمة فارغة تماماً</h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-sm">لم تقم بإضافة أي أقسام لقائمة التنقل الخاصة بالمتجر. ابدأ بإضافة القوائم الرئيسية ثم فرّع منها.</p>
+              <button onClick={() => addItem()} className="mt-6 bg-gray-50 border border-gray-200 text-[#202223] font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-sm">
+                <Plus size={16}/> أضف قسمك الرئيسي الأول
+              </button>
             </div>
           ) : (
             <RenderMenuTree list={items} />
