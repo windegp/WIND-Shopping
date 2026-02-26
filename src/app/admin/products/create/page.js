@@ -253,6 +253,10 @@ function CreateProductForm() {
     }
   };
 
+  const removeImage = (indexToRemove) => {
+    setImages(images.filter((_, index) => index !== indexToRemove));
+  };
+
   const addOption = () => setOptions([...options, { name: '', values: '' }]);
   const removeOption = (index) => setOptions(options.filter((_, i) => i !== index));
   const updateOption = (index, field, value) => {
@@ -319,427 +323,504 @@ function CreateProductForm() {
   // ==========================================
   if (isLoadingData) {
     return (
-      <div className="h-screen bg-[#121212] flex flex-col items-center justify-center text-[#F5C518] gap-4">
-        <Loader2 className="animate-spin" size={50} />
-        <h2 className="text-xl font-black tracking-widest animate-pulse">WIND ENGINE LOADING...</h2>
+      <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center text-[#202223] gap-4">
+        <Loader2 className="animate-spin text-[#008060]" size={50} />
+        <h2 className="text-sm font-bold text-gray-500">جاري تحميل بيانات المنتج...</h2>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 text-right pb-20 font-sans" dir="rtl">
+    <div className="min-h-screen bg-[#f4f6f8] font-sans pb-24 text-[#202223]" dir="rtl">
+      <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       
-      {/* هيدر الصفحة - الأزرار والتحكم السريع */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 bg-[#1a1a1a] p-6 rounded-3xl border border-[#333] sticky top-4 z-50 shadow-2xl backdrop-blur-md bg-opacity-95">
-        <div className="flex items-center gap-5">
-          <div onClick={() => router.back()} className="p-3 bg-[#222] rounded-2xl cursor-pointer hover:bg-[#F5C518] hover:text-black text-gray-400 transition-all duration-300">
-            <ArrowRight size={24} />
+        {/* هيدر الصفحة - الأزرار والتحكم السريع */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.back()} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 bg-white">
+              <ArrowRight size={20} />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-[#202223] flex items-center gap-2">
+                {isEditing ? "تعديل المنتج" : "إضافة منتج جديد"}
+              </h1>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-black text-white flex items-center gap-3">
-              <Box className="text-[#F5C518]" /> {isEditing ? "تعديل المنتج" : "إضافة منتج جديد"}
-            </h1>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">WIND Management System v2.0</span>
+          <div className="w-full sm:w-auto">
+            <button 
+              onClick={handleSaveProduct} 
+              disabled={isSaving}
+              className="w-full sm:w-auto bg-[#008060] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[#006e52] transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} 
+              {isEditing ? "حفظ التعديلات" : "حفظ المنتج"}
+            </button>
           </div>
         </div>
-        <div className="flex gap-4 w-full md:w-auto">
-          <button 
-            onClick={handleSaveProduct} 
-            disabled={isSaving}
-            className="flex-1 md:flex-none justify-center bg-[#F5C518] text-black px-12 py-4 rounded-2xl font-black hover:bg-white transition-all duration-300 flex items-center gap-3 shadow-[0_10px_30px_rgba(245,197,24,0.2)] disabled:opacity-50"
-          >
-            {isSaving ? <Loader2 className="animate-spin" size={22} /> : <Save size={22} />} 
-            {isEditing ? "حفظ التعديلات" : "نشر الآن"}
-          </button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        
-        {/* العمود الأيمن (المحتوى والبيانات - 2/3) */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 relative items-start">
           
-          {/* صندوق العنوان والوصف */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm hover:border-gray-700 transition-all duration-500">
-            <div className="mb-8">
-              <label className="block text-sm font-black text-gray-400 mb-4 flex items-center gap-2">
-                <Tag size={18} className="text-[#F5C518]"/> العنوان (Product Title)
+          {/* العمود الأيمن (المحتوى والبيانات - 2/3) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* صندوق العنوان والوصف */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-[#202223] mb-2">
+                  العنوان (Title)
+                </label>
+                <input 
+                  type="text" 
+                  name="title"
+                  value={productData.title}
+                  onChange={handleProductChange}
+                  placeholder="مثال: قميص قطني قصير الأكمام" 
+                  className="w-full bg-white border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all text-[#202223]" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#202223] mb-2">
+                  الوصف (Description)
+                </label>
+                <div className="rounded-lg border border-gray-300 overflow-hidden focus-within:border-[#008060] focus-within:ring-1 focus-within:ring-[#008060] transition-all bg-white">
+                   <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex gap-3 items-center">
+                      <span className="font-bold cursor-help hover:text-black">B</span>
+                      <span className="font-bold cursor-help hover:text-black italic">I</span>
+                      <span className="font-bold cursor-help hover:text-black underline">U</span>
+                   </div>
+                   <textarea 
+                    name="description"
+                    value={productData.description}
+                    onChange={handleProductChange}
+                    rows="8" 
+                    className="w-full p-4 text-sm text-[#202223] outline-none resize-y"
+                    placeholder="أدخل وصفاً تفصيلياً للمنتج..."
+                   ></textarea>
+                </div>
+              </div>
+            </div>
+
+            {/* صندوق الوسائط والصور */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="text-sm font-bold text-[#202223]">الوسائط (Media)</h3>
+              </div>
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors group relative">
+                <ImageUploader onUploadSuccess={handleImageKitSuccess} />
+                
+                <div className="mt-6 pt-6 border-t border-gray-200 flex flex-col sm:flex-row gap-3">
+                  <input 
+                    type="url" 
+                    value={imageUrlInput}
+                    onChange={(e) => setImageUrlInput(e.target.value)}
+                    placeholder="إضافة صورة عبر الرابط (URL)..." 
+                    className="flex-1 bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]"
+                  />
+                  <button 
+                    onClick={handleAddImageUrl} 
+                    type="button" 
+                    className="bg-white border border-gray-300 text-[#202223] px-6 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors whitespace-nowrap"
+                  >
+                    إضافة رابط
+                  </button>
+                </div>
+              </div>
+
+              {images.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-6">
+                  {images.map((src, i) => (
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group bg-gray-50">
+                      <img src={src} className="w-full h-full object-cover" alt="product media"/>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button 
+                          onClick={() => removeImage(i)} 
+                          className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                          title="حذف الصورة"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* صندوق التصنيف (Shopify Category Sync) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <label className="block text-sm font-bold text-[#202223] mb-2">
+                 التصنيف الأساسي (Category)
               </label>
               <input 
                 type="text" 
-                name="title"
-                value={productData.title}
+                name="category"
+                value={productData.category}
                 onChange={handleProductChange}
-                placeholder="مثال: Sweatshirt Oversized Cotton" 
-                className="w-full bg-[#121212] border border-[#333] p-5 rounded-2xl text-white focus:border-[#F5C518] outline-none transition-all font-bold text-lg" 
+                list="csv-collections"
+                placeholder="ابحث عن تصنيف..." 
+                className="w-full bg-white border border-gray-300 px-4 py-2.5 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
               />
+              <p className="text-xs text-gray-500 mt-2">يحدد الفئة الضريبية ويساعد في تحسين محركات البحث.</p>
             </div>
-            <div>
-              <label className="block text-sm font-black text-gray-400 mb-4 flex items-center gap-2">
-                <Layout size={18} className="text-[#F5C518]"/> الوصف (Description)
-              </label>
-              <div className="rounded-2xl border border-[#333] overflow-hidden focus-within:border-[#F5C518] transition-all">
-                 <div className="bg-[#222] p-3 flex gap-4 border-b border-[#333]">
-                    <span className="text-gray-500 text-xs font-bold cursor-help hover:text-white">B</span>
-                    <span className="text-gray-500 text-xs font-bold cursor-help hover:text-white italic">I</span>
-                    <span className="text-gray-500 text-xs font-bold cursor-help hover:text-white underline">U</span>
-                    <div className="w-[1px] h-4 bg-[#333]"></div>
-                    <span className="text-gray-500 text-[10px] font-bold">WIND Rich Editor Mode</span>
-                 </div>
-                 <textarea 
-                  name="description"
-                  value={productData.description}
-                  onChange={handleProductChange}
-                  rows="10" 
-                  className="w-full bg-[#121212] p-5 text-white outline-none resize-none leading-relaxed text-sm"
-                  placeholder="اكتب تفاصيل المنتج بوضوح..."
-                 ></textarea>
-              </div>
-            </div>
-          </div>
 
-          {/* صندوق الوسائط والصور */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-               <h3 className="text-sm font-black text-gray-400 flex items-center gap-2">
-                 <ImageIcon size={20} className="text-[#F5C518]"/> معرض الصور (Media)
-               </h3>
-               <span className="text-[10px] text-gray-600">Max 5MB per image</span>
-            </div>
-            
-            <div className="border-4 border-dashed border-[#121212] rounded-3xl p-10 text-center bg-[#151515] hover:border-[#F5C518] transition-all duration-500 group relative">
-              <ImageUploader onUploadSuccess={handleImageKitSuccess} />
-              <p className="text-xs text-gray-500 mt-4 font-bold group-hover:text-gray-300 transition-colors">Drag and drop images or click to upload</p>
+            {/* 4. التسعير (Pricing) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <h3 className="text-sm font-bold text-[#202223] mb-4">التسعير (Pricing)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">السعر (Price)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500 text-sm">E£</span>
+                    <input 
+                      type="number" 
+                      name="price"
+                      value={productData.price}
+                      onChange={handleProductChange}
+                      placeholder="0.00" 
+                      className="w-full bg-white border border-gray-300 pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">السعر قبل الخصم (Compare at price)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500 text-sm">E£</span>
+                    <input 
+                      type="number" 
+                      name="compareAtPrice"
+                      value={productData.compareAtPrice}
+                      onChange={handleProductChange}
+                      placeholder="0.00" 
+                      className="w-full bg-white border border-gray-300 pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
+                    />
+                  </div>
+                </div>
+              </div>
               
-              <div className="mt-8 pt-8 border-t border-[#333] flex flex-col md:flex-row gap-3 max-w-2xl mx-auto">
-                <input 
-                  type="url" 
-                  value={imageUrlInput}
-                  onChange={(e) => setImageUrlInput(e.target.value)}
-                  placeholder="أو أضف رابط صورة مباشر (URL)..." 
-                  className="flex-1 bg-[#1a1a1a] border border-[#333] p-4 rounded-2xl text-xs text-white outline-none focus:border-[#F5C518] transition-all"
-                />
-                <button 
-                  onClick={handleAddImageUrl} 
-                  type="button" 
-                  className="bg-[#222] text-[#F5C518] px-8 py-4 rounded-2xl text-xs font-black hover:bg-[#F5C518] hover:text-black transition-all"
-                >إدراج رابط</button>
+              <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
+                <div className="w-full sm:w-1/2">
+                  <label className="block text-xs text-gray-600 mb-1.5">التكلفة (Cost per item)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500 text-sm">E£</span>
+                    <input 
+                      type="number" 
+                      name="costPerItem"
+                      value={productData.costPerItem}
+                      onChange={handleProductChange}
+                      placeholder="0.00" 
+                      className="w-full bg-white border border-gray-300 pl-10 pr-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="chargeTax"
+                    checked={chargeTax}
+                    onChange={() => setChargeTax(!chargeTax)}
+                    className="w-4 h-4 text-[#008060] border-gray-300 rounded focus:ring-[#008060]"
+                  />
+                  <label htmlFor="chargeTax" className="text-sm text-gray-700 cursor-pointer">فرض ضرائب على هذا المنتج</label>
+                </div>
               </div>
             </div>
 
-            {images.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mt-10">
-                {images.map((src, i) => (
-                  <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-[#333] group shadow-lg">
-                    <img src={src} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-125" alt="product"/>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button 
-                        onClick={() => removeImage(i)} 
-                        className="bg-red-600/90 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-red-500 transition-all active:scale-90"
-                      >حذف الصورة</button>
+            {/* 5. المخزون (Inventory) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <h3 className="text-sm font-bold text-[#202223] mb-4">المخزون (Inventory)</h3>
+              
+              <div className="mb-6 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="inventoryTracked"
+                    checked={inventoryTracked}
+                    onChange={() => setInventoryTracked(!inventoryTracked)}
+                    className="w-4 h-4 text-[#008060] border-gray-300 rounded focus:ring-[#008060]"
+                  />
+                  <label htmlFor="inventoryTracked" className="text-sm text-gray-700 cursor-pointer">تتبع الكمية (Track quantity)</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="sellOutOfStock"
+                    checked={productData.sellOutOfStock === "Yes"}
+                    onChange={(e) => handleProductChange({ target: { name: 'sellOutOfStock', value: e.target.checked ? "Yes" : "No" }})}
+                    className="w-4 h-4 text-[#008060] border-gray-300 rounded focus:ring-[#008060]"
+                  />
+                  <label htmlFor="sellOutOfStock" className="text-sm text-gray-700 cursor-pointer">الاستمرار في البيع عند نفاد الكمية</label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 pt-6 border-t border-gray-100">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">الكمية المتاحة</label>
+                  <input 
+                    type="number" 
+                    name="quantity"
+                    value={productData.quantity}
+                    onChange={handleProductChange}
+                    placeholder="0" 
+                    className="w-full bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">رمز الصنف (SKU)</label>
+                  <input 
+                    type="text" 
+                    name="sku" 
+                    value={productData.sku} 
+                    onChange={handleProductChange} 
+                    className="w-full bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">الباركود (Barcode)</label>
+                  <input 
+                    type="text" 
+                    name="barcode" 
+                    value={productData.barcode} 
+                    onChange={handleProductChange} 
+                    className="w-full bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all text-[#202223]" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 6. البدائل (Variants) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-sm font-bold text-[#202223]">البدائل (Variants)</h3>
+                 <button onClick={addOption} className="text-[#005bd3] text-sm font-bold hover:underline">+ إضافة خيارات (كالحجم أو اللون)</button>
+              </div>
+              
+              <div className="space-y-4">
+                {options.map((option, index) => (
+                  <div key={index} className="bg-gray-50 border border-gray-200 p-4 sm:p-5 rounded-xl relative group">
+                    <button 
+                      onClick={() => removeOption(index)} 
+                      className="absolute top-2 left-2 text-gray-400 hover:text-red-600 transition-colors p-1"
+                      title="إزالة هذا الخيار"
+                    >
+                      <X size={16} />
+                    </button>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5">اسم الخيار (Option name)</label>
+                        <input 
+                          type="text" 
+                          value={option.name} 
+                          onChange={(e) => updateOption(index, 'name', e.target.value)} 
+                          placeholder="مثال: Color أو Size" 
+                          list="csv-option-names" 
+                          className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5">القيم (مفصولة بفاصلة)</label>
+                        <input 
+                          type="text" 
+                          value={option.values} 
+                          onChange={(e) => updateOption(index, 'values', e.target.value)} 
+                          placeholder="Red, Blue, Green" 
+                          className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
+                        />
+                      </div>
                     </div>
+
+                    {/* 🔥 اختيار صورة المنتج لكل لون 🔥 */}
+                    {(option.name.toLowerCase() === 'color' || option.name === 'اللون' || option.name === 'لون') && option.values.trim() !== '' && (
+                      <div className="mt-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <label className="block text-xs font-bold text-[#202223] mb-3">ربط الألوان بصور المنتج</label>
+                        
+                        {images.length === 0 ? (
+                          <p className="text-xs text-red-600 bg-red-50 border border-red-100 p-2.5 rounded-md">أضف صوراً للمنتج في الأعلى لتتمكن من ربطها بالألوان.</p>
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {option.values.split(',').map(val => val.trim()).filter(Boolean).map((colorName, i) => (
+                              <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-200">
+                                <span className="text-xs font-bold text-[#202223] w-20 shrink-0">{colorName}:</span>
+                                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                  {images.map((imgUrl, imgIdx) => (
+                                    <img
+                                      key={imgIdx}
+                                      src={imgUrl}
+                                      onClick={() => setColorSwatches({...colorSwatches, [colorName]: imgUrl})}
+                                      className={`w-10 h-10 shrink-0 rounded object-cover cursor-pointer border-2 transition-all duration-200 ${colorSwatches[colorName] === imgUrl ? 'border-[#008060] shadow-sm scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                      alt={`اختيار صورة لـ ${colorName}`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* صندوق التصنيف (Shopify Category Sync) */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <label className="block text-sm font-black text-gray-400 mb-4 flex items-center gap-2">
-               <Database size={18} className="text-[#F5C518]"/> التصنيف الأساسي (Shopify Matching)
-            </label>
-            <input 
-              type="text" 
-              name="category"
-              value={productData.category}
-              onChange={handleProductChange}
-              list="csv-collections"
-              placeholder="اختر التصنيف المطابق للشيت..." 
-              className="w-full bg-[#121212] border border-[#333] p-5 rounded-2xl text-white outline-none focus:border-[#F5C518] transition-all font-bold" 
-            />
-            <p className="text-[10px] text-gray-600 mt-3">* هذا الحقل يستخدم للمطابقة مع شيت Shopify فقط، وللربط بالمنيو استخدم القائمة الجانبية.</p>
-          </div>
-          {/* 4. التسعير (Pricing) */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <h3 className="text-sm font-black text-gray-400 mb-6 flex items-center gap-2">
-              <Tag size={18} className="text-[#F5C518]"/> التسعير (Pricing)
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">Price</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-4 text-gray-500 font-bold">E£</span>
+            {/* 7. الـ Metafields والبيانات المخصصة */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <h3 className="text-sm font-bold text-[#202223] mb-4">بيانات مخصصة (Metafields)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 {Object.keys(metafields).map((key) => (
+                   <div key={key}>
+                      <label className="block text-xs text-gray-600 mb-1.5 capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
+                      <input 
+                        type="text" 
+                        name={key} 
+                        value={metafields[key]} 
+                        onChange={handleMetafieldChange} 
+                        className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
+                      />
+                   </div>
+                 ))}
+              </div>
+            </div>
+
+            {/* 8. محركات البحث (SEO) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
+              <h3 className="text-sm font-bold text-[#202223] mb-1">محركات البحث (SEO)</h3>
+              <p className="text-xs text-gray-500 mb-5">كيف سيظهر منتجك في نتائج بحث جوجل.</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">عنوان الصفحة (Page title)</label>
                   <input 
-                    type="number" 
-                    name="price"
-                    value={productData.price}
-                    onChange={handleProductChange}
-                    placeholder="0.00" 
-                    className="w-full bg-[#121212] border border-[#333] p-4 pl-12 rounded-2xl text-white outline-none focus:border-[#F5C518] transition-all font-bold" 
+                    type="text" 
+                    value={seoTitle} 
+                    onChange={(e) => setSeoTitle(e.target.value)} 
+                    maxLength={70} 
+                    className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
                   />
+                  <p className="text-[10px] text-gray-500 mt-1">{seoTitle.length} / 70</p>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">Compare at price</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-4 text-gray-500 font-bold">E£</span>
-                  <input 
-                    type="number" 
-                    name="compareAtPrice"
-                    value={productData.compareAtPrice}
-                    onChange={handleProductChange}
-                    placeholder="0.00" 
-                    className="w-full bg-[#121212] border border-[#333] p-4 pl-12 rounded-2xl text-gray-400 outline-none focus:border-[#F5C518] transition-all font-bold" 
-                  />
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">الوصف (Meta description)</label>
+                  <textarea 
+                    value={seoDesc} 
+                    onChange={(e) => setSeoDesc(e.target.value)} 
+                    maxLength={320} 
+                    className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none h-20 resize-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]"
+                  ></textarea>
+                  <p className="text-[10px] text-gray-500 mt-1">{seoDesc.length} / 320</p>
                 </div>
-              </div>
-            </div>
-            <div className="border-t border-[#333] mt-8 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">Cost per item</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-4 text-gray-500 font-bold">E£</span>
-                  <input 
-                    type="number" 
-                    name="costPerItem"
-                    value={productData.costPerItem}
-                    onChange={handleProductChange}
-                    placeholder="0.00" 
-                    className="w-full bg-[#121212] border border-[#333] p-4 pl-12 rounded-2xl text-white outline-none focus:border-[#F5C518] transition-all font-bold" 
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-4 justify-center md:col-span-2 bg-[#121212] p-4 rounded-2xl border border-[#333]">
-                <span className="text-sm font-black text-gray-300">Charge tax on this product</span>
-                <button onClick={() => setChargeTax(!chargeTax)} className={`w-14 h-7 rounded-full relative transition-all duration-300 ${chargeTax ? 'bg-green-600' : 'bg-gray-700'}`}>
-                  <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all duration-300 ${chargeTax ? 'left-8' : 'left-1'}`}></div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 5. المخزون (Inventory) */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-sm font-black text-gray-400 flex items-center gap-2">
-                <Settings size={18} className="text-[#F5C518]"/> المخزون (Inventory)
-              </h3>
-              <div className="flex items-center gap-3 bg-[#121212] px-4 py-2 rounded-xl border border-[#333]">
-                <span className="text-[10px] font-black text-gray-500 uppercase">Track Inventory</span>
-                <button onClick={() => setInventoryTracked(!inventoryTracked)} className={`w-10 h-5 rounded-full relative transition-all duration-300 ${inventoryTracked ? 'bg-[#F5C518]' : 'bg-gray-700'}`}>
-                  <div className={`w-3.5 h-3.5 bg-black rounded-full absolute top-[3px] transition-all duration-300 ${inventoryTracked ? 'left-6' : 'left-1'}`}></div>
-                </button>
-              </div>
-            </div>
-            
-            <div className="bg-[#121212] border border-[#333] rounded-3xl p-6 mb-8">
-              <div className="flex justify-between items-center mb-4 border-b border-[#333] pb-4">
-                <span className="text-sm font-black text-white uppercase tracking-tighter">Location: Obour City</span>
-                <span className="text-[10px] text-[#F5C518] font-black cursor-pointer hover:underline uppercase">Edit Location</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-400">Available Quantity</span>
-                <input 
-                  type="number" 
-                  name="quantity"
-                  value={productData.quantity}
-                  onChange={handleProductChange}
-                  placeholder="0" 
-                  className="w-32 bg-[#1a1a1a] border border-[#333] p-3 rounded-xl text-center text-white outline-none focus:border-[#F5C518] font-black" 
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">SKU (Stock Keeping Unit)</label>
-                <input type="text" name="sku" value={productData.sku} onChange={handleProductChange} className="w-full bg-[#121212] border border-[#333] p-4 rounded-xl text-white outline-none focus:border-[#F5C518]" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Barcode (ISBN, UPC, GTIN)</label>
-                <input type="text" name="barcode" value={productData.barcode} onChange={handleProductChange} className="w-full bg-[#121212] border border-[#333] p-4 rounded-xl text-white outline-none focus:border-[#F5C518]" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">OutOfStock Policy</label>
-                <select name="sellOutOfStock" value={productData.sellOutOfStock} onChange={handleProductChange} className="w-full bg-[#121212] border border-[#333] p-4 rounded-xl text-white outline-none focus:border-[#F5C518] font-bold">
-                  <option value="No">Stop selling</option>
-                  <option value="Yes">Continue selling</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* 6. البدائل (Variants) + 🔥 اختيار الصور للألوان 🔥 */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-8">
-               <h3 className="text-sm font-black text-gray-400 flex items-center gap-2"><ListFilter size={18} className="text-[#F5C518]"/> البدائل (Variants)</h3>
-               <button onClick={addOption} className="bg-[#222] text-[#F5C518] px-4 py-2 rounded-xl text-xs font-black hover:bg-[#F5C518] hover:text-black transition-all">+ Add Option</button>
-            </div>
-            
-            <div className="space-y-6">
-              {options.map((option, index) => (
-                <div key={index} className="bg-[#121212] border border-[#333] p-6 rounded-3xl relative group border-dashed">
-                  <button onClick={() => removeOption(index)} className="absolute -top-3 -left-3 bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xl font-bold">×</button>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-600 mb-2 uppercase">Option Name</label>
-                      <input type="text" value={option.name} onChange={(e) => updateOption(index, 'name', e.target.value)} placeholder="Color or Size" list="csv-option-names" className="w-full bg-[#1a1a1a] border border-[#333] p-4 rounded-2xl text-white outline-none focus:border-[#F5C518] font-bold" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-600 mb-2 uppercase">Option Values (Separate with comma)</label>
-                      <input type="text" value={option.values} onChange={(e) => updateOption(index, 'values', e.target.value)} placeholder="fuchsia, black, jeans-blue" className="w-full bg-[#1a1a1a] border border-[#333] p-4 rounded-2xl text-white outline-none focus:border-[#F5C518]" />
-                    </div>
-                  </div>
-
-                  {/* 🔥 اختيار صورة المنتج لكل لون 🔥 */}
-                  {(option.name.toLowerCase() === 'color' || option.name === 'اللون' || option.name === 'لون') && option.values.trim() !== '' && (
-                    <div className="mt-5 bg-[#1a1a1a] p-5 rounded-2xl border border-[#F5C518]/30 shadow-inner">
-                      <label className="block text-[10px] font-black text-[#F5C518] mb-4 uppercase tracking-widest flex items-center gap-2">
-                         <div className="w-2 h-2 rounded-full bg-[#F5C518] animate-pulse"></div> ربط الألوان بصور المنتج (Image Swatches)
-                      </label>
-                      
-                      {images.length === 0 ? (
-                        <p className="text-xs text-red-400 font-bold border border-red-500/30 p-3 rounded-xl bg-red-500/10">يرجى رفع صور للمنتج أولاً من قسم (معرض الصور) بالاعلى لربطها بالألوان.</p>
-                      ) : (
-                        <div className="flex flex-col gap-4">
-                          {option.values.split(',').map(val => val.trim()).filter(Boolean).map((colorName, i) => (
-                            <div key={i} className="flex flex-col md:flex-row md:items-center gap-3 bg-[#121212] px-4 py-3 rounded-xl border border-[#444] hover:border-gray-500 transition-colors">
-                              <span className="text-xs text-white font-bold w-24 shrink-0 uppercase">{colorName}:</span>
-                              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                                {images.map((imgUrl, imgIdx) => (
-                                  <img
-                                    key={imgIdx}
-                                    src={imgUrl}
-                                    onClick={() => setColorSwatches({...colorSwatches, [colorName]: imgUrl})}
-                                    className={`w-10 h-10 shrink-0 rounded-full object-cover cursor-pointer border-2 transition-all duration-300 ${colorSwatches[colorName] === imgUrl ? 'border-[#F5C518] scale-110 shadow-[0_0_10px_rgba(245,197,24,0.5)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                                    alt={`اختيار لـ ${colorName}`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                </div>
-              ))}
-              {options.length === 0 && (
-                <p className="text-center text-gray-600 text-xs py-4 border border-dashed border-[#333] rounded-3xl font-bold italic">No variants added. Product will be sold as a single unit.</p>
-              )}
-            </div>
-          </div>
-
-          {/* 7. الـ Metafields والبيانات المخصصة */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <h3 className="text-sm font-black text-gray-400 mb-8 border-b border-[#333] pb-4">بيانات WIND المخصصة (Metafields)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               {Object.keys(metafields).map((key) => (
-                 <div key={key}>
-                    <label className="block text-[10px] font-black text-gray-600 mb-2 uppercase tracking-widest">{key.replace(/([A-Z])/g, ' $1')}</label>
-                    <input 
-                      type="text" 
-                      name={key} 
-                      value={metafields[key]} 
-                      onChange={handleMetafieldChange} 
-                      className="w-full bg-[#121212] border border-[#333] p-3 rounded-xl text-sm text-[#F5C518] outline-none focus:border-white transition-all font-mono" 
-                    />
-                 </div>
-               ))}
-            </div>
-          </div>
-
-          {/* 8. محركات البحث (SEO) */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm border-dashed">
-            <h3 className="text-sm font-black text-gray-400 mb-2 flex items-center gap-2"><Globe size={18} className="text-[#F5C518]"/> Search engine listing</h3>
-            <p className="text-[10px] text-gray-600 mb-8">This is how your product will appear in search results</p>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase">Page title</label>
-                <input type="text" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} maxLength={70} className="w-full bg-[#121212] border border-[#333] p-4 rounded-2xl text-white outline-none focus:border-[#F5C518] font-bold" />
-                <p className="text-[9px] text-gray-600 mt-2">{seoTitle.length} of 70 characters</p>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase">Meta description</label>
-                <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} maxLength={320} className="w-full bg-[#121212] border border-[#333] p-4 rounded-2xl text-white outline-none h-28 resize-none focus:border-[#F5C518]"></textarea>
-                <p className="text-[9px] text-gray-600 mt-2">{seoDesc.length} of 320 characters</p>
-              </div>
-              <div className="bg-[#121212] p-5 rounded-2xl border border-[#333]">
-                 <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">URL and handle</label>
-                 <div className="flex items-center text-xs font-bold" dir="ltr">
-                    <span className="text-gray-600">windeg.com/products/</span>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1.5">الرابط (URL handle)</label>
+                  <div className="flex items-center text-sm bg-gray-50 border border-gray-300 rounded-lg px-3 overflow-hidden" dir="ltr">
+                    <span className="text-gray-500 whitespace-nowrap py-2">windeg.com/products/</span>
                     <input 
                       type="text" 
                       value={urlHandle} 
                       onChange={(e) => setUrlHandle(e.target.value.toLowerCase().replace(/\s+/g, '-'))} 
-                      className="bg-transparent text-[#F5C518] outline-none border-b border-[#333] focus:border-[#F5C518] flex-1 ml-1" 
+                      className="bg-transparent text-[#202223] outline-none flex-1 py-2 w-full min-w-0" 
                     />
-                 </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* العمود الأيسر (الجانبي - 33%) */}
-        <div className="space-y-8">
-          {/* صندوق الحالة */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm">
-            <label className="block text-[10px] font-black text-gray-500 mb-4 uppercase tracking-widest">Product Status</label>
-            <select name="status" value={productData.status} onChange={handleProductChange} className="w-full bg-[#121212] border border-[#333] p-4 rounded-2xl text-white outline-none focus:border-[#F5C518] font-black">
-              <option value="Active">Active</option>
-              <option value="Draft">Draft</option>
-            </select>
           </div>
 
-          {/* 🔥 الربط الذهبي: قائمة الأقسام (Checkboxes) 🔥 */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#F5C518]/30 p-8 shadow-xl">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-sm font-black text-[#F5C518] uppercase tracking-tighter">الأقسام والمنيو (Collections)</h3>
-              <Info size={14} className="text-gray-600" />
-            </div>
+          {/* العمود الأيسر (الجانبي - 33%) */}
+          <div className="space-y-6 lg:sticky lg:top-6">
             
-            <div className="bg-black/40 rounded-2xl p-4 border border-[#333] space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {availableCollections.length > 0 ? (
-                availableCollections.map((col) => {
-                  const isChecked = (productData.selectedCollections || []).includes(col.slug);
-                  return (
-                    <label key={col.id} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer border transition-all duration-300 group ${isChecked ? 'bg-[#F5C518] border-transparent shadow-lg' : 'bg-[#1a1a1a] border-[#333] hover:border-gray-600'}`}>
-                      <input type="checkbox" checked={isChecked} onChange={() => handleCollectionToggle(col.slug)} className="hidden" />
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center border-2 transition-all duration-300 ${isChecked ? 'bg-black border-black scale-110' : 'bg-transparent border-gray-700'}`}>
-                        {isChecked && <CheckCircle2 size={14} className="text-[#F5C518]" />}
-                      </div>
-                      <div className="flex flex-col flex-1">
-                        <span className={`text-xs font-black transition-colors ${isChecked ? 'text-black' : 'text-gray-300 group-hover:text-white'}`}>{col.name}</span>
-                        <span className={`text-[9px] font-bold ${isChecked ? 'text-black/60' : 'text-gray-600'}`} dir="ltr">{col.slug}</span>
-                      </div>
-                    </label>
-                  );
-                })
-              ) : (
-                <div className="p-8 text-center border-2 border-dashed border-[#333] rounded-2xl text-gray-700 text-[10px] font-black uppercase">جاري مزامنة الكولكشنز...</div>
-              )}
+            {/* صندوق الحالة */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <label className="block text-sm font-bold text-[#202223] mb-3">حالة المنتج (Status)</label>
+              <select 
+                name="status" 
+                value={productData.status} 
+                onChange={handleProductChange} 
+                className="w-full bg-white border border-gray-300 px-4 py-2.5 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223] cursor-pointer"
+              >
+                <option value="Active">نشط (Active)</option>
+                <option value="Draft">مسودة (Draft)</option>
+              </select>
             </div>
-            <p className="mt-4 text-[9px] text-gray-500 font-bold leading-relaxed">* سيظهر المنتج تلقائياً في كل قسم تقوم باختياره، وسيرتبط بالمنيو فور الحفظ.</p>
-          </div>
 
-          {/* التنظيم (Organization) */}
-          <div className="bg-[#1a1a1a] rounded-3xl border border-[#333] p-8 shadow-sm space-y-6">
-            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest border-b border-[#333] pb-4">Organization</h3>
-            <div>
-              <label className="block text-[10px] font-black text-gray-600 mb-2 uppercase tracking-widest">Product Type</label>
-              <input type="text" name="type" value={productData.type} onChange={handleProductChange} list="csv-types" placeholder="Sweatshirt, Jacket..." className="w-full bg-[#121212] border border-[#333] p-4 rounded-xl text-white outline-none focus:border-[#F5C518]" />
+            {/* 🔥 قائمة الأقسام (Collections) - تم تحسينها جداً للموبايل 🔥 */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col max-h-[500px]">
+              <div className="p-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-sm font-bold text-[#202223]">أقسام المتجر (Collections)</h3>
+                <p className="text-[10px] text-gray-500 mt-1">اختر الأقسام التي سيظهر فيها المنتج.</p>
+              </div>
+              
+              <div className="p-2 overflow-y-auto custom-scrollbar flex-1">
+                {availableCollections.length > 0 ? (
+                  <div className="space-y-1">
+                    {availableCollections.map((col) => {
+                      const isChecked = (productData.selectedCollections || []).includes(col.slug);
+                      return (
+                        <label 
+                          key={col.id} 
+                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${isChecked ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                        >
+                          <div className="pt-0.5">
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked} 
+                              onChange={() => handleCollectionToggle(col.slug)} 
+                              className="w-4 h-4 text-[#008060] border-gray-300 rounded focus:ring-[#008060] cursor-pointer" 
+                            />
+                          </div>
+                          <div className="flex flex-col flex-1">
+                            <span className={`text-sm font-bold ${isChecked ? 'text-[#008060]' : 'text-[#202223]'}`}>{col.name}</span>
+                            <span className="text-[10px] text-gray-500" dir="ltr">{col.slug}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-xs text-gray-500">جاري تحميل الأقسام...</div>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="block text-[10px] font-black text-gray-600 mb-2 uppercase tracking-widest">Vendor</label>
-              <input type="text" name="vendor" value={productData.vendor} onChange={handleProductChange} className="w-full bg-[#121212] border border-[#333] p-4 rounded-xl text-white outline-none focus:border-[#F5C518]" />
+
+            {/* التنظيم (Organization) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-[#202223] mb-1">التنظيم (Organization)</h3>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1.5">النوع (Product type)</label>
+                <input 
+                  type="text" 
+                  name="type" 
+                  value={productData.type} 
+                  onChange={handleProductChange} 
+                  list="csv-types" 
+                  placeholder="مثال: تيشرتات" 
+                  className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1.5">المورد (Vendor)</label>
+                <input 
+                  type="text" 
+                  name="vendor" 
+                  value={productData.vendor} 
+                  onChange={handleProductChange} 
+                  className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1.5">العلامات (Tags - مفصولة بفاصلة)</label>
+                <input 
+                  type="text" 
+                  name="tags" 
+                  value={productData.tags} 
+                  onChange={handleProductChange} 
+                  placeholder="صيفي، جديد" 
+                  className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-[10px] font-black text-gray-600 mb-2 uppercase tracking-widest">Tags (Separate with comma)</label>
-              <input type="text" name="tags" value={productData.tags} onChange={handleProductChange} placeholder="winter, new-collection" className="w-full bg-[#121212] border border-[#333] p-4 rounded-xl text-white outline-none focus:border-[#F5C518]" />
-            </div>
+
           </div>
         </div>
       </div>
@@ -762,10 +843,10 @@ function CreateProductForm() {
       </datalist>
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 20px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #F5C518; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d2d5d8; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a6aab0; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -778,12 +859,9 @@ function CreateProductForm() {
 export default function CreateProductPage() {
   return (
     <Suspense fallback={
-      <div className="h-screen bg-[#121212] flex flex-col items-center justify-center text-[#F5C518] gap-6">
-        <Loader2 className="animate-spin" size={60} />
-        <div className="flex flex-col items-center gap-2">
-          <h2 className="text-2xl font-black tracking-[0.3em] uppercase animate-pulse">WIND Engine</h2>
-          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Initializing Smart Content Management System...</p>
-        </div>
+      <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center text-[#202223] gap-4">
+        <Loader2 className="animate-spin text-[#008060]" size={50} />
+        <h2 className="text-sm font-bold text-gray-500">جاري تهيئة نظام إدارة المنتجات...</h2>
       </div>
     }>
       <CreateProductForm />
