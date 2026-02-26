@@ -220,433 +220,448 @@ export default function HomeManagerPage() {
   };
 
   if (loading) {
-    return <div className="max-w-5xl mx-auto p-10 text-center text-[#F5C518] font-bold text-xl bg-[#121212] min-h-screen">جاري تحميل لوحة تحكم WIND...</div>;
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center text-[#202223]">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#202223] mb-4"></div>
+        <p className="font-bold text-sm text-gray-500">جاري تحميل الإعدادات...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] py-8 px-4 font-sans relative">
-      <div className="max-w-6xl mx-auto bg-[#1a1a1a] rounded-xl shadow-2xl text-white border border-[#333] overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-[#f4f6f8] text-[#202223] font-sans pb-24" dir="rtl">
+      
+      {/* Header الثابت */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm px-4 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-bold text-[#202223]">إدارة الصفحة الرئيسية</h1>
+          <p className="text-gray-500 text-xs lg:text-sm mt-1">تخصيص الهيكل والمحتوى لواجهة المتجر</p>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${
+            saving 
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
+            : 'bg-[#1a1a1a] hover:bg-black text-white'
+          }`}
+        >
+          {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+          {saving ? 'جاري الحفظ...' : 'حفظ ونشر التعديلات'}
+        </button>
+      </div>
 
-        {/* هيدر اللوحة */}
-        <div className="p-6 border-b border-[#333] flex flex-col md:flex-row justify-between items-center sticky top-0 bg-[#1a1a1a] z-40">
-          <div>
-            <h1 className="text-3xl font-black mb-1 text-[#F5C518] tracking-tight">إدارة واجهة WIND</h1>
-            <p className="text-gray-400 text-xs">تحكم شامل في ترتيب ومحتوى الصفحة الرئيسية</p>
+      <div className="max-w-5xl mx-auto mt-6 px-4">
+        
+        {/* أزرار التبويبات (Tabs) */}
+        <div className="flex overflow-x-auto scrollbar-hide bg-white border border-gray-200 rounded-xl shadow-sm mb-6 p-1">
+          <button onClick={() => setActiveTab('layout')} className={`flex-1 min-w-[140px] whitespace-nowrap py-2.5 px-4 text-sm font-bold rounded-lg transition-all ${activeTab === 'layout' ? 'bg-gray-100 text-[#202223] shadow-sm' : 'text-gray-500 hover:text-[#202223] hover:bg-gray-50'}`}>1. هيكلة وترتيب الصفحة</button>
+          <button onClick={() => setActiveTab('hero')} className={`flex-1 min-w-[140px] whitespace-nowrap py-2.5 px-4 text-sm font-bold rounded-lg transition-all ${activeTab === 'hero' ? 'bg-gray-100 text-[#202223] shadow-sm' : 'text-gray-500 hover:text-[#202223] hover:bg-gray-50'}`}>2. محتوى الهيرو</button>
+          <button onClick={() => setActiveTab('featured')} className={`flex-1 min-w-[140px] whitespace-nowrap py-2.5 px-4 text-sm font-bold rounded-lg transition-all ${activeTab === 'featured' ? 'bg-gray-100 text-[#202223] shadow-sm' : 'text-gray-500 hover:text-[#202223] hover:bg-gray-50'}`}>3. محتوى الأقسام المُضافة</button>
+        </div>
+
+        {/* ========================================= */}
+        {/* === التبويب الأول: محرك الترتيب الذكي === */}
+        {/* ========================================= */}
+        {activeTab === 'layout' && (
+          <div className="space-y-4 animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6 flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-[#008060] rounded-full"></div>
+              <div>
+                <h2 className="text-base font-bold text-[#202223]">هيكلة وترتيب الصفحة (Layout)</h2>
+                <p className="text-gray-500 text-xs mt-0.5">أضف الأقسام ورتبها. التصميم (Design ID) سيتم ضبطه تلقائياً.</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {layoutSections.map((section, index) => (
+                <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-[#008060]/50 transition-colors">
+                  
+                  <div className="flex sm:flex-col gap-1 w-full sm:w-auto justify-center order-2 sm:order-1 border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-3">
+                    <button onClick={() => moveSection(index, 'up')} className="bg-gray-50 p-2 rounded-lg text-gray-500 hover:text-[#202223] hover:bg-gray-100 transition-colors flex-1 sm:flex-none flex justify-center">▲</button>
+                    <button onClick={() => moveSection(index, 'down')} className="bg-gray-50 p-2 rounded-lg text-gray-500 hover:text-[#202223] hover:bg-gray-100 transition-colors flex-1 sm:flex-none flex justify-center">▼</button>
+                  </div>
+
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full order-1 sm:order-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-600 mb-1.5">نوع القسم</label>
+                      <select
+                        value={section.category}
+                        onChange={(e) => handleLayoutCategoryChange(index, e.target.value)}
+                        className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all"
+                      >
+                        {Object.keys(SECTION_TYPES).map(key => (
+                          <option key={key} value={key}>{SECTION_TYPES[key].label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-400 mb-1.5">التصميم المرتبط (تلقائي)</label>
+                      <input
+                        type="text" value={section.designId} readOnly
+                        className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-lg text-sm text-gray-500 cursor-not-allowed font-mono" dir="ltr"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => removeSection(index)}
+                    className="sm:ml-auto order-3 bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2.5 rounded-lg border border-red-100 transition-colors w-full sm:w-auto text-sm font-bold"
+                  >
+                    حذف
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addNewSection}
+              className="w-full mt-4 py-3.5 border-2 border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-[#202223] rounded-xl transition-all font-bold bg-white text-sm shadow-sm"
+            >
+              + إضافة قسم جديد للصفحة
+            </button>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`mt-4 md:mt-0 font-black py-3 px-10 rounded shadow-[0_0_15px_rgba(245,197,24,0.3)] transition-all duration-300 ${saving ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#F5C518] hover:bg-[#ffdb4d] text-black hover:scale-105'}`}
-          >
-            {saving ? 'جاري الحفظ...' : 'حفظ ونشر التعديلات'}
-          </button>
-        </div>
+        )}
 
-        {/* أزرار التبويبات */}
-        <div className="flex flex-wrap bg-[#121212] border-b border-[#333]">
-          <button onClick={() => setActiveTab('layout')} className={`flex-1 min-w-[150px] py-4 font-bold transition-all text-sm md:text-base ${activeTab === 'layout' ? 'text-[#F5C518] border-b-2 border-[#F5C518] bg-[#1a1a1a]' : 'text-gray-500 hover:text-white'}`}>1. هيكلة وترتيب الصفحة</button>
-          <button onClick={() => setActiveTab('hero')} className={`flex-1 min-w-[150px] py-4 font-bold transition-all text-sm md:text-base ${activeTab === 'hero' ? 'text-[#F5C518] border-b-2 border-[#F5C518] bg-[#1a1a1a]' : 'text-gray-500 hover:text-white'}`}>2. محتوى الهيرو</button>
-          <button onClick={() => setActiveTab('featured')} className={`flex-1 min-w-[150px] py-4 font-bold transition-all text-sm md:text-base ${activeTab === 'featured' ? 'text-[#F5C518] border-b-2 border-[#F5C518] bg-[#1a1a1a]' : 'text-gray-500 hover:text-white'}`}>3. محتوى الأقسام المُضافة</button>
-        </div>
-
-        <div className="p-4 md:p-8">
-
-          {/* ========================================= */}
-          {/* === التبويب الأول: محرك الترتيب الذكي === */}
-          {/* ========================================= */}
-          {activeTab === 'layout' && (
-            <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
-                <h2 className="text-2xl font-black">هيكلة وترتيب الصفحة (Layout)</h2>
-              </div>
-              <p className="text-gray-400 text-sm mb-6">أضف الأقسام ورتبها. التصميم (Design ID) سيتم ضبطه تلقائياً حسب نوع القسم.</p>
-
-              <div className="space-y-4">
-                {layoutSections.map((section, index) => (
-                  <div key={index} className="flex flex-col md:flex-row items-center gap-4 p-5 bg-[#242424] border border-[#444] rounded-xl group relative hover:border-[#F5C518]/50 transition-colors shadow-sm">
-
-                    <div className="flex md:flex-col gap-2 w-full md:w-auto justify-center">
-                      <button onClick={() => moveSection(index, 'up')} className="bg-[#121212] p-2 rounded text-gray-500 hover:text-[#F5C518] transition-colors">▲</button>
-                      <button onClick={() => moveSection(index, 'down')} className="bg-[#121212] p-2 rounded text-gray-500 hover:text-[#F5C518] transition-colors">▼</button>
-                    </div>
-
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                      <div>
-                        <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">نوع القسم</label>
-                        <select
-                          value={section.category}
-                          onChange={(e) => handleLayoutCategoryChange(index, e.target.value)}
-                          className="w-full bg-[#121212] border border-[#555] p-3 rounded text-sm text-white focus:border-[#F5C518] outline-none"
-                        >
-                          {Object.keys(SECTION_TYPES).map(key => (
-                            <option key={key} value={key}>{SECTION_TYPES[key].label}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] text-gray-400 mb-1 font-bold">التصميم المرتبط (تلقائي)</label>
-                        <input
-                          type="text" value={section.designId} readOnly
-                          className="w-full bg-[#121212]/50 border border-[#333] p-3 rounded text-sm text-gray-500 cursor-not-allowed" dir="ltr"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => removeSection(index)}
-                      className="bg-red-900/20 text-red-500 hover:bg-red-900/50 p-3 rounded-lg border border-red-900/50 transition-colors w-full md:w-auto font-bold"
-                    >
-                      حذف
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={addNewSection}
-                className="w-full py-4 border-2 border-dashed border-[#555] text-gray-400 hover:border-[#F5C518] hover:text-[#F5C518] rounded-xl transition-all font-bold bg-[#1a1a1a]"
-              >
-                + إضافة قسم جديد للصفحة
-              </button>
+        {/* ========================================= */}
+        {/* === التبويب الثاني: الهيرو === */}
+        {/* ========================================= */}
+        {activeTab === 'hero' && (
+          <div className="space-y-8 animate-[fadeIn_0.2s_ease-out]">
+            
+            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6 flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-[#008060] rounded-full"></div>
+              <h2 className="text-base font-bold text-[#202223]">إدارة شرائح العرض (Hero Slides)</h2>
             </div>
-          )}
 
-          {/* ========================================= */}
-          {/* === التبويب الثاني: الهيرو === */}
-          {/* ========================================= */}
-          {activeTab === 'hero' && (
-            <div className="space-y-12 animate-[fadeIn_0.3s_ease-out]">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
-                <h2 className="text-2xl font-black">إدارة شرائح العرض (Hero Slides)</h2>
-              </div>
+            <div className="space-y-6">
+              {slides.map((slide, index) => (
+                <div key={index} className="p-4 sm:p-5 border border-gray-200 rounded-xl bg-white shadow-sm relative">
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                    <h3 className="font-bold text-sm text-[#202223]">الشريحة رقم {index + 1}</h3>
+                    <button onClick={() => removeSlide(index)} className="text-red-500 hover:text-red-700 text-xs font-bold transition-colors">حذف الشريحة</button>
+                  </div>
 
-              <div className="space-y-8">
-                {slides.map((slide, index) => (
-                  <div key={index} className="p-6 border border-[#444] rounded-xl bg-[#242424] relative shadow-md">
-                    <div className="flex justify-between items-center mb-5 border-b border-[#444] pb-2">
-                      <h3 className="font-semibold text-lg text-[#F5C518]">الشريحة رقم {index + 1}</h3>
-                      <button onClick={() => removeSlide(index)} className="text-red-400 hover:text-red-300 text-sm font-bold transition-colors">حذف الشريحة</button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="col-span-1 sm:col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">رابط الصورة الخلفية الرئيسية</label>
+                      <input type="text" value={slide.image} onChange={(e) => handleSlideChange(index, 'image', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg outline-none bg-white text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] font-mono" dir="ltr" />
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="col-span-1 md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-400 mb-1.5">رابط الصورة الخلفية الرئيسية</label>
-                        <input type="text" value={slide.image} onChange={(e) => handleSlideChange(index, 'image', e.target.value)} className="w-full p-3 border border-[#555] rounded-md outline-none bg-[#121212] text-white focus:border-[#F5C518]" />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">الوسم المميّز (شريط أصفر)</label>
+                      <input type="text" value={slide.tag} onChange={(e) => handleSlideChange(index, 'tag', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg outline-none bg-white text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060]" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">العنوان الرئيسي</label>
+                      <input type="text" value={slide.title} onChange={(e) => handleSlideChange(index, 'title', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg outline-none bg-white text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060]" />
+                    </div>
+                    <div className="col-span-1 sm:col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">وصف التصميم</label>
+                      <textarea value={slide.desc} onChange={(e) => handleSlideChange(index, 'desc', e.target.value)} rows="2" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none bg-white text-sm text-[#202223] resize-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060]" />
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط البوستر المصغر</label>
+                        <input type="text" value={slide.thumbnail} onChange={(e) => handleSlideChange(index, 'thumbnail', e.target.value)} className="w-full p-2 bg-white border border-gray-300 rounded-md text-xs text-[#202223] focus:border-[#008060] outline-none font-mono" dir="ltr" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-1.5">الوسم المميّز (شريط أصفر)</label>
-                        <input type="text" value={slide.tag} onChange={(e) => handleSlideChange(index, 'tag', e.target.value)} className="w-full p-3 border border-[#555] rounded-md outline-none bg-[#121212] text-white focus:border-[#F5C518]" />
+                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط المنتج المخصص</label>
+                        <input type="text" value={slide.productLink} onChange={(e) => handleSlideChange(index, 'productLink', e.target.value)} className="w-full p-2 bg-white border border-gray-300 rounded-md text-xs text-[#202223] focus:border-[#008060] outline-none font-mono" dir="ltr" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-1.5">العنوان الرئيسي</label>
-                        <input type="text" value={slide.title} onChange={(e) => handleSlideChange(index, 'title', e.target.value)} className="w-full p-3 border border-[#555] rounded-md outline-none bg-[#121212] text-white focus:border-[#F5C518]" />
-                      </div>
-                      <div className="col-span-1 md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-400 mb-1.5">وصف التصميم</label>
-                        <textarea value={slide.desc} onChange={(e) => handleSlideChange(index, 'desc', e.target.value)} rows="2" className="w-full p-3 border border-[#555] rounded-md outline-none bg-[#121212] text-white resize-none focus:border-[#F5C518]" />
-                      </div>
-                      <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#333] col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5 mt-2">
-                        <div>
-                          <label className="block text-xs font-bold text-[#F5C518] mb-1.5">رابط البوستر المصغر</label>
-                          <input type="text" value={slide.thumbnail} onChange={(e) => handleSlideChange(index, 'thumbnail', e.target.value)} className="w-full p-2.5 bg-[#121212] border border-[#555] rounded text-sm text-white focus:border-[#F5C518] outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-[#F5C518] mb-1.5">رابط المنتج المخصص</label>
-                          <input type="text" value={slide.productLink} onChange={(e) => handleSlideChange(index, 'productLink', e.target.value)} className="w-full p-2.5 bg-[#121212] border border-[#555] rounded text-sm text-white focus:border-[#F5C518] outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-[#F5C518] mb-1.5">نص الزر</label>
-                          <input type="text" value={slide.buttonText || ""} onChange={(e) => handleSlideChange(index, 'buttonText', e.target.value)} className="w-full p-2.5 bg-[#121212] border border-[#555] rounded text-sm text-white focus:border-[#F5C518] outline-none" />
-                        </div>
+                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">نص الزر</label>
+                        <input type="text" value={slide.buttonText || ""} onChange={(e) => handleSlideChange(index, 'buttonText', e.target.value)} className="w-full p-2 bg-white border border-gray-300 rounded-md text-xs text-[#202223] focus:border-[#008060] outline-none" />
                       </div>
                     </div>
                   </div>
-                ))}
-                <button onClick={addNewSlide} className="mt-6 w-full py-4 border-2 border-dashed border-[#555] text-gray-400 font-bold rounded-xl hover:border-[#F5C518] hover:text-[#F5C518] bg-[#1a1a1a] transition-all">+ إضافة شريحة عرض جديدة</button>
-              </div>
-
-              {/* شريط الأقسام السفلية */}
-              <div className="pt-12 border-t border-[#444]">
-                <h2 className="text-2xl font-black mb-6 flex items-center gap-3"><div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>إدارة أزرار تصفح الأقسام</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {categories.map((category, index) => (
-                    <div key={index} className="flex gap-4 items-center p-3 border border-[#444] rounded-lg bg-[#242424]">
-                      <input type="text" value={category.title} onChange={(e) => handleCategoryChange(index, 'title', e.target.value)} placeholder="اسم القسم" className="w-1/3 p-2.5 bg-[#121212] border border-[#555] rounded text-sm text-white focus:border-[#F5C518] outline-none" />
-                      <input type="text" value={category.link} onChange={(e) => handleCategoryChange(index, 'link', e.target.value)} placeholder="الرابط" className="flex-1 p-2.5 bg-[#121212] border border-[#555] rounded text-sm text-white focus:border-[#F5C518] outline-none" dir="ltr" />
-                      <button onClick={() => removeCategory(index)} className="text-red-500 hover:text-red-400 p-2 font-bold">✕</button>
-                    </div>
-                  ))}
                 </div>
-                <button onClick={addNewCategory} className="mt-4 px-6 py-3 bg-[#242424] border border-[#555] text-[#F5C518] font-bold rounded-xl hover:border-[#F5C518] hover:text-white transition-all">+ إضافة قسم جديد</button>
+              ))}
+              <button onClick={addNewSlide} className="w-full py-3.5 border border-dashed border-gray-300 text-gray-600 text-sm font-bold rounded-xl hover:border-gray-400 hover:bg-gray-50 bg-white transition-all shadow-sm">+ إضافة شريحة عرض جديدة</button>
+            </div>
+
+            {/* شريط الأقسام السفلية */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mt-8">
+              <h2 className="text-base font-bold text-[#202223] mb-4 flex items-center gap-2">
+                <div className="w-1 h-4 bg-[#008060] rounded-sm"></div>
+                إدارة أزرار تصفح الأقسام
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {categories.map((category, index) => (
+                  <div key={index} className="flex gap-2 items-center p-2.5 border border-gray-200 rounded-lg bg-gray-50">
+                    <input type="text" value={category.title} onChange={(e) => handleCategoryChange(index, 'title', e.target.value)} placeholder="اسم القسم" className="w-1/3 p-2 bg-white border border-gray-300 rounded text-xs text-[#202223] focus:border-[#008060] outline-none" />
+                    <input type="text" value={category.link} onChange={(e) => handleCategoryChange(index, 'link', e.target.value)} placeholder="الرابط" className="flex-1 p-2 bg-white border border-gray-300 rounded text-xs text-[#202223] focus:border-[#008060] outline-none font-mono" dir="ltr" />
+                    <button onClick={() => removeCategory(index)} className="text-red-500 hover:text-red-700 p-1.5 font-bold text-sm">✕</button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addNewCategory} className="mt-4 px-4 py-2 bg-white border border-gray-300 text-[#202223] text-xs font-bold rounded-lg hover:bg-gray-50 transition-all shadow-sm">+ إضافة قسم جديد</button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================= */}
+        {/* === التبويب الثالث: محرر الأقسام === */}
+        {/* ========================================= */}
+        {activeTab === 'featured' && (
+          <div className="space-y-4 animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6 flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-[#008060] rounded-full"></div>
+              <div>
+                <h2 className="text-base font-bold text-[#202223]">محتوى الأقسام الإضافية</h2>
+                <p className="text-gray-500 text-xs mt-0.5">اضغط على أي قسم لفتحه وتعديل محتواه.</p>
               </div>
             </div>
-          )}
 
-          {/* ========================================= */}
-          {/* === التبويب الثالث: محرر الأقسام === */}
-          {/* ========================================= */}
-          {activeTab === 'featured' && (
-            <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-              <div className="flex items-center gap-3 mb-8 border-b border-[#333] pb-4">
-                <div className="w-2 h-8 bg-[#F5C518] rounded-sm"></div>
-                <div>
-                  <h2 className="text-2xl font-black">محتوى الأقسام الإضافية</h2>
-                  <p className="text-gray-400 text-sm mt-1">اضغط على أي قسم لفتحه وتعديل محتواه.</p>
-                </div>
-              </div>
+            {layoutSections.map((section, sectionIndex) => {
+              const config = SECTION_TYPES[section.category];
+              if (section.category === 'HERO_SECTION') return null;
 
-              {layoutSections.map((section, sectionIndex) => {
-                const config = SECTION_TYPES[section.category];
-                if (section.category === 'HERO_SECTION') return null;
+              const isExpanded = expandedSections[sectionIndex];
 
-                const isExpanded = expandedSections[sectionIndex];
+              return (
+                <div key={sectionIndex} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-3">
 
-                return (
-                  <div key={sectionIndex} className="bg-[#1a1a1a] border border-[#444] rounded-xl shadow-md transition-all overflow-hidden mb-4">
-
-                    {/* رأس الأكورديون */}
-                    <div
-                      onClick={() => toggleAccordion(sectionIndex)}
-                      className="p-5 flex justify-between items-center cursor-pointer hover:bg-[#242424] transition-colors bg-[#222] border-b border-transparent data-[expanded=true]:border-[#444]"
-                      data-expanded={isExpanded}
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="bg-[#F5C518] text-black font-black text-xs px-3 py-1.5 rounded-sm uppercase tracking-wider">
-                          {config?.label}
-                        </span>
-                        <span className="font-bold text-white text-lg">
-                          {section.data?.title || "بدون عنوان"}
-                        </span>
-                      </div>
-                      <div className={`text-[#F5C518] font-black text-xl transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                        ▼
-                      </div>
+                  {/* رأس الأكورديون */}
+                  <div
+                    onClick={() => toggleAccordion(sectionIndex)}
+                    className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors border-b border-transparent data-[expanded=true]:border-gray-200"
+                    data-expanded={isExpanded}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <span className="bg-gray-100 text-[#202223] font-bold text-[10px] sm:text-xs px-2.5 py-1 rounded border border-gray-200 w-fit tracking-wide">
+                        {config?.label}
+                      </span>
+                      <span className="font-bold text-[#202223] text-sm sm:text-base">
+                        {section.data?.title || "بدون عنوان"}
+                      </span>
                     </div>
+                    <div className={`text-gray-400 font-bold text-sm transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                      ▼
+                    </div>
+                  </div>
 
-                    {/* المحتوى عند فتح الأكورديون */}
-                    {isExpanded && (
-                      <div className="p-6 bg-[#242424] animate-[fadeIn_0.2s_ease-out]">
+                  {/* المحتوى عند فتح الأكورديون */}
+                  {isExpanded && (
+                    <div className="p-4 sm:p-5 bg-gray-50 animate-[fadeIn_0.2s_ease-out]">
 
-                        {/* 1. العنوان الرئيسي والفرعي */}
-                        {config?.hasTitle && (
-                          <div className="mb-6 bg-[#121212] p-4 rounded-lg border border-[#333]">
-                            <div className="mb-4">
-                              <label className="block text-xs font-bold text-[#F5C518] mb-2">العنوان الرئيسي للقسم</label>
+                      {/* 1. العنوان الرئيسي والفرعي */}
+                      {config?.hasTitle && (
+                        <div className="mb-5 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                          <div className="mb-4">
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5">العنوان الرئيسي للقسم</label>
+                            <input
+                              type="text" value={section.data?.title || ""}
+                              onChange={(e) => handleLayoutDataChange(sectionIndex, 'title', e.target.value)}
+                              className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none"
+                            />
+                          </div>
+                          {config?.hasSubTitle && (
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1.5">العنوان الفرعي (اختياري)</label>
                               <input
-                                type="text" value={section.data?.title || ""}
-                                onChange={(e) => handleLayoutDataChange(sectionIndex, 'title', e.target.value)}
-                                className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white font-bold focus:border-[#F5C518] outline-none"
+                                type="text" value={section.data?.subTitle || ""}
+                                onChange={(e) => handleLayoutDataChange(sectionIndex, 'subTitle', e.target.value)}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
                               />
                             </div>
-                            {config?.hasSubTitle && (
-                              <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-2">العنوان الفرعي (اختياري)</label>
-                                <input
-                                  type="text" value={section.data?.subTitle || ""}
-                                  onChange={(e) => handleLayoutDataChange(sectionIndex, 'subTitle', e.target.value)}
-                                  className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white focus:border-[#F5C518] outline-none"
-                                />
-                              </div>
-                            )}
+                          )}
 
-                            {/* إضافة رابط عرض الكل للقسم بالكامل */}
-<div className="mt-4 pt-4 border-t border-[#333]">
-  <label className="block text-xs font-bold text-[#F5C518] mb-2">رابط زر "عرض الكل" (صفحة المجموعة)</label>
-  <input 
-    type="text" 
-    value={section.data?.linkUrl || ""} 
-    onChange={(e) => handleLayoutDataChange(sectionIndex, 'linkUrl', e.target.value)} 
-    placeholder="مثال: /collections/shoes"
-    className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white focus:border-[#F5C518] outline-none"
-    dir="ltr"
-  />
-</div>
-
-                            {/* ✅ رابط "عرض الكل" - خاص بـ TOP_TEN_SECTION فقط */}
-                            {section.category === 'TOP_TEN_SECTION' && (
-                              <div className="mt-4">
-                                <label className="block text-xs font-bold text-[#F5C518] mb-2">رابط زرار "عرض الكل" (صفحة المجموعة)</label>
-                                <input
-                                  type="text"
-                                  value={section.data?.viewAllLink || ""}
-                                  onChange={(e) => handleLayoutDataChange(sectionIndex, 'viewAllLink', e.target.value)}
-                                  className="w-full p-3 border border-[#555] rounded bg-[#1a1a1a] text-white focus:border-[#F5C518] outline-none"
-                                  dir="ltr"
-                                  placeholder="مثال: /collections/top-ten"
-                                />
-                              </div>
-                            )}
+                          {/* إضافة رابط عرض الكل للقسم بالكامل */}
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5">رابط زر "عرض الكل" (صفحة المجموعة)</label>
+                            <input 
+                              type="text" 
+                              value={section.data?.linkUrl || ""} 
+                              onChange={(e) => handleLayoutDataChange(sectionIndex, 'linkUrl', e.target.value)} 
+                              placeholder="مثال: /collections/shoes"
+                              className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono"
+                              dir="ltr"
+                            />
                           </div>
-                        )}
 
-                        {/* 2. محرر البطاقات */}
-                        {config?.hasFeaturedCards && (
-                          <div className="border-t border-[#444] pt-4">
-                            <h4 className="text-[#F5C518] font-bold mb-4">البطاقات المخصصة (Cards):</h4>
-                            <div className="space-y-6">
-                              {(section.data?.cards || []).map((card, cardIndex) => (
-                                <div key={cardIndex} className="p-5 border border-[#555] rounded-xl bg-[#1a1a1a] relative shadow-inner">
-                                  <div className="flex justify-between items-center mb-4 border-b border-[#333] pb-2">
-                                    <span className="font-bold text-gray-300 text-sm">البطاقة الرئيسية #{cardIndex + 1}</span>
-                                    <button onClick={() => removeArrayItem(sectionIndex, 'cards', cardIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف البطاقة بالكامل</button>
+                          {/* رابط "عرض الكل" - خاص بـ TOP_TEN_SECTION فقط */}
+                          {section.category === 'TOP_TEN_SECTION' && (
+                            <div className="mt-4">
+                              <label className="block text-xs font-bold text-gray-600 mb-1.5">رابط زرار "عرض الكل" (TOP 10)</label>
+                              <input
+                                type="text"
+                                value={section.data?.viewAllLink || ""}
+                                onChange={(e) => handleLayoutDataChange(sectionIndex, 'viewAllLink', e.target.value)}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono"
+                                dir="ltr"
+                                placeholder="مثال: /collections/top-ten"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 2. محرر البطاقات */}
+                      {config?.hasFeaturedCards && (
+                        <div>
+                          <h4 className="text-sm font-bold text-[#202223] mb-3">البطاقات المخصصة (Cards):</h4>
+                          <div className="space-y-4">
+                            {(section.data?.cards || []).map((card, cardIndex) => (
+                              <div key={cardIndex} className="p-4 sm:p-5 border border-gray-200 rounded-xl bg-white shadow-sm relative">
+                                <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                                  <span className="font-bold text-[#202223] text-sm">البطاقة الرئيسية #{cardIndex + 1}</span>
+                                  <button onClick={() => removeArrayItem(sectionIndex, 'cards', cardIndex)} className="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2 py-1 rounded">حذف البطاقة بالكامل</button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                  {/* رابط الصورة - مشترك */}
+                                  <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط الصورة (Image URL)</label>
+                                    <input type="text" value={card.image} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'image', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" />
                                   </div>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                    {/* رابط الصورة - مشترك */}
-                                    <div className="col-span-1 md:col-span-2 flex gap-2">
-                                      <div className="flex-1">
-                                        <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">رابط الصورة (Image URL)</label>
-                                        <input type="text" value={card.image} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'image', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr" />
-                                      </div>
-                                    </div>
-
-                                    {/* Badge Type - خاص بـ FEATURED فقط */}
-                                    {section.category !== 'TOP_TEN_SECTION' && (
-                                      <div>
-                                        <label className="block text-[11px] text-gray-400 mb-1 font-bold">نوع الشارة (Badge Type)</label>
-                                        <select value={card.badgeType} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'badgeType', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none">
-                                          <option value="none">بدون شارة</option>
-                                          <option value="list">قائمة (List)</option>
-                                          <option value="photos">صور (Photos)</option>
-                                        </select>
-                                      </div>
-                                    )}
-
-                                    {/* العنوان - مشترك */}
-                                    <div>
-                                      <label className="block text-[11px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
-                                      <input type="text" value={card.mainTitle} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'mainTitle', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
-                                    </div>
-                                    <div>
-  <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">رابط تفاصيل المنتج (داخل الكارت)</label>
-  <input 
-    type="text" 
-    value={card.linkUrl || ""} 
-    onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} 
-    placeholder="ألصق رابط المنتج هنا"
-    className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" 
-    dir="ltr" 
-  />
-</div>
-
-                                    {/* نص الرابط الملوّن - خاص بـ FEATURED فقط */}
-                                    {section.category !== 'TOP_TEN_SECTION' && (
-                                      <div>
-                                        <label className="block text-[11px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
-                                        <input type="text" value={card.linkText} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
-                                      </div>
-                                    )}
-
-                                    {/* رابط التوجيه - مشترك (هو رابط المنتج لزرار "عرض التفاصيل" في TOP_TEN) */}
-                                    <div>
-                                      <label className="block text-[11px] text-[#F5C518] mb-1 font-bold">
-                                        {section.category === 'TOP_TEN_SECTION' ? 'رابط المنتج (زرار "عرض التفاصيل")' : 'رابط التوجيه (URL)'}
-                                      </label>
-                                      <input type="text" value={card.linkUrl} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا" />
-                                    </div>
-
-                                    {/* ✅ خانات خاصة بـ TOP_TEN_SECTION */}
-                                    {section.category === 'TOP_TEN_SECTION' && (
-                                      <>
-                                        <div>
-                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">السعر</label>
-                                          <input type="text" value={card.price || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'price', e.target.value)} placeholder="مثال: 1500 ج.م" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
-                                        </div>
-                                        <div>
-                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">التقييم</label>
-                                          <input type="text" value={card.rating || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'rating', e.target.value)} placeholder="مثال: 4.8" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
-                                        </div>
-                                        <div>
-                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">عدد المراجعات</label>
-                                          <input type="text" value={card.reviewsCount || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'reviewsCount', e.target.value)} placeholder="مثال: 120 مراجعة" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
-                                        </div>
-                                        <div>
-                                          <label className="block text-[11px] text-gray-400 mb-1 font-bold">تصنيف المنتج (الفئة)</label>
-                                          <input type="text" value={card.category || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'category', e.target.value)} placeholder="مثال: أجهزة منزلية" className="w-full p-2.5 border border-[#444] rounded bg-[#121212] text-white text-sm focus:border-[#F5C518] outline-none" />
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-
-                                  {/* البطاقات الفرعية - خاصة بـ FEATURED فقط */}
+                                  {/* Badge Type - خاص بـ FEATURED فقط */}
                                   {section.category !== 'TOP_TEN_SECTION' && (
-                                    <div className="mt-6 border-t border-[#333] pt-4">
-                                      <h5 className="text-[#F5C518] font-bold text-sm mb-3">البطاقات الفرعية المرتبطة بهذه البطاقة:</h5>
-                                      <div className="space-y-4">
-                                        {(card.subCards || []).map((subCard, subIndex) => (
-                                          <div key={subIndex} className="p-4 border border-[#444] rounded-lg bg-[#222] relative">
-                                            <div className="flex justify-between items-center mb-3">
-                                              <span className="font-bold text-gray-400 text-xs">بطاقة فرعية #{subIndex + 1}</span>
-                                              <button onClick={() => removeSubCard(sectionIndex, cardIndex, subIndex)} className="text-red-400 hover:text-red-300 font-bold text-xs">حذف البطاقة الفرعية</button>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                              <div className="col-span-1 md:col-span-2">
-                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط الصورة</label>
-                                                <input type="text" value={subCard.image} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'image', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr" />
-                                              </div>
-                                              <div>
-                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">العنوان أسفل الصورة</label>
-                                                <input type="text" value={subCard.mainTitle} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'mainTitle', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" />
-                                              </div>
-                                              <div>
-                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">نص الرابط الملوّن</label>
-                                                <input type="text" value={subCard.linkText} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkText', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" />
-                                              </div>
-                                              <div className="col-span-1 md:col-span-2">
-                                                <label className="block text-[10px] text-gray-400 mb-1 font-bold">رابط التوجيه (URL)</label>
-                                                <input type="text" value={subCard.linkUrl} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkUrl', e.target.value)} className="w-full p-2 border border-[#444] rounded bg-[#121212] text-white text-xs focus:border-[#F5C518] outline-none" dir="ltr" />
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                      <button onClick={() => addSubCard(sectionIndex, cardIndex)} className="mt-3 w-full py-2 border border-dashed border-gray-500 text-gray-400 font-bold text-xs rounded-lg hover:border-white hover:text-white transition-all">+ إضافة بطاقة فرعية</button>
+                                    <div>
+                                      <label className="block text-[11px] font-bold text-gray-600 mb-1.5">نوع الشارة (Badge Type)</label>
+                                      <select value={card.badgeType} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'badgeType', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none">
+                                        <option value="none">بدون شارة</option>
+                                        <option value="list">قائمة (List)</option>
+                                        <option value="photos">صور (Photos)</option>
+                                      </select>
                                     </div>
                                   )}
+
+                                  {/* العنوان - مشترك */}
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">العنوان أسفل الصورة</label>
+                                    <input type="text" value={card.mainTitle} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'mainTitle', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط تفاصيل المنتج (داخل الكارت)</label>
+                                    <input 
+                                      type="text" 
+                                      value={card.linkUrl || ""} 
+                                      onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} 
+                                      placeholder="ألصق رابط المنتج هنا"
+                                      className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" 
+                                      dir="ltr" 
+                                    />
+                                  </div>
+
+                                  {/* نص الرابط الملوّن - خاص بـ FEATURED فقط */}
+                                  {section.category !== 'TOP_TEN_SECTION' && (
+                                    <div>
+                                      <label className="block text-[11px] font-bold text-gray-600 mb-1.5">نص الرابط الملوّن</label>
+                                      <input type="text" value={card.linkText} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                    </div>
+                                  )}
+
+                                  {/* رابط التوجيه - مشترك (هو رابط المنتج لزرار "عرض التفاصيل" في TOP_TEN) */}
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">
+                                      {section.category === 'TOP_TEN_SECTION' ? 'رابط المنتج (زرار "عرض التفاصيل")' : 'رابط التوجيه (URL)'}
+                                    </label>
+                                    <input type="text" value={card.linkUrl} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا" />
+                                  </div>
+
+                                  {/* ✅ خانات خاصة بـ TOP_TEN_SECTION */}
+                                  {section.category === 'TOP_TEN_SECTION' && (
+                                    <>
+                                      <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">السعر</label>
+                                        <input type="text" value={card.price || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'price', e.target.value)} placeholder="مثال: 1500 ج.م" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">التقييم</label>
+                                        <input type="text" value={card.rating || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'rating', e.target.value)} placeholder="مثال: 4.8" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">عدد المراجعات</label>
+                                        <input type="text" value={card.reviewsCount || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'reviewsCount', e.target.value)} placeholder="مثال: 120 مراجعة" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 mb-1.5">تصنيف المنتج (الفئة)</label>
+                                        <input type="text" value={card.category || ""} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'category', e.target.value)} placeholder="مثال: أجهزة منزلية" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
 
-                            {/* ✅ زرار إضافة بطاقة جديدة مع template مختلف حسب نوع القسم */}
-                            <button
-                              onClick={() => addArrayItem(sectionIndex, 'cards',
-                                section.category === 'TOP_TEN_SECTION'
-                                  ? { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" }
-                                  : { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] }
-                              )}
-                              className="mt-4 w-full py-3 border border-dashed border-[#F5C518] text-[#F5C518] font-bold rounded-xl hover:bg-[#F5C518] hover:text-black transition-all"
-                            >
-                              + إضافة بطاقة جديدة
-                            </button>
+                                {/* البطاقات الفرعية - خاصة بـ FEATURED فقط */}
+                                {section.category !== 'TOP_TEN_SECTION' && (
+                                  <div className="mt-5 border-t border-gray-100 pt-4">
+                                    <h5 className="text-xs font-bold text-gray-600 mb-3">البطاقات الفرعية المرتبطة بهذه البطاقة:</h5>
+                                    <div className="space-y-3">
+                                      {(card.subCards || []).map((subCard, subIndex) => (
+                                        <div key={subIndex} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
+                                          <div className="flex justify-between items-center mb-3">
+                                            <span className="font-bold text-gray-500 text-[11px]">بطاقة فرعية #{subIndex + 1}</span>
+                                            <button onClick={() => removeSubCard(sectionIndex, cardIndex, subIndex)} className="text-red-500 hover:text-red-700 text-[10px] font-bold bg-white px-2 py-1 rounded border border-gray-200">حذف البطاقة الفرعية</button>
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="col-span-1 md:col-span-2">
+                                              <label className="block text-[10px] font-bold text-gray-500 mb-1">رابط الصورة</label>
+                                              <input type="text" value={subCard.image} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'image', e.target.value)} className="w-full p-2 border border-gray-300 rounded bg-white text-xs text-[#202223] focus:border-[#008060] outline-none font-mono" dir="ltr" />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] font-bold text-gray-500 mb-1">العنوان أسفل الصورة</label>
+                                              <input type="text" value={subCard.mainTitle} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'mainTitle', e.target.value)} className="w-full p-2 border border-gray-300 rounded bg-white text-xs text-[#202223] focus:border-[#008060] outline-none" />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] font-bold text-gray-500 mb-1">نص الرابط الملوّن</label>
+                                              <input type="text" value={subCard.linkText} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkText', e.target.value)} className="w-full p-2 border border-gray-300 rounded bg-white text-xs text-[#202223] focus:border-[#008060] outline-none" />
+                                            </div>
+                                            <div className="col-span-1 md:col-span-2">
+                                              <label className="block text-[10px] font-bold text-gray-500 mb-1">رابط التوجيه (URL)</label>
+                                              <input type="text" value={subCard.linkUrl} onChange={(e) => updateSubCard(sectionIndex, cardIndex, subIndex, 'linkUrl', e.target.value)} className="w-full p-2 border border-gray-300 rounded bg-white text-xs text-[#202223] focus:border-[#008060] outline-none font-mono" dir="ltr" />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <button onClick={() => addSubCard(sectionIndex, cardIndex)} className="mt-3 w-full py-2 border border-dashed border-gray-300 text-gray-500 font-bold text-xs rounded-lg hover:border-gray-400 hover:bg-white bg-transparent transition-all shadow-sm">+ إضافة بطاقة فرعية</button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        )}
 
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                          {/* ✅ زرار إضافة بطاقة جديدة مع template مختلف حسب نوع القسم */}
+                          <button
+                            onClick={() => addArrayItem(sectionIndex, 'cards',
+                              section.category === 'TOP_TEN_SECTION'
+                                ? { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" }
+                                : { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] }
+                            )}
+                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
+                          >
+                            + إضافة بطاقة جديدة
+                          </button>
+                        </div>
+                      )}
 
-              {/* رسالة توضيحية */}
-              {layoutSections.length <= 1 && (
-                <div className="p-10 border border-[#444] rounded-xl text-center text-gray-400 bg-[#1a1a1a]">
-                  لا توجد أقسام حالياً. أضف قسم (المميز اليوم) من التبويب الأول للبدء في تعديله.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              );
+            })}
+
+            {/* رسالة توضيحية */}
+            {layoutSections.length <= 1 && (
+              <div className="p-8 border border-dashed border-gray-300 rounded-xl text-center text-gray-500 bg-white text-sm shadow-sm">
+                لا توجد أقسام حالياً. أضف قسم (المميز اليوم) من التبويب الأول للبدء في تعديله.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <style jsx global>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(5px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   );
