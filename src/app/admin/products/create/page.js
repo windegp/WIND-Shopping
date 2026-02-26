@@ -8,7 +8,7 @@ import ImageUploader from "@/components/ImageUploader";
 import { 
   Save, Loader2, ArrowRight, Image as ImageIcon, 
   CheckCircle2, Globe, Box, Settings, Tag, 
-  Truck, Info, ListFilter, AlertCircle, Database, Layout
+  Truck, Info, ListFilter, AlertCircle, Database, Layout, Trash2, X
 } from "lucide-react";
 
 // ==========================================
