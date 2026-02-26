@@ -7,7 +7,7 @@ import {
   Plus, Save, Loader2, Trash2, 
   Link as LinkIcon, Layers, Database, 
   Layout, MonitorSmartphone, Menu,
-  ChevronDown, ChevronRight, Info, X, ChevronUp
+  ChevronDown, ChevronRight, Info, X, ChevronUp, CornerDownLeft
 } from "lucide-react";
 
 export default function ProfessionalMenuManager() {
@@ -97,74 +97,81 @@ export default function ProfessionalMenuManager() {
     setItems(newItems);
   };
 
- // --- مكون الشجرة (الأكورديون) ---
+  // --- مكون الشجرة (الأكورديون) ---
   const RenderMenuTree = ({ list, path = [], depth = 0 }) => {
+    if (!list || list.length === 0) return null;
+
+    // السر هنا: المربع اللي بيحتوي الأبناء بياخد Border من اليمين كأنه خط الشجرة العمودي
     return (
-      <div className={`space-y-3 ${depth > 0 ? 'mt-3 mr-4 sm:mr-8 border-r-2 border-gray-200 pr-4 sm:pr-6 relative' : ''}`}>
+      <div className={`flex flex-col gap-3 ${depth > 0 ? 'mt-3 pr-4 sm:pr-8 border-r-2 border-gray-300' : ''}`}>
         {list.map((item, index) => {
           const currentPath = [...path, index];
           const isExpanded = expandedItems.has(item.id);
           const hasChildren = item.children && item.children.length > 0;
 
           // تدرج لوني ذكي حسب العمق
-          const depthBgClass = 
+          const isDark = depth >= 2; 
+          
+          const cardStyle = 
             depth === 0 ? "bg-white border-gray-200 shadow-sm" : 
-            depth === 1 ? "bg-[#fafafa] border-gray-200" : 
-            depth === 2 ? "bg-[#f4f6f8] border-gray-300" : 
-            "bg-[#eeeeee] border-gray-300";
+            depth === 1 ? "bg-gray-50 border-gray-300" : 
+            depth === 2 ? "bg-[#2b2b2b] border-[#444]" : 
+            "bg-[#111] border-[#333]";
+
+          const textColor = isDark ? "text-white" : "text-[#202223]";
+          const labelColor = isDark ? "text-gray-400" : "text-gray-500";
+          const inputBg = isDark ? "bg-[#1a1a1a] border-[#444] text-white focus:border-[#008060] placeholder-gray-600" : "bg-white border-gray-300 text-[#202223] focus:border-[#008060] placeholder-gray-400";
+          const linkBg = isDark ? "bg-[#111] border-[#333] text-gray-400" : "bg-white border-gray-200 text-gray-500";
 
           return (
             <div key={item.id} className="relative animate-[fadeIn_0.2s_ease-out]">
               
-              {/* خط التوصيل الأفقي للأبناء (عشان يبان إنه متفرع من اللي فوقه) */}
+              {/* خط التوصيل الأفقي (الفرع اللي بيمسك الكارت في العمود الرئيسي) */}
               {depth > 0 && (
-                <div className="absolute top-8 -right-4 sm:-right-6 w-4 sm:w-6 h-[2px] bg-gray-200"></div>
+                <div className="absolute top-10 -right-4 sm:-right-8 w-4 sm:w-8 h-[2px] bg-gray-300 z-0"></div>
               )}
 
               <div className={`
-                border ${depthBgClass} 
-                p-4 sm:p-5 rounded-xl transition-all duration-200 hover:border-[#008060]/50 relative z-10
-                ${isExpanded && depth === 0 ? 'ring-1 ring-gray-200 shadow-md' : ''}
+                border p-4 sm:p-5 rounded-xl transition-all duration-200 relative z-10
+                ${cardStyle}
+                ${isExpanded && depth === 0 ? 'ring-1 ring-[#008060]/30 shadow-md' : ''}
               `}>
                 
-                {/* 1. رأس الكارت (مؤشر المستوى + أزرار الطي والحذف) */}
-                <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200/60">
+                {/* 1. رأس الكارت */}
+                <div className={`flex justify-between items-center mb-4 pb-3 border-b ${isDark ? 'border-[#444]' : 'border-gray-200/60'}`}>
                   <div className="flex items-center gap-3">
                     {hasChildren ? (
                       <button 
                         onClick={() => toggleAccordion(item.id)} 
-                        className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-[#008060] text-white shadow-sm' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}`}
-                        title={isExpanded ? "طي القائمة" : "إظهار القوائم الفرعية"}
+                        className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-[#008060] text-white' : isDark ? 'bg-[#444] text-white hover:bg-[#555]' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}`}
                       >
                         {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                       </button>
                     ) : (
                       <div className="w-7 h-7 flex items-center justify-center">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                        <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-gray-500' : 'bg-gray-300'}`}></div>
                       </div>
                     )}
-                    <span className="bg-gray-100 text-gray-500 font-bold text-[10px] px-2 py-1 rounded border border-gray-200">
+                    <span className={`font-bold text-[10px] px-2 py-1 rounded border ${isDark ? 'bg-[#333] border-[#555] text-gray-300' : 'bg-white border-gray-200 text-[#008060]'}`}>
                       مستوى {depth + 1}
                     </span>
-                    <h3 className="text-sm font-bold text-[#202223] truncate max-w-[150px] sm:max-w-xs">{item.title || "بند جديد"}</h3>
+                    <h3 className={`text-sm font-bold truncate max-w-[120px] sm:max-w-xs ${textColor}`}>{item.title || "بند جديد"}</h3>
                   </div>
 
                   <button 
                     onClick={() => deleteItem(currentPath)} 
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-500 hover:text-white rounded-lg transition-colors border border-red-100"
-                    title="حذف هذا القسم بالكامل"
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isDark ? 'bg-red-900/30 text-red-400 border-red-900/50 hover:bg-red-600 hover:text-white' : 'text-red-600 bg-red-50 border-red-100 hover:bg-red-500 hover:text-white'}`}
                   >
                     <Trash2 size={14} /> <span className="hidden sm:inline">حذف</span>
                   </button>
                 </div>
 
-                {/* 2. منطقة الإدخال (الربط والعنوان) */}
+                {/* 2. منطقة الإدخال */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* ربط الكولكشن */}
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase">ربط بقسم موجود (اختياري)</label>
+                    <label className={`block text-[10px] font-bold mb-1.5 uppercase ${labelColor}`}>ربط بقسم موجود (اختياري)</label>
                     <select 
-                      className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm text-[#202223] outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all cursor-pointer"
+                      className={`w-full p-2.5 rounded-lg text-sm outline-none transition-all cursor-pointer ${inputBg}`}
                       value={availableCollections.find(c => `/collections/${c.slug}` === item.link)?.slug || ""}
                       onChange={(e) => {
                         const selected = availableCollections.find(c => c.slug === e.target.value);
@@ -179,43 +186,42 @@ export default function ProfessionalMenuManager() {
                     </select>
                   </div>
 
-                  {/* العنوان */}
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase">عنوان القسم (لظهوره للعميل)</label>
+                    <label className={`block text-[10px] font-bold mb-1.5 uppercase ${labelColor}`}>عنوان القسم (كما يظهر للعميل)</label>
                     <input 
                       type="text" 
                       value={item.title} 
                       onChange={(e) => updateItem(currentPath, 'title', e.target.value)}
-                      className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm font-bold text-[#202223] outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all"
+                      className={`w-full p-2.5 rounded-lg text-sm font-bold outline-none transition-all ${inputBg}`}
                       placeholder="مثال: أحدث الشيلان"
                     />
                   </div>
                 </div>
 
-                {/* 3. الرابط (عرض فقط للتأكيد) وزر التفريع */}
-                <div className="mt-4 pt-4 border-t border-gray-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex-1 w-full sm:w-auto flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200">
-                    <LinkIcon size={14} className="text-gray-400 shrink-0" />
-                    <span className="text-[11px] text-gray-500 font-mono truncate w-full" dir="ltr" title={item.link}>{item.link}</span>
+                {/* 3. الإجراءات السفلية (زر التفريع) */}
+                <div className={`mt-4 pt-4 border-t flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDark ? 'border-[#444]' : 'border-gray-200/60'}`}>
+                  <div className={`flex-1 w-full sm:w-auto flex items-center gap-2 px-3 py-2 rounded-lg border ${linkBg}`}>
+                    <LinkIcon size={14} className="shrink-0" />
+                    <span className="text-[11px] font-mono truncate w-full" dir="ltr" title={item.link}>{item.link}</span>
                   </div>
                   
-                  {/* الزر السحري الخاص بإضافة أبناء لهذا القسم فقط */}
+                  {/* الزر اللي بيضيف أبناء داخل هذا الكارت فقط */}
                   <button 
                     onClick={() => addItem(currentPath)} 
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-[#202223] text-white text-xs font-bold rounded-lg hover:bg-black transition-all shadow-sm"
+                    className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-sm border ${isDark ? 'bg-white text-black hover:bg-gray-200 border-white' : 'bg-[#202223] text-white hover:bg-black border-[#202223]'}`}
                   >
-                    <Plus size={14} /> إضافة تفريع داخلي
+                    <CornerDownLeft size={14} className="rtl:rotate-180" /> 
+                    إضافة قسم فرعي داخل "{item.title || 'هذا القسم'}"
                   </button>
                 </div>
 
+                {/* منطقة الأبناء */}
+                {hasChildren && isExpanded && (
+                  <div className="mt-2 animate-[slideDown_0.3s_ease-out]">
+                    <RenderMenuTree list={item.children} path={currentPath} depth={depth + 1} />
+                  </div>
+                )}
               </div>
-
-              {/* منطقة الأبناء (تفتح وتقفل بناءً على الأكورديون) */}
-              {hasChildren && isExpanded && (
-                <div className="animate-[slideDown_0.3s_ease-out]">
-                  <RenderMenuTree list={item.children} path={currentPath} depth={depth + 1} />
-                </div>
-              )}
             </div>
           );
         })}
@@ -244,18 +250,18 @@ export default function ProfessionalMenuManager() {
               <Layers size={28}/>
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#202223]">القوائم الرئيسية (Navigation)</h1>
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#202223]">القوائم (Navigation)</h1>
               <p className="text-xs text-gray-500 mt-1">نظام إدارة الأقسام الشجرية المترابطة</p>
             </div>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto relative z-10">
-            {/* الزر ده مخصص للقسم الرئيسي فقط (مستوى 1) */}
+            {/* الزر ده مخصص للقسم الرئيسي فقط */}
             <button 
               onClick={() => addItem()} 
               className="w-full sm:w-auto bg-white border border-gray-300 text-[#202223] px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
             >
-              <Plus size={16}/> إضافة قائمة رئيسية
+              <Plus size={16}/> إضافة قسم رئيسي جديد
             </button>
             <button 
               onClick={async () => {
@@ -270,7 +276,7 @@ export default function ProfessionalMenuManager() {
               }`}
             >
               {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-              {saving ? "جاري الحفظ..." : "حفظ الهيكل"}
+              {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
             </button>
           </div>
         </header>
@@ -280,10 +286,10 @@ export default function ProfessionalMenuManager() {
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-80">
               <Menu size={56} className="text-gray-300 mb-4" />
-              <h3 className="text-lg font-bold text-[#202223]">القائمة فارغة تماماً</h3>
-              <p className="text-sm text-gray-500 mt-2 max-w-sm">لم تقم بإضافة أي أقسام لقائمة التنقل الخاصة بالمتجر. ابدأ بإضافة القوائم الرئيسية ثم فرّع منها.</p>
+              <h3 className="text-lg font-bold text-[#202223]">لا توجد أقسام حالياً</h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-sm">ابدأ بإضافة قسم رئيسي (مثل: نساء، رجال) ثم قم بتفريعه من الداخل.</p>
               <button onClick={() => addItem()} className="mt-6 bg-gray-50 border border-gray-200 text-[#202223] font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2 shadow-sm">
-                <Plus size={16}/> أضف قسمك الرئيسي الأول
+                <Plus size={16}/> إضافة أول قسم رئيسي
               </button>
             </div>
           ) : (
