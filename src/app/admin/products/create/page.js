@@ -50,7 +50,13 @@ function CreateProductForm() {
   const [chargeTax, setChargeTax] = useState(false);
   const [inventoryTracked, setInventoryTracked] = useState(true);
   const [physicalProduct, setPhysicalProduct] = useState(true);
-  const [options, setOptions] = useState([]);
+  
+  // 🔥 تعديل جوهري: لو منتج جديد، هنبدأ بخياري اللون والمقاس افتراضياً
+  const [options, setOptions] = useState(isEditing ? [] : [
+    { name: 'Color', values: '' },
+    { name: 'Size', values: '' }
+  ]);
+  
   const [colorSwatches, setColorSwatches] = useState({}); // لحفظ الصور المرتبطة بالألوان
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDesc, setSeoDesc] = useState("");
@@ -200,7 +206,7 @@ function CreateProductForm() {
               fit: data.metafields?.fit || ""
             });
 
-            if (data.options) {
+            if (data.options && data.options.length > 0) {
               setOptions(data.options);
             } else if (data.variants && data.variants.length > 0) {
               const loadedOptions = [];
@@ -209,7 +215,7 @@ function CreateProductForm() {
                 const vals = [...new Set(data.variants.map(v => v.option1Value))].filter(Boolean).join(', ');
                 loadedOptions.push({ name: opt1Name, values: vals });
               }
-              setOptions(loadedOptions);
+              setOptions(loadedOptions.length > 0 ? loadedOptions : [ { name: 'Color', values: '' }, { name: 'Size', values: '' } ]);
             }
           }
         } catch (error) {
@@ -264,6 +270,31 @@ function CreateProductForm() {
     newOptions[index][field] = value;
     setOptions(newOptions);
   };
+
+  // 🔥 إضافة جديدة: التعرف الذكي على حقول الألوان والمقاسات
+  const isColorOption = (name) => {
+    if (!name) return false;
+    const n = name.toLowerCase().trim();
+    return n.includes('color') || n.includes('colour') || n.includes('لون') || n.includes('الوان');
+  };
+
+  const isSizeOption = (name) => {
+    if (!name) return false;
+    const n = name.toLowerCase().trim();
+    return n.includes('size') || n.includes('مقاس') || n.includes('حجم');
+  };
+
+  // 🔥 إضافة جديدة: دالة لإضافة القيمة بسرعة من الأزرار الجاهزة (Chips)
+  const appendOptionValue = (index, val) => {
+    const currentValues = options[index].values;
+    const currentArr = currentValues.split(',').map(s => s.trim()).filter(Boolean);
+    if (!currentArr.includes(val)) {
+      currentArr.push(val);
+      // بنجمعهم ونحط مسافة بعد الفاصلة عشان الشكل، وممكن اليوزر يكمل كتابة
+      updateOption(index, 'values', currentArr.join(', '));
+    }
+  };
+
   // ==========================================
   // 5. الحفظ الفعلي في قاعدة البيانات (Firebase)
   // ==========================================
@@ -592,7 +623,7 @@ function CreateProductForm() {
             <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                  <h3 className="text-sm font-bold text-[#202223]">البدائل (Variants)</h3>
-                 <button onClick={addOption} className="text-[#005bd3] text-sm font-bold hover:underline">+ إضافة خيارات (كالحجم أو اللون)</button>
+                 <button onClick={addOption} className="text-[#005bd3] text-sm font-bold hover:underline">+ إضافة خيارات أخرى</button>
               </div>
               
               <div className="space-y-4">
@@ -614,7 +645,6 @@ function CreateProductForm() {
                           value={option.name} 
                           onChange={(e) => updateOption(index, 'name', e.target.value)} 
                           placeholder="مثال: Color أو Size" 
-                          list="csv-option-names" 
                           className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
                         />
                       </div>
@@ -628,10 +658,48 @@ function CreateProductForm() {
                           className="w-full bg-white border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] text-[#202223]" 
                         />
                       </div>
+                      
+                      {/* 🔥 الأزرار السريعة (Chips) للألوان 🔥 */}
+                      {isColorOption(option.name) && (
+                        <div className="col-span-1 sm:col-span-2 mt-1">
+                          <span className="text-[10px] text-gray-500 font-bold mb-2 block">ألوان مقترحة (اضغط للإضافة السريعة):</span>
+                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar p-1">
+                            {csvColors.map(c => (
+                              <button 
+                                key={c} 
+                                type="button" 
+                                onClick={() => appendOptionValue(index, c)}
+                                className="bg-white hover:bg-[#008060] hover:text-white text-[#202223] text-[11px] px-3 py-1.5 rounded-full transition-colors border border-gray-300 shadow-sm"
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 🔥 الأزرار السريعة (Chips) للمقاسات 🔥 */}
+                      {isSizeOption(option.name) && (
+                        <div className="col-span-1 sm:col-span-2 mt-1">
+                          <span className="text-[10px] text-gray-500 font-bold mb-2 block">مقاسات مقترحة (اضغط للإضافة السريعة):</span>
+                          <div className="flex flex-wrap gap-2">
+                            {csvSizes.map(s => (
+                              <button 
+                                key={s} 
+                                type="button" 
+                                onClick={() => appendOptionValue(index, s)}
+                                className="bg-white hover:bg-[#008060] hover:text-white text-[#202223] text-[11px] px-3 py-1.5 rounded-full transition-colors border border-gray-300 shadow-sm"
+                              >
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* 🔥 اختيار صورة المنتج لكل لون 🔥 */}
-                    {(option.name.toLowerCase() === 'color' || option.name === 'اللون' || option.name === 'لون') && option.values.trim() !== '' && (
+                    {isColorOption(option.name) && option.values.trim() !== '' && (
                       <div className="mt-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                         <label className="block text-xs font-bold text-[#202223] mb-3">ربط الألوان بصور المنتج</label>
                         
