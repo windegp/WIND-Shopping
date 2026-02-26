@@ -100,79 +100,102 @@ export default function ProfessionalMenuManager() {
   // --- مكون الشجرة (الأكورديون) ---
   const RenderMenuTree = ({ list, path = [], depth = 0 }) => {
     return (
-      <div className={`space-y-4 ${depth > 0 ? 'mt-4 mr-4 md:mr-10 border-r border-[#222] pr-4' : ''}`}>
+      <div className={`space-y-3 ${depth > 0 ? 'mt-3 mr-3 sm:mr-8 border-r-2 border-gray-100 pr-3 sm:pr-5' : ''}`}>
         {list.map((item, index) => {
           const currentPath = [...path, index];
           const isExpanded = expandedItems.has(item.id);
           const hasChildren = item.children && item.children.length > 0;
 
           return (
-            <div key={item.id} className="relative">
+            <div key={item.id} className="relative animate-[fadeIn_0.2s_ease-out]">
               <div className={`
-                bg-[#111] border ${isExpanded ? 'border-[#F5C518]/40 shadow-[0_0_20px_rgba(245,197,24,0.05)]' : 'border-[#222]'} 
-                p-4 md:p-5 rounded-[2rem] flex flex-col xl:flex-row items-center gap-4 transition-all duration-300
+                bg-white border ${isExpanded ? 'border-gray-300 shadow-md ring-1 ring-gray-100' : 'border-gray-200 shadow-sm'} 
+                p-4 sm:p-5 rounded-xl flex flex-col lg:flex-row lg:items-center gap-4 transition-all duration-200 hover:border-gray-300 relative z-10
               `}>
                 
-                {/* أيقونة الأكورديون + السحب (بصرياً) */}
-                <div className="flex items-center gap-3 self-start md:self-center">
+                {/* 1. أيقونة الأكورديون + السحب (بصرياً) */}
+                <div className="flex items-center gap-3">
                   {hasChildren ? (
-                    <button onClick={() => toggleAccordion(item.id)} className="p-2 bg-black rounded-full text-[#F5C518] hover:scale-110 transition-transform">
-                      {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                    <button 
+                      onClick={() => toggleAccordion(item.id)} 
+                      className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-gray-200 text-[#202223]' : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+                      title={isExpanded ? "طي القائمة" : "إظهار القائمة الفرعية"}
+                    >
+                      {isExpanded ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
                     </button>
                   ) : (
-                    <div className="w-8 h-8 flex items-center justify-center text-gray-800"><div className="w-1.5 h-1.5 bg-gray-800 rounded-full"></div></div>
+                    <div className="w-8 h-8 flex items-center justify-center text-gray-300">
+                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
+                    </div>
                   )}
                 </div>
 
-                {/* ربط الكولكشن */}
-                <div className="w-full xl:w-64">
-                  <select 
-                    className="w-full bg-black border border-[#333] p-3 rounded-2xl text-[11px] text-[#F5C518] font-bold outline-none focus:border-[#F5C518]"
-                    value={availableCollections.find(c => `/collections/${c.slug}` === item.link)?.slug || ""}
-                    onChange={(e) => {
-                      const selected = availableCollections.find(c => c.slug === e.target.value);
-                      if (selected) {
-                        updateItem(currentPath, 'title', selected.name);
-                        updateItem(currentPath, 'link', `/collections/${selected.slug}`);
-                      }
-                    }}
+                {/* 2. منطقة الإدخال (ربط القسم والعنوان) */}
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                  
+                  {/* ربط الكولكشن */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">ربط بقسم (اختياري)</label>
+                    <select 
+                      className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-lg text-sm text-[#202223] outline-none focus:bg-white focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all cursor-pointer"
+                      value={availableCollections.find(c => `/collections/${c.slug}` === item.link)?.slug || ""}
+                      onChange={(e) => {
+                        const selected = availableCollections.find(c => c.slug === e.target.value);
+                        if (selected) {
+                          updateItem(currentPath, 'title', selected.name);
+                          updateItem(currentPath, 'link', `/collections/${selected.slug}`);
+                        }
+                      }}
+                    >
+                      <option value="">-- اختر قسماً للربط --</option>
+                      {availableCollections.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* العنوان */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">عنوان البند (الذي يظهر للعميل)</label>
+                    <input 
+                      type="text" 
+                      value={item.title} 
+                      onChange={(e) => updateItem(currentPath, 'title', e.target.value)}
+                      className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm font-bold text-[#202223] outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all"
+                      placeholder="مثال: أحدث الشيلان"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. الرابط (يظهر في الشاشات الكبيرة) */}
+                <div className="hidden xl:flex flex-col flex-1 max-w-[200px]">
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase">الرابط الوجهة</label>
+                  <div className="flex items-center gap-2 bg-gray-50 px-3 py-2.5 rounded-lg border border-gray-200">
+                    <LinkIcon size={14} className="text-gray-400 shrink-0" />
+                    <span className="text-[11px] text-gray-500 font-mono truncate" dir="ltr" title={item.link}>{item.link}</span>
+                  </div>
+                </div>
+
+                {/* 4. أزرار الإجراءات */}
+                <div className="flex items-center gap-2 w-full lg:w-auto justify-end border-t lg:border-t-0 border-gray-100 pt-3 lg:pt-0 mt-2 lg:mt-0">
+                  <button 
+                    onClick={() => addItem(currentPath)} 
+                    className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-300 text-[#202223] text-xs font-bold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
+                    title="إضافة قائمة فرعية متفرعة من هذا البند"
                   >
-                    <option value="">-- ربط بقسم --</option>
-                    {availableCollections.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-                  </select>
-                </div>
-
-                {/* العنوان */}
-                <div className="flex-1 w-full">
-                  <input 
-                    type="text" 
-                    value={item.title} 
-                    onChange={(e) => updateItem(currentPath, 'title', e.target.value)}
-                    className="w-full bg-transparent border-b border-[#222] focus:border-[#F5C518] p-2 text-sm font-black text-white outline-none"
-                    placeholder="عنوان البند"
-                  />
-                </div>
-
-                {/* الرابط */}
-                <div className="hidden lg:flex flex-1 items-center gap-2 bg-black/40 px-4 py-2.5 rounded-2xl border border-[#222]">
-                  <LinkIcon size={12} className="text-gray-600" />
-                  <span className="text-[9px] text-gray-500 font-mono truncate" dir="ltr">{item.link}</span>
-                </div>
-
-                {/* أزرار الإجراءات */}
-                <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 border-[#222] pt-3 md:pt-0">
-                  <button onClick={() => addItem(currentPath)} className="p-2.5 bg-[#F5C518] text-black rounded-xl hover:bg-white transition-all shadow-lg">
-                    <Plus size={18} />
+                    <Plus size={14} /> <span>تفريع</span>
                   </button>
-                  <button onClick={() => deleteItem(currentPath)} className="p-2.5 text-gray-600 hover:text-red-500 transition-all">
-                    <Trash2 size={18} />
+                  <button 
+                    onClick={() => deleteItem(currentPath)} 
+                    className="p-2 text-red-500 bg-red-50 hover:bg-red-500 hover:text-white border border-red-100 rounded-lg transition-colors"
+                    title="حذف هذا البند"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
 
               {/* منطقة الأبناء (تفتح وتقفل) */}
               {hasChildren && isExpanded && (
-                <div className="animate-in slide-in-from-top-2 duration-300">
+                <div className="animate-[slideDown_0.3s_ease-out]">
                   <RenderMenuTree list={item.children} path={currentPath} depth={depth + 1} />
                 </div>
               )}
@@ -183,23 +206,39 @@ export default function ProfessionalMenuManager() {
     );
   };
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-[#F5C518] font-black tracking-widest animate-pulse">WIND NAVIGATION LOADING...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center text-[#202223]">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#202223] mb-4"></div>
+        <p className="font-bold text-sm text-gray-500">جاري تحميل شجرة القوائم...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-10 bg-[#080808] min-h-screen text-white font-sans" dir="rtl">
-      <div className="max-w-6xl mx-auto pb-40">
+    <div className="p-4 sm:p-6 lg:p-8 bg-[#f4f6f8] min-h-screen text-[#202223] font-sans" dir="rtl">
+      <div className="max-w-5xl mx-auto pb-24">
         
-        <header className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16 bg-[#111] p-8 md:p-12 rounded-[3rem] border border-[#222] relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#F5C518]/5 blur-[100px] rounded-full"></div>
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="p-5 bg-black rounded-[2rem] border border-[#222] text-[#F5C518] shadow-2xl"><MonitorSmartphone size={32}/></div>
+        {/* الهيدر العلوي */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-5 md:p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+          
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-[#202223]">
+              <Layers size={28}/>
+            </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-black italic tracking-tighter uppercase">Integrated <span className="text-[#F5C518]">Nav</span></h1>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em] mt-2">نظام إدارة الأقسام الشجرية المترابطة</p>
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#202223]">القوائم (Navigation)</h1>
+              <p className="text-xs text-gray-500 mt-1">نظام إدارة الأقسام الشجرية المترابطة (Menu)</p>
             </div>
           </div>
-          <div className="flex gap-4 w-full md:w-auto relative z-10">
-            <button onClick={() => addItem()} className="flex-1 md:flex-none bg-[#1a1a1a] px-8 py-4 rounded-2xl text-[10px] font-black border border-[#333] hover:border-[#F5C518] transition-all uppercase tracking-widest">+ رئيسي</button>
+          
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto relative z-10">
+            <button 
+              onClick={() => addItem()} 
+              className="w-full sm:w-auto bg-white border border-gray-300 text-[#202223] px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <Plus size={16}/> قائمة رئيسية
+            </button>
             <button 
               onClick={async () => {
                 setSaving(true);
@@ -208,16 +247,42 @@ export default function ProfessionalMenuManager() {
                 alert("تم الحفظ بنجاح! ✨");
               }} 
               disabled={saving}
-              className="flex-1 md:flex-none bg-[#F5C518] text-black px-12 py-4 rounded-2xl font-black shadow-xl hover:bg-white transition-all disabled:opacity-50"
+              className={`w-full sm:w-auto px-8 py-2.5 rounded-xl font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all ${
+                saving ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-[#1a1a1a] text-white hover:bg-black'
+              }`}
             >
-              {saving ? <Loader2 className="animate-spin" /> : "حفظ الهيكل"}
+              {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+              {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
             </button>
           </div>
         </header>
 
-        <RenderMenuTree list={items} />
+        {/* مساحة عرض الشجرة */}
+        <div className="bg-white p-5 md:p-8 rounded-2xl border border-gray-200 shadow-sm min-h-[50vh]">
+          {items.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-60">
+              <Menu size={48} className="text-gray-300 mb-4" />
+              <h3 className="text-lg font-bold text-gray-500">القائمة فارغة</h3>
+              <p className="text-sm text-gray-400 mt-1">ابدأ بإضافة قائمة رئيسية لمتجرك لترتيب الأقسام.</p>
+              <button onClick={() => addItem()} className="mt-6 text-[#008060] font-bold text-sm hover:underline flex items-center gap-1"><Plus size={16}/> أضف قائمتك الأولى</button>
+            </div>
+          ) : (
+            <RenderMenuTree list={items} />
+          )}
+        </div>
 
       </div>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
