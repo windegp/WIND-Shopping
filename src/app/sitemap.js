@@ -8,10 +8,9 @@ export default async function sitemap() {
   // 1. جلب المنتجات من Firebase
   let fbProducts = [];
   
-  // التحقق من وجود Project ID وأيضاً أن قاعدة البيانات جاهزة (db ليست null)
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-  if (projectId && projectId !== "undefined" && db) {
+  // هنا شيلنا الاعتماد على process.env وخلينا الشرط يعتمد على وجود الـ db فقط
+  // بما إننا عملنا Hardcode لملف firebase.js، فالـ db دايماً هتكون موجودة
+  if (db) {
     try {
       const querySnapshot = await getDocs(collection(db, "products"));
       if (!querySnapshot.empty) {
@@ -21,27 +20,20 @@ export default async function sitemap() {
         }));
       }
     } catch (error) {
-      // طباعة الخطأ في الـ Logs دون توقيف الـ Build
-      console.error("❌ Sitemap Build Warning (Firebase):", error.message);
+      console.error("❌ Sitemap Build Warning (Firebase Fetch Failed):", error.message);
     }
-  } else {
-    // رسالة تنبيه واضحة في الـ Terminal أثناء الـ Build
-    console.warn("⚠️ Sitemap: Firebase DB is not initialized or Project ID is missing. Falling back to static products.");
   }
 
-  // 2. دمج المنتجات (لو فيربيز فشل، هيكون عندنا الـ static فقط)
+  // 2. دمج المنتجات
   const allProducts = [...staticProducts, ...fbProducts];
 
-  // 3. تحويل المنتجات لروابط مع معالجة ذكية للتاريخ
+  // 3. تحويل المنتجات لروابط
   const productEntries = allProducts.map((p) => {
-    // نستخدم الـ id الخاص بفيربيز أو الـ handle من الملف الثابت
     const identifier = p.id || p.handle; 
-    
-    let finalDate = new Date(); // افتراضياً تاريخ اليوم
+    let finalDate = new Date();
 
     if (p.updatedAt) {
       try {
-        // فحص نوع التاريخ (Firebase Timestamp vs JS Date)
         if (p.updatedAt && typeof p.updatedAt === 'object' && p.updatedAt.seconds) {
           finalDate = new Date(p.updatedAt.seconds * 1000);
         } else {
@@ -51,7 +43,7 @@ export default async function sitemap() {
           }
         }
       } catch (e) {
-        finalDate = new Date(); // في حالة أي خطأ في التحويل
+        finalDate = new Date();
       }
     }
 
@@ -63,7 +55,6 @@ export default async function sitemap() {
     };
   });
 
-  // 4. إرجاع الروابط النهائية (الصفحة الرئيسية + روابط المنتجات)
   return [
     {
       url: baseUrl,
