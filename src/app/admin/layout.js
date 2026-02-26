@@ -1,16 +1,31 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { auth } from "@/lib/firebase"; // استيراد الحارس
 import { 
   LayoutDashboard, ShoppingBag, PlusCircle, 
   Palette, FolderTree, Menu, 
-  FileText, LogOut, ChevronLeft 
+  FileText, LogOut, ChevronLeft, Lock 
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // الـ UID المسموح له بدخول منطقة الإدارة
+  const ADMIN_UID = "jGb9wBMHZfRIQgR9yfbb3rkvzRw2";
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const menu = [
     { name: 'الرئيسية', path: '/admin', icon: <LayoutDashboard size={20}/> },
@@ -22,6 +37,33 @@ export default function AdminLayout({ children }) {
     { name: 'الصفحات', path: '/admin/pages', icon: <FileText size={20}/> },
   ];
 
+  // 1. حالة التحميل (عشان ما نلمحش الداتا قبل التأكد)
+  if (loading) {
+    return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-[#F5C518]">جاري التحقق...</div>;
+  }
+
+  // 2. حالة "لست الأدمن" أو "لم تسجل دخول"
+  if (!user || user.uid !== ADMIN_UID) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6 text-center" dir="rtl">
+        <div className="bg-[#111] p-8 rounded-3xl border border-[#222] max-w-sm w-full shadow-2xl">
+          <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="text-[#F5C518]" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">منطقة محظورة</h2>
+          <p className="text-gray-500 mb-8 text-sm">عذراً، يجب تسجيل الدخول بحساب المدير لتتمكن من عرض هذه الصفحة.</p>
+          <button 
+            onClick={() => router.push('/admin/login')}
+            className="w-full py-4 bg-[#F5C518] text-black font-bold rounded-2xl hover:bg-yellow-400 transition-colors"
+          >
+            تسجيل الدخول كمدير
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. حالة "الأدمن الحقيقي" (يعرض المحتوى الطبيعي)
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex overflow-hidden" dir="rtl">
       {/* Sidebar */}
@@ -43,6 +85,15 @@ export default function AdminLayout({ children }) {
               </Link>
             );
           })}
+          
+          {/* زرار تسجيل الخروج */}
+          <button 
+            onClick={() => auth.signOut()}
+            className="w-full flex items-center gap-4 p-3.5 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all mt-10"
+          >
+            <LogOut size={20}/>
+            {isOpen && <span className="text-sm">خروج</span>}
+          </button>
         </nav>
       </aside>
 
