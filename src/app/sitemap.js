@@ -7,14 +7,25 @@ export default async function sitemap() {
 
   // 1. جلب المنتجات من Firebase
   let fbProducts = [];
-  try {
-    const querySnapshot = await getDocs(collection(db, "products"));
-    fbProducts = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-  } catch (error) {
-    console.error("Error fetching products for sitemap:", error);
+  
+  // --- إضافة صمام أمان: التحقق من وجود Project ID قبل الطلب ---
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+  if (projectId && projectId !== "undefined") {
+    try {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      if (!querySnapshot.empty) {
+        fbProducts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
+    } catch (error) {
+      // طباعة الخطأ بشكل واضح في الـ Logs بتاعة Vercel للتشخيص
+      console.error("❌ Sitemap Build Warning (Firebase):", error.message);
+    }
+  } else {
+    console.warn("⚠️ Sitemap: Skipping Firebase fetch because Project ID is missing.");
   }
 
   // 2. دمج المنتجات
@@ -30,7 +41,7 @@ export default async function sitemap() {
     if (p.updatedAt) {
       try {
         // إذا كان التاريخ جاي من Firebase Timestamp
-        if (p.updatedAt.seconds) {
+        if (p.updatedAt && typeof p.updatedAt === 'object' && p.updatedAt.seconds) {
           finalDate = new Date(p.updatedAt.seconds * 1000);
         } else {
           // إذا كان التاريخ نصي أو Date عادي
@@ -40,7 +51,6 @@ export default async function sitemap() {
           }
         }
       } catch (e) {
-        // لو حصل أي فشل في التحويل، هيفضل تاريخ اليوم هو البديل الآمن
         finalDate = new Date();
       }
     }
