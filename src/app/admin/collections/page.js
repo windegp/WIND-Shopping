@@ -169,147 +169,153 @@ export default function CollectionsPage() {
     const filteredProducts = allProducts.filter(p => p.title?.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (loading && view === 'list') return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#121212] text-[#F5C518]">
-            <Loader2 className="animate-spin mb-4" size={40} />
-            <p className="font-bold tracking-widest">LOADING WIND CMS...</p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#f4f6f8] text-[#202223]">
+            <Loader2 className="animate-spin mb-4 text-[#202223]" size={40} />
+            <p className="font-bold text-sm tracking-wide text-gray-500">جاري التحميل...</p>
         </div>
     );
 
     if (view === 'editor') {
         return (
-            <div className="min-h-screen bg-[#121212] text-white pb-20" dir="rtl">
+            <div className="min-h-screen bg-[#f4f6f8] text-[#202223] pb-20 font-sans" dir="rtl">
                 {/* Navbar */}
-                <div className="sticky top-0 z-40 bg-[#1a1a1a] border-b border-[#333] px-6 py-4 flex justify-between items-center shadow-lg">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setView('list')} className="text-gray-400 hover:text-white transition"><ArrowRight size={24} /></button>
-                        <h1 className="text-xl font-bold">{activeId ? `تعديل: ${formData.name}` : 'إضافة قسم جديد'}</h1>
+                <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center shadow-sm">
+                    <div className="flex items-center gap-3 lg:gap-4">
+                        <button onClick={() => setView('list')} className="p-2 -m-2 text-gray-500 hover:text-black transition-colors rounded-lg hover:bg-gray-100">
+                            <ArrowRight size={20} />
+                        </button>
+                        <h1 className="text-lg lg:text-xl font-bold text-[#202223] line-clamp-1">{activeId ? `تعديل: ${formData.name}` : 'إضافة قسم جديد'}</h1>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={handleSave} disabled={isSaving} className="bg-[#F5C518] text-black px-8 py-2 rounded-lg font-black flex items-center gap-2 hover:bg-white transition disabled:opacity-50">
-                            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} حفظ التغييرات
+                        <button onClick={handleSave} disabled={isSaving} className="bg-[#1a1a1a] text-white px-5 lg:px-8 py-2 rounded-xl text-sm lg:text-base font-bold flex items-center gap-2 hover:bg-black transition-all shadow-sm disabled:opacity-50">
+                            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} 
+                            <span className="hidden sm:inline">حفظ التغييرات</span>
+                            <span className="sm:hidden">حفظ</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="max-w-6xl mx-auto mt-8 px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Right Column */}
+                <div className="max-w-5xl mx-auto mt-6 lg:mt-8 px-4 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                    {/* Right Column (2/3) */}
                     <div className="lg:col-span-2 space-y-6">
                         
                         {/* 1. Basic Details */}
-                        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-                            <h3 className="text-lg font-bold mb-4 text-[#F5C518]">البيانات الأساسية</h3>
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6">
+                            <h3 className="text-sm font-bold mb-4 text-[#202223]">البيانات الأساسية</h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs text-gray-400 mb-1 block">عنوان القسم الرئيسي</label>
-                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none" placeholder="مثلاً: الشيلان" />
+                                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">عنوان القسم الرئيسي</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all" placeholder="مثلاً: الشيلان" />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 mb-1 block">الوصف الفرعي (تحت العنوان)</label>
-                                    <input type="text" value={formData.subtitle} onChange={(e) => setFormData({...formData, subtitle: e.target.value})} className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none" placeholder="مثلاً: WIND ESSENTIALS" />
+                                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">الوصف الفرعي (تحت العنوان)</label>
+                                    <input type="text" value={formData.subtitle} onChange={(e) => setFormData({...formData, subtitle: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all" placeholder="مثلاً: WIND ESSENTIALS" />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 mb-1 block">الوصف المختصر</label>
-                                    <textarea rows={2} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-[#333] rounded-lg p-3 text-white focus:border-[#F5C518] outline-none resize-none" placeholder="يظهر أسفل العنوان الرئيسي..." />
+                                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">الوصف المختصر</label>
+                                    <textarea rows={2} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none resize-none transition-all" placeholder="يظهر أسفل العنوان الرئيسي..." />
                                 </div>
                             </div>
                         </div>
 
                         {/* 2. SEO Bottom Description */}
-                        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-                            <h3 className="text-lg font-bold mb-2 text-[#F5C518]">وصف الـ SEO (أسفل الصفحة)</h3>
-                            <p className="text-xs text-gray-500 mb-4">هذا النص سيظهر في أسفل صفحة القسم لتحسين محركات البحث، وسيتم طيه تلقائياً بزر "اقرأ المزيد".</p>
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6">
+                            <h3 className="text-sm font-bold mb-1.5 text-[#202223]">وصف محركات البحث (SEO)</h3>
+                            <p className="text-[11px] text-gray-500 mb-4">هذا النص سيظهر أسفل المنتجات في صفحة القسم، لتحسين الأرشفة.</p>
                             <textarea 
                                 rows={6} 
                                 value={formData.bottomDescription} 
                                 onChange={(e) => setFormData({...formData, bottomDescription: e.target.value})} 
-                                className="w-full bg-black border border-[#333] rounded-lg p-4 text-sm text-gray-300 focus:border-[#F5C518] outline-none resize-y" 
+                                className="w-full bg-white border border-gray-300 rounded-lg p-3 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none resize-y transition-all" 
                                 placeholder="اكتب وصفاً طويلاً يحتوي على الكلمات المفتاحية هنا..." 
                             />
                         </div>
 
                         {/* 3. Products Summary Card */}
-                        <div className="bg-gradient-to-r from-[#1a1a1a] to-[#222] border border-[#333] rounded-xl p-6 flex justify-between items-center shadow-lg">
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <h3 className="text-lg font-bold text-white mb-1">المنتجات المرتبطة</h3>
-                                <p className="text-sm text-gray-400">القسم يحتوي حالياً على <span className="text-[#F5C518] font-bold">{selectedProducts.length}</span> منتج.</p>
+                                <h3 className="text-sm font-bold text-[#202223] mb-1">المنتجات المرتبطة</h3>
+                                <p className="text-xs text-gray-500">يحتوي القسم على <span className="text-[#008060] font-bold bg-green-50 px-1.5 py-0.5 rounded">{selectedProducts.length}</span> منتج.</p>
                             </div>
                             <button 
                                 onClick={() => setIsProductModalOpen(true)}
-                                className="bg-[#333] border border-[#444] text-white hover:text-black hover:bg-[#F5C518] px-6 py-3 rounded-lg font-bold transition-all"
+                                className="w-full sm:w-auto bg-white border border-gray-300 text-[#202223] hover:bg-gray-50 hover:border-gray-400 px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm"
                             >
                                 إدارة المنتجات
                             </button>
                         </div>
                     </div>
 
-                    {/* Left Column: Settings */}
+                    {/* Left Column (1/3): Settings */}
                     <div className="space-y-6">
-                        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">صورة الكولكشن</h3>
-                            <div className="border-2 border-dashed border-[#333] rounded-lg flex flex-col items-center justify-center h-48 bg-black mb-3 overflow-hidden">
-                                {formData.image ? <img src={formData.image} alt="Preview" className="w-full h-full object-cover rounded" /> : <ImageIcon size={30} className="text-gray-600" />}
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">صورة الكولكشن</h3>
+                            <div className="border border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center h-40 lg:h-48 bg-gray-50 mb-4 overflow-hidden">
+                                {formData.image ? <img src={formData.image} alt="Preview" className="w-full h-full object-cover" /> : <div className="text-center p-4"><ImageIcon size={28} className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-500">لا توجد صورة</span></div>}
                             </div>
-                            <input type="url" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} className="w-full bg-black border border-[#333] rounded p-2 text-xs text-white outline-none font-mono" placeholder="رابط الصورة..." dir="ltr" />
+                            <input type="url" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-xs text-[#202223] outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all font-mono" placeholder="رابط الصورة (URL)" dir="ltr" />
                         </div>
 
-                        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">رابط الصفحة (Slug)</h3>
-                            <input type="text" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} className="w-full bg-black border border-[#333] rounded p-2 text-sm text-white focus:border-[#F5C518] outline-none font-mono" dir="ltr" />
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">رابط الصفحة (Slug)</h3>
+                            <input type="text" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all font-mono" dir="ltr" />
                         </div>
                     </div>
                 </div>
 
                 {/* --- نافذة إدارة المنتجات (Modal) --- */}
                 {isProductModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsProductModalOpen(false)}></div>
-                        <div className="bg-[#111] border border-[#333] w-full max-w-5xl h-[85vh] rounded-2xl relative z-10 flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsProductModalOpen(false)}></div>
+                        <div className="bg-[#f4f6f8] border border-gray-200 w-full sm:max-w-4xl h-[90vh] sm:h-[80vh] rounded-t-2xl sm:rounded-2xl relative z-10 flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
                             
                             {/* Header المودال */}
-                            <div className="p-6 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] rounded-t-2xl">
-                                <div>
-                                    <h2 className="text-2xl font-black text-[#F5C518]">اختيار المنتجات</h2>
-                                    <p className="text-sm text-gray-400 mt-1">تم اختيار {selectedProducts.length} منتج</p>
+                            <div className="p-4 sm:p-5 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white rounded-t-2xl">
+                                <div className="flex justify-between w-full sm:w-auto items-center">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-[#202223]">اختيار المنتجات</h2>
+                                        <p className="text-xs text-gray-500 mt-0.5">تم اختيار {selectedProducts.length} منتجات</p>
+                                    </div>
+                                    <button onClick={() => setIsProductModalOpen(false)} className="sm:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><X size={20}/></button>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="relative w-64 md:w-80">
-                                        <Search className="absolute right-3 top-2.5 text-gray-500" size={18} />
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <div className="relative w-full sm:w-72">
+                                        <Search className="absolute right-3 top-2.5 text-gray-400" size={16} />
                                         <input 
                                             type="text" 
                                             placeholder="ابحث عن منتج..." 
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full bg-black border border-[#444] rounded-lg py-2 pr-10 pl-4 text-sm text-white focus:border-[#F5C518] outline-none"
+                                            className="w-full bg-white border border-gray-300 rounded-lg py-2 pr-9 pl-4 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all"
                                         />
                                     </div>
-                                    <button onClick={() => setIsProductModalOpen(false)} className="bg-[#333] hover:bg-white hover:text-black p-2 rounded-lg transition-colors"><X size={20}/></button>
+                                    <button onClick={() => setIsProductModalOpen(false)} className="hidden sm:block p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"><X size={20}/></button>
                                 </div>
                             </div>
 
                             {/* شبكة المنتجات مع Checkboxes */}
-                            <div className="flex-1 overflow-y-auto p-6 bg-[#0a0a0a]">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f4f6f8] custom-scrollbar">
                                 {isSearching ? (
-                                    <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-[#F5C518]" size={40} /></div>
+                                    <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-gray-400" size={32} /></div>
                                 ) : (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        {/* نعرض المنتجات المختارة في الأول لو مفيش بحث */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                                         {(searchQuery ? filteredProducts : allProducts).map(prod => {
                                             const isSelected = selectedProducts.find(p => p.id === prod.id);
                                             return (
                                                 <div 
                                                     key={prod.id} 
                                                     onClick={() => toggleProductSelection(prod)}
-                                                    className={`cursor-pointer group relative border-2 rounded-xl overflow-hidden transition-all duration-200 ${isSelected ? 'border-[#F5C518] bg-[#F5C518]/10' : 'border-[#333] bg-[#1a1a1a] hover:border-gray-500'}`}
+                                                    className={`cursor-pointer group relative bg-white border rounded-xl overflow-hidden transition-all duration-200 shadow-sm hover:shadow-md ${isSelected ? 'border-[#008060] ring-1 ring-[#008060]' : 'border-gray-200 hover:border-gray-300'}`}
                                                 >
-                                                    <div className="h-40 bg-black relative">
-                                                        <img src={prod.images?.[0] || '/placeholder.png'} className={`w-full h-full object-cover transition-opacity ${isSelected ? 'opacity-100' : 'opacity-60 group-hover:opacity-80'}`} alt="" />
-                                                        <div className="absolute top-2 right-2 bg-black/50 rounded-lg p-1">
-                                                            {isSelected ? <CheckSquare className="text-[#F5C518]" size={20} /> : <Square className="text-gray-400" size={20} />}
+                                                    <div className="h-32 sm:h-36 bg-gray-100 relative">
+                                                        <img src={prod.images?.[0] || '/placeholder.png'} className={`w-full h-full object-cover transition-opacity ${isSelected ? 'opacity-100' : 'opacity-90 group-hover:opacity-100'}`} alt="" />
+                                                        <div className="absolute top-2 right-2 bg-white rounded shadow-sm p-0.5">
+                                                            {isSelected ? <CheckSquare className="text-[#008060]" size={18} /> : <Square className="text-gray-300" size={18} />}
                                                         </div>
                                                     </div>
-                                                    <div className="p-3">
-                                                        <p className="text-xs font-bold text-white truncate">{prod.title}</p>
-                                                        <p className="text-[10px] text-[#F5C518] mt-1">{prod.price} EGP</p>
+                                                    <div className="p-2 sm:p-3 border-t border-gray-100">
+                                                        <p className="text-[11px] sm:text-xs font-bold text-[#202223] truncate" title={prod.title}>{prod.title}</p>
+                                                        <p className="text-[10px] sm:text-[11px] text-gray-500 mt-1">{prod.price} EGP</p>
                                                     </div>
                                                 </div>
                                             );
@@ -319,8 +325,8 @@ export default function CollectionsPage() {
                             </div>
 
                             {/* Footer المودال */}
-                            <div className="p-4 border-t border-[#333] bg-[#1a1a1a] rounded-b-2xl text-left">
-                                <button onClick={() => setIsProductModalOpen(false)} className="bg-[#F5C518] text-black px-8 py-2 rounded-lg font-black hover:bg-white transition-colors">
+                            <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl flex justify-end">
+                                <button onClick={() => setIsProductModalOpen(false)} className="w-full sm:w-auto bg-[#1a1a1a] text-white px-8 py-2.5 rounded-xl text-sm font-bold hover:bg-black transition-colors shadow-sm">
                                     تأكيد وإغلاق
                                 </button>
                             </div>
@@ -333,36 +339,62 @@ export default function CollectionsPage() {
 
     // --- LIST VIEW ---
     return (
-        <div className="p-6 bg-[#121212] min-h-screen text-white font-sans" dir="rtl">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-end mb-10">
+        <div className="p-4 sm:p-6 lg:p-8 bg-[#f4f6f8] min-h-screen text-[#202223] font-sans" dir="rtl">
+            <div className="max-w-6xl mx-auto">
+                
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                     <div>
-                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Collections</h1>
-                        <p className="text-[#F5C518] font-bold tracking-[0.3em] text-xs mt-2">WIND CONTROL PANEL</p>
+                        <h1 className="text-xl sm:text-2xl font-bold text-[#202223]">الأقسام (Collections)</h1>
+                        <p className="text-gray-500 text-xs sm:text-sm mt-1">إدارة جميع أقسام متجرك</p>
                     </div>
-                    <button onClick={() => openEditor(null)} className="bg-[#F5C518] text-black px-8 py-3 rounded-full font-black flex items-center gap-2 hover:bg-white transition shadow-lg">
-                        <Plus size={20} /> كولكشن جديد
+                    <button onClick={() => openEditor(null)} className="w-full sm:w-auto bg-[#1a1a1a] text-white px-5 sm:px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-black transition-all shadow-sm">
+                        <Plus size={18} /> قسم جديد
                     </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+                {/* Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {collections.map((item) => (
-                        <div key={item.id} className="bg-[#1a1a1a] border border-[#333] rounded-2xl overflow-hidden group hover:border-[#F5C518] flex flex-col">
-                            <div className="h-40 bg-black relative">
-                                {item.image ? <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition" /> : <div className="w-full h-full flex items-center justify-center bg-[#222]"><ImageIcon className="text-gray-600" size={30} /></div>}
-                            </div>
-                            <div className="p-5 flex-1 flex flex-col">
-                                <h3 className="text-xl font-bold text-white mb-2">{item.name}</h3>
-                                <p className="text-gray-500 text-xs line-clamp-2 mb-4 flex-1">{item.description}</p>
-                                <div className="flex items-center justify-between pt-4 border-t border-[#333]">
-                                    <div className="flex gap-2">
-                                        <button onClick={() => openEditor(item)} className="p-2 bg-[#222] rounded-lg hover:bg-[#F5C518] hover:text-black transition text-gray-400"><Edit2 size={16} /></button>
-                                        <button onClick={() => handleDeleteCollection(item.id, item.slug)} className="p-2 bg-[#222] rounded-lg hover:bg-red-600 hover:text-white transition text-gray-400"><Trash2 size={16} /></button>
+                        <div key={item.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden group hover:shadow-md transition-all flex flex-col">
+                            <div className="h-36 sm:h-48 bg-gray-50 relative border-b border-gray-100">
+                                {item.image ? (
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
+                                        <ImageIcon className="text-gray-300 mb-2" size={28} />
+                                        <span className="text-[10px] text-gray-400">بدون صورة</span>
                                     </div>
-                                    <a href={`/collections/${item.slug}`} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-[#F5C518] flex items-center gap-1">عرض <ExternalLink size={10} /></a>
+                                )}
+                            </div>
+                            <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                                <h3 className="text-base font-bold text-[#202223] mb-1 line-clamp-1">{item.name}</h3>
+                                <p className="text-gray-500 text-xs line-clamp-2 mb-4 flex-1 leading-relaxed">{item.description || "لا يوجد وصف"}</p>
+                                
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <div className="flex gap-1.5">
+                                        <button onClick={() => openEditor(item)} className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-black transition-colors text-gray-600 shadow-sm" title="تعديل">
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button onClick={() => handleDeleteCollection(item.id, item.slug)} className="p-2 bg-red-50 border border-red-100 rounded-lg hover:bg-red-600 hover:border-red-600 hover:text-white transition-colors text-red-600 shadow-sm" title="حذف">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                    <a href={`/collections/${item.slug}`} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-gray-500 hover:text-[#008060] flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#008060]/30 transition-colors">
+                                        عرض <ExternalLink size={12} />
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     ))}
+                    
+                    {/* لو مفيش أقسام */}
+                    {collections.length === 0 && (
+                        <div className="col-span-full py-16 text-center bg-white border border-dashed border-gray-300 rounded-xl">
+                            <FolderTree size={40} className="mx-auto text-gray-300 mb-3" />
+                            <p className="text-gray-500 text-sm font-medium">لا توجد أقسام حالياً. ابدأ بإنشاء قسم جديد.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
