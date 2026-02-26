@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-// 🚀 إجبار فيرسيل على عدم الكاش
+// السطر ده مهم جداً عشان يمنع فيرسيل من كأشحة الصفحة
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // 👇👇👇 حط مفاتيحك هنا يدوياً للتجربة 👇👇👇
-    const privateKey = "private_d/0OZReajja+/7TGxcbvQKUCl7g="; // انسخه من ImageKit
-    const publicKey = "public_qxxjKJ3sgdFJWnCWYk/BzUuiZlY=";  // انسخه من ImageKit
-    const urlEndpoint = "https://ik.imagekit.io/windeg";   // انسخه من ImageKit
-    // 👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆
+    // السيرفر بيقرا المفاتيح المتخزنة بأمان في فيرسيل
+    const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+    const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY;
+    const urlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT;
 
-    // توليد التوقيع (Signature) يدوياً
+    if (!privateKey || !publicKey) {
+      return NextResponse.json({ error: "الخزنة مقفولة: المفاتيح مش موجودة في فيرسيل" }, { status: 500 });
+    }
+
     const token = crypto.randomBytes(20).toString('hex');
     const expire = Math.floor(Date.now() / 1000) + 2400;
     const signature = crypto
@@ -20,7 +22,7 @@ export async function GET() {
       .update(token + expire.toString())
       .digest('hex');
 
-    // بنرجع كل حاجة عشان الـ Client يستخدمها وميحتاجش Env Vars هو كمان
+    // بنبعت المفتاح العام والـ Endpoint للـ Frontend عشان نريحه
     return NextResponse.json({
       token,
       expire,
@@ -30,7 +32,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error("❌ Manual Code Error:", error);
+    console.error("❌ API Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
