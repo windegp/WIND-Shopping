@@ -7,42 +7,40 @@ export default async function sitemap() {
 
   // 1. جلب المنتجات من Firebase
   let fbProducts = [];
-  
-  // هنا شيلنا الاعتماد على process.env وخلينا الشرط يعتمد على وجود الـ db فقط
-  // بما إننا عملنا Hardcode لملف firebase.js، فالـ db دايماً هتكون موجودة
-  if (db) {
-    try {
-      const querySnapshot = await getDocs(collection(db, "products"));
-      if (!querySnapshot.empty) {
-        fbProducts = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      }
-    } catch (error) {
-      console.error("❌ Sitemap Build Warning (Firebase Fetch Failed):", error.message);
-    }
+  try {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    fbProducts = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Error fetching products for sitemap:", error);
   }
 
   // 2. دمج المنتجات
   const allProducts = [...staticProducts, ...fbProducts];
 
-  // 3. تحويل المنتجات لروابط
+  // 3. تحويل المنتجات لروابط مع معالجة ذكية للتاريخ
   const productEntries = allProducts.map((p) => {
     const identifier = p.id || p.handle; 
-    let finalDate = new Date();
+    
+    // --- معالجة التاريخ لضمان عدم حدوث Error ---
+    let finalDate = new Date(); // افتراضياً تاريخ اليوم
 
     if (p.updatedAt) {
       try {
-        if (p.updatedAt && typeof p.updatedAt === 'object' && p.updatedAt.seconds) {
+        // إذا كان التاريخ جاي من Firebase Timestamp
+        if (p.updatedAt.seconds) {
           finalDate = new Date(p.updatedAt.seconds * 1000);
         } else {
+          // إذا كان التاريخ نصي أو Date عادي
           const parsedDate = new Date(p.updatedAt);
           if (!isNaN(parsedDate.getTime())) {
             finalDate = parsedDate;
           }
         }
       } catch (e) {
+        // لو حصل أي فشل في التحويل، هيفضل تاريخ اليوم هو البديل الآمن
         finalDate = new Date();
       }
     }
@@ -55,6 +53,7 @@ export default async function sitemap() {
     };
   });
 
+  // 4. إرجاع الروابط النهائية
   return [
     {
       url: baseUrl,
