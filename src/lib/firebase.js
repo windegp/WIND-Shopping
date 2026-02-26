@@ -1,10 +1,8 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getAuth } from "firebase/auth"; // أضفنا الحارس
+import { getAuth } from "firebase/auth";
 
-// هنا بنخلي الكود يقرأ من البيئة المحيطة (Environment Variables) 
-// بدل ما نكتب المفاتيح "على المكشوف"
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,12 +12,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// منع إعادة تشغيل Firebase في كل مرة يتم فيها عمل Refresh (Hydration)
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// 1. فحص وجود المفتاح قبل أي شيء
+const isConfigValid = !!firebaseConfig.apiKey;
 
-const db = getFirestore(app);
-const storage = getStorage(app);
-const auth = getAuth(app); // تعريف الحارس
+// 2. تهيئة التطبيق فقط لو الإعدادات موجودة، وإلا نرجع null
+const app = isConfigValid 
+  ? (getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)) 
+  : null;
 
-// تصدير كل الأدوات اللي محتاجينها في المشروع
+// 3. تهيئة الخدمات مع صمام أمان
+const db = app ? getFirestore(app) : null;
+const storage = app ? getStorage(app) : null;
+const auth = app ? getAuth(app) : null;
+
 export { db, storage, auth };
