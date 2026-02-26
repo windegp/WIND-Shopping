@@ -13,22 +13,24 @@ export default function ImageUploader({ onUploadSuccess }) {
     setError(null);
 
     try {
-      // 1. طلب توقيع الرفع من الـ API (الخطوة دي GET وخفيفة جداً)
+      // 1. هات التوقيع والمفاتيح من الـ API بتاعنا
       const authRes = await fetch('/api/upload');
-      if (!authRes.ok) throw new Error("فشل الحصول على تصريح الرفع");
-      const authData = await authRes.json();
+      if (!authRes.ok) throw new Error("فشل الاتصال بالـ API");
+      
+      // هنا بناخد المفاتيح من الرد بتاع الـ API مش من الـ Env
+      const { signature, expire, token, publicKey, urlEndpoint } = await authRes.json();
 
-      // 2. تجهيز البيانات للرفع المباشر لـ ImageKit
+      // 2. جهز الفورم
       const formData = new FormData();
       formData.append("file", file);
       formData.append("fileName", file.name.replace(/\s+/g, '-'));
-      formData.append("publicKey", process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY);
-      formData.append("signature", authData.signature);
-      formData.append("expire", authData.expire);
-      formData.append("token", authData.token);
-      formData.append("folder", "/WIND_Shopping"); // تحديد الفولدر في ImageKit
+      formData.append("publicKey", publicKey); // استخدام المفتاح اللي راجع من الـ API
+      formData.append("signature", signature);
+      formData.append("expire", expire);
+      formData.append("token", token);
+      formData.append("folder", "/WIND_Shopping");
 
-      // 3. الرفع الفعلي لـ ImageKit مباشرة من المتصفح
+      // 3. ارفع لـ ImageKit
       const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
         method: "POST",
         body: formData,

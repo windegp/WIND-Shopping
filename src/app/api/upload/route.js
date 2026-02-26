@@ -1,29 +1,36 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-// 💡 هذا هو السطر السحري: يجبر Vercel على تشغيل الكود في كل مرة وعدم استخدام الكاش
+// 🚀 إجبار فيرسيل على عدم الكاش
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
+export async function GET() {
   try {
-    const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+    // 👇👇👇 حط مفاتيحك هنا يدوياً للتجربة 👇👇👇
+    const privateKey = "private_d/0OZReajja+/7TGxcbvQKUCl7g="; // انسخه من ImageKit
+    const publicKey = "public_qxxjKJ3sgdFJWnCWYk/BzUuiZlY=";  // انسخه من ImageKit
+    const urlEndpoint = "https://ik.imagekit.io/windeg";   // انسخه من ImageKit
+    // 👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆
 
-    // لو المفتاح لسه مش مقروء، هيطلع لنا رسالة واضحة
-    if (!privateKey) {
-      return NextResponse.json({ error: "Private key is completely missing from Vercel" }, { status: 500 });
-    }
-
-    // توليد التوقيع يدوياً (أسرع وأضمن مليون مرة من المكتبة)
+    // توليد التوقيع (Signature) يدوياً
     const token = crypto.randomBytes(20).toString('hex');
-    const expire = Math.floor(Date.now() / 1000) + 2400; // صالح لمدة 40 دقيقة
+    const expire = Math.floor(Date.now() / 1000) + 2400;
     const signature = crypto
       .createHmac('sha1', privateKey)
       .update(token + expire.toString())
       .digest('hex');
 
-    return NextResponse.json({ token, expire, signature });
+    // بنرجع كل حاجة عشان الـ Client يستخدمها وميحتاجش Env Vars هو كمان
+    return NextResponse.json({
+      token,
+      expire,
+      signature,
+      publicKey,
+      urlEndpoint
+    });
+
   } catch (error) {
-    console.error("❌ Auth Error:", error);
+    console.error("❌ Manual Code Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
