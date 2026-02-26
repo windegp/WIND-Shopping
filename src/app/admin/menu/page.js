@@ -10,12 +10,161 @@ import {
   ChevronDown, ChevronRight, Info, X, ChevronUp, CornerDownLeft
 } from "lucide-react";
 
+// --- مكون الشجرة (الأكورديون) ---
+// تم نقله "خارج" المكون الرئيسي لمنع إعادة الرسم (Re-render) وفقدان التركيز (Focus Loss) أثناء الكتابة
+const RenderMenuTree = ({ list, path = [], depth = 0, availableCollections, expandedItems, toggleAccordion, updateItem, addItem, deleteItem }) => {
+  if (!list || list.length === 0) return null;
+
+  return (
+    <div className={`flex flex-col gap-3 ${depth > 0 ? 'mt-3 pr-4 sm:pr-8 border-r-2 border-gray-300' : ''}`}>
+      {list.map((item, index) => {
+        const currentPath = [...path, index];
+        const isExpanded = expandedItems.has(item.id);
+        const hasChildren = item.children && item.children.length > 0;
+
+        // تدرج لوني ذكي حسب العمق
+        const isDark = depth >= 2; 
+        
+        const cardStyle = 
+          depth === 0 ? "bg-white border-gray-200 shadow-sm" : 
+          depth === 1 ? "bg-gray-50 border-gray-300" : 
+          depth === 2 ? "bg-[#2b2b2b] border-[#444]" : 
+          "bg-[#111] border-[#333]";
+
+        const textColor = isDark ? "text-white" : "text-[#202223]";
+        const labelColor = isDark ? "text-gray-400" : "text-gray-500";
+        const inputBg = isDark ? "bg-[#1a1a1a] border-[#444] text-white focus:border-[#008060] placeholder-gray-600" : "bg-white border-gray-300 text-[#202223] focus:border-[#008060] placeholder-gray-400";
+        const linkBg = isDark ? "bg-[#111] border-[#333] text-gray-400" : "bg-white border-gray-200 text-gray-500";
+
+        return (
+          <div key={item.id} className="relative animate-[fadeIn_0.2s_ease-out]">
+            
+            {/* خط التوصيل الأفقي (الفرع اللي بيمسك الكارت في العمود الرئيسي) */}
+            {depth > 0 && (
+              <div className="absolute top-10 -right-4 sm:-right-8 w-4 sm:w-8 h-[2px] bg-gray-300 z-0"></div>
+            )}
+
+            <div className={`
+              border p-4 sm:p-5 rounded-xl transition-all duration-200 relative z-10
+              ${cardStyle}
+              ${isExpanded && depth === 0 ? 'ring-1 ring-[#008060]/30 shadow-md' : ''}
+            `}>
+              
+              {/* 1. رأس الكارت */}
+              <div className={`flex justify-between items-center mb-4 pb-3 border-b ${isDark ? 'border-[#444]' : 'border-gray-200/60'}`}>
+                <div className="flex items-center gap-3">
+                  {hasChildren ? (
+                    <button 
+                      onClick={() => toggleAccordion(item.id)} 
+                      className={`p-2 rounded-lg transition-all shadow-sm border flex items-center justify-center ${
+                        isExpanded 
+                          ? 'bg-[#008060] border-[#008060] text-white' 
+                          : isDark 
+                            ? 'bg-[#444] border-[#555] text-[#F5C518] hover:bg-[#555]' 
+                            : 'bg-[#e8f4f0] border-[#008060]/30 text-[#008060] hover:bg-[#d1e9e2]'
+                      }`}
+                      title={isExpanded ? "طي القائمة" : "إظهار القوائم الفرعية"}
+                    >
+                      {/* السهم هنا بقى سميك ومميز جداً */}
+                      {isExpanded ? <ChevronUp size={16} strokeWidth={3}/> : <ChevronDown size={16} strokeWidth={3}/>}
+                    </button>
+                  ) : (
+                    <div className="w-8 h-8 flex items-center justify-center">
+                      <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-gray-500' : 'bg-gray-300'}`}></div>
+                    </div>
+                  )}
+                  <span className={`font-bold text-[10px] px-2 py-1 rounded border ${isDark ? 'bg-[#333] border-[#555] text-gray-300' : 'bg-white border-gray-200 text-[#008060]'}`}>
+                    مستوى {depth + 1}
+                  </span>
+                  <h3 className={`text-sm font-bold truncate max-w-[120px] sm:max-w-xs ${textColor}`}>{item.title || "بند جديد"}</h3>
+                </div>
+
+                <button 
+                  onClick={() => deleteItem(currentPath)} 
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isDark ? 'bg-red-900/30 text-red-400 border-red-900/50 hover:bg-red-600 hover:text-white' : 'text-red-600 bg-red-50 border-red-100 hover:bg-red-500 hover:text-white'}`}
+                >
+                  <Trash2 size={14} /> <span className="hidden sm:inline">حذف</span>
+                </button>
+              </div>
+
+              {/* 2. منطقة الإدخال */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-[10px] font-bold mb-1.5 uppercase ${labelColor}`}>ربط بقسم موجود (اختياري)</label>
+                  <select 
+                    className={`w-full p-2.5 rounded-lg text-sm outline-none transition-all cursor-pointer ${inputBg}`}
+                    value={availableCollections.find(c => `/collections/${c.slug}` === item.link)?.slug || ""}
+                    onChange={(e) => {
+                      const selected = availableCollections.find(c => c.slug === e.target.value);
+                      if (selected) {
+                        updateItem(currentPath, 'title', selected.name);
+                        updateItem(currentPath, 'link', `/collections/${selected.slug}`);
+                      }
+                    }}
+                  >
+                    <option value="">-- اختر قسماً للربط --</option>
+                    {availableCollections.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className={`block text-[10px] font-bold mb-1.5 uppercase ${labelColor}`}>عنوان القسم (كما يظهر للعميل)</label>
+                  <input 
+                    type="text" 
+                    value={item.title} 
+                    onChange={(e) => updateItem(currentPath, 'title', e.target.value)}
+                    className={`w-full p-2.5 rounded-lg text-sm font-bold outline-none transition-all ${inputBg}`}
+                    placeholder="مثال: أحدث الشيلان"
+                  />
+                </div>
+              </div>
+
+              {/* 3. الإجراءات السفلية (زر التفريع) */}
+              <div className={`mt-4 pt-4 border-t flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDark ? 'border-[#444]' : 'border-gray-200/60'}`}>
+                <div className={`flex-1 w-full sm:w-auto flex items-center gap-2 px-3 py-2 rounded-lg border ${linkBg}`}>
+                  <LinkIcon size={14} className="shrink-0" />
+                  <span className="text-[11px] font-mono truncate w-full" dir="ltr" title={item.link}>{item.link}</span>
+                </div>
+                
+                <button 
+                  onClick={() => addItem(currentPath)} 
+                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-sm border ${isDark ? 'bg-white text-black hover:bg-gray-200 border-white' : 'bg-[#202223] text-white hover:bg-black border-[#202223]'}`}
+                >
+                  <CornerDownLeft size={14} className="rtl:rotate-180" /> 
+                  إضافة قسم فرعي داخل "{item.title || 'هذا القسم'}"
+                </button>
+              </div>
+
+              {/* منطقة الأبناء */}
+              {hasChildren && isExpanded && (
+                <div className="mt-2 animate-[slideDown_0.3s_ease-out]">
+                  <RenderMenuTree 
+                    list={item.children} 
+                    path={currentPath} 
+                    depth={depth + 1} 
+                    availableCollections={availableCollections}
+                    expandedItems={expandedItems}
+                    toggleAccordion={toggleAccordion}
+                    updateItem={updateItem}
+                    addItem={addItem}
+                    deleteItem={deleteItem}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export default function ProfessionalMenuManager() {
   const [items, setItems] = useState([]);
   const [availableCollections, setAvailableCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [expandedItems, setExpandedItems] = useState(new Set()); // لإدارة الأكورديون
+  const [expandedItems, setExpandedItems] = useState(new Set()); 
 
   // --- جلب البيانات ---
   useEffect(() => {
@@ -69,12 +218,15 @@ export default function ProfessionalMenuManager() {
   const addItem = (path = null) => {
     const newItem = { id: Math.random().toString(36).substr(2, 9), title: "بند جديد", link: "/", children: [] };
     const newItems = JSON.parse(JSON.stringify(items));
-    if (path === null) newItems.push(newItem);
-    else {
+    
+    if (path === null) {
+      // تعديل هنا: unshift بدلاً من push لتنزيل القسم الجديد في الأعلى
+      newItems.unshift(newItem);
+    } else {
       let current = { children: newItems };
       path.forEach(idx => { current = current.children[idx]; });
       current.children.push(newItem);
-      // فتح الأكورديون تلقائياً عند إضافة فرع
+      
       const parentId = current.id;
       if (parentId) {
         const newExpanded = new Set(expandedItems);
@@ -95,138 +247,6 @@ export default function ProfessionalMenuManager() {
       parent.children.splice(path[path.length - 1], 1);
     }
     setItems(newItems);
-  };
-
-  // --- مكون الشجرة (الأكورديون) ---
-  const RenderMenuTree = ({ list, path = [], depth = 0 }) => {
-    if (!list || list.length === 0) return null;
-
-    // السر هنا: المربع اللي بيحتوي الأبناء بياخد Border من اليمين كأنه خط الشجرة العمودي
-    return (
-      <div className={`flex flex-col gap-3 ${depth > 0 ? 'mt-3 pr-4 sm:pr-8 border-r-2 border-gray-300' : ''}`}>
-        {list.map((item, index) => {
-          const currentPath = [...path, index];
-          const isExpanded = expandedItems.has(item.id);
-          const hasChildren = item.children && item.children.length > 0;
-
-          // تدرج لوني ذكي حسب العمق
-          const isDark = depth >= 2; 
-          
-          const cardStyle = 
-            depth === 0 ? "bg-white border-gray-200 shadow-sm" : 
-            depth === 1 ? "bg-gray-50 border-gray-300" : 
-            depth === 2 ? "bg-[#2b2b2b] border-[#444]" : 
-            "bg-[#111] border-[#333]";
-
-          const textColor = isDark ? "text-white" : "text-[#202223]";
-          const labelColor = isDark ? "text-gray-400" : "text-gray-500";
-          const inputBg = isDark ? "bg-[#1a1a1a] border-[#444] text-white focus:border-[#008060] placeholder-gray-600" : "bg-white border-gray-300 text-[#202223] focus:border-[#008060] placeholder-gray-400";
-          const linkBg = isDark ? "bg-[#111] border-[#333] text-gray-400" : "bg-white border-gray-200 text-gray-500";
-
-          return (
-            <div key={item.id} className="relative animate-[fadeIn_0.2s_ease-out]">
-              
-              {/* خط التوصيل الأفقي (الفرع اللي بيمسك الكارت في العمود الرئيسي) */}
-              {depth > 0 && (
-                <div className="absolute top-10 -right-4 sm:-right-8 w-4 sm:w-8 h-[2px] bg-gray-300 z-0"></div>
-              )}
-
-              <div className={`
-                border p-4 sm:p-5 rounded-xl transition-all duration-200 relative z-10
-                ${cardStyle}
-                ${isExpanded && depth === 0 ? 'ring-1 ring-[#008060]/30 shadow-md' : ''}
-              `}>
-                
-                {/* 1. رأس الكارت */}
-                <div className={`flex justify-between items-center mb-4 pb-3 border-b ${isDark ? 'border-[#444]' : 'border-gray-200/60'}`}>
-                  <div className="flex items-center gap-3">
-                    {hasChildren ? (
-                      <button 
-                        onClick={() => toggleAccordion(item.id)} 
-                        className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-[#008060] text-white' : isDark ? 'bg-[#444] text-white hover:bg-[#555]' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
-                      </button>
-                    ) : (
-                      <div className="w-7 h-7 flex items-center justify-center">
-                        <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-gray-500' : 'bg-gray-300'}`}></div>
-                      </div>
-                    )}
-                    <span className={`font-bold text-[10px] px-2 py-1 rounded border ${isDark ? 'bg-[#333] border-[#555] text-gray-300' : 'bg-white border-gray-200 text-[#008060]'}`}>
-                      مستوى {depth + 1}
-                    </span>
-                    <h3 className={`text-sm font-bold truncate max-w-[120px] sm:max-w-xs ${textColor}`}>{item.title || "بند جديد"}</h3>
-                  </div>
-
-                  <button 
-                    onClick={() => deleteItem(currentPath)} 
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isDark ? 'bg-red-900/30 text-red-400 border-red-900/50 hover:bg-red-600 hover:text-white' : 'text-red-600 bg-red-50 border-red-100 hover:bg-red-500 hover:text-white'}`}
-                  >
-                    <Trash2 size={14} /> <span className="hidden sm:inline">حذف</span>
-                  </button>
-                </div>
-
-                {/* 2. منطقة الإدخال */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-[10px] font-bold mb-1.5 uppercase ${labelColor}`}>ربط بقسم موجود (اختياري)</label>
-                    <select 
-                      className={`w-full p-2.5 rounded-lg text-sm outline-none transition-all cursor-pointer ${inputBg}`}
-                      value={availableCollections.find(c => `/collections/${c.slug}` === item.link)?.slug || ""}
-                      onChange={(e) => {
-                        const selected = availableCollections.find(c => c.slug === e.target.value);
-                        if (selected) {
-                          updateItem(currentPath, 'title', selected.name);
-                          updateItem(currentPath, 'link', `/collections/${selected.slug}`);
-                        }
-                      }}
-                    >
-                      <option value="">-- اختر قسماً للربط --</option>
-                      {availableCollections.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={`block text-[10px] font-bold mb-1.5 uppercase ${labelColor}`}>عنوان القسم (كما يظهر للعميل)</label>
-                    <input 
-                      type="text" 
-                      value={item.title} 
-                      onChange={(e) => updateItem(currentPath, 'title', e.target.value)}
-                      className={`w-full p-2.5 rounded-lg text-sm font-bold outline-none transition-all ${inputBg}`}
-                      placeholder="مثال: أحدث الشيلان"
-                    />
-                  </div>
-                </div>
-
-                {/* 3. الإجراءات السفلية (زر التفريع) */}
-                <div className={`mt-4 pt-4 border-t flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDark ? 'border-[#444]' : 'border-gray-200/60'}`}>
-                  <div className={`flex-1 w-full sm:w-auto flex items-center gap-2 px-3 py-2 rounded-lg border ${linkBg}`}>
-                    <LinkIcon size={14} className="shrink-0" />
-                    <span className="text-[11px] font-mono truncate w-full" dir="ltr" title={item.link}>{item.link}</span>
-                  </div>
-                  
-                  {/* الزر اللي بيضيف أبناء داخل هذا الكارت فقط */}
-                  <button 
-                    onClick={() => addItem(currentPath)} 
-                    className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-sm border ${isDark ? 'bg-white text-black hover:bg-gray-200 border-white' : 'bg-[#202223] text-white hover:bg-black border-[#202223]'}`}
-                  >
-                    <CornerDownLeft size={14} className="rtl:rotate-180" /> 
-                    إضافة قسم فرعي داخل "{item.title || 'هذا القسم'}"
-                  </button>
-                </div>
-
-                {/* منطقة الأبناء */}
-                {hasChildren && isExpanded && (
-                  <div className="mt-2 animate-[slideDown_0.3s_ease-out]">
-                    <RenderMenuTree list={item.children} path={currentPath} depth={depth + 1} />
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
   };
 
   if (loading) {
@@ -293,7 +313,15 @@ export default function ProfessionalMenuManager() {
               </button>
             </div>
           ) : (
-            <RenderMenuTree list={items} />
+            <RenderMenuTree 
+              list={items} 
+              availableCollections={availableCollections}
+              expandedItems={expandedItems}
+              toggleAccordion={toggleAccordion}
+              updateItem={updateItem}
+              addItem={addItem}
+              deleteItem={deleteItem}
+            />
           )}
         </div>
 
