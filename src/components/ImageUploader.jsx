@@ -12,27 +12,39 @@ export default function ImageUploader({ onUploadSuccess }) {
     setLoading(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      // بنبعت الصورة للـ API اللي لسه عاملينه
-      const res = await fetch('/api/upload', {
-        method: 'POST',
+      // 1. طلب توقيع الرفع من الـ API (الخطوة دي GET وخفيفة جداً)
+      const authRes = await fetch('/api/upload');
+      if (!authRes.ok) throw new Error("فشل الحصول على تصريح الرفع");
+      const authData = await authRes.json();
+
+      // 2. تجهيز البيانات للرفع المباشر لـ ImageKit
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("fileName", file.name.replace(/\s+/g, '-'));
+      formData.append("publicKey", process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY);
+      formData.append("signature", authData.signature);
+      formData.append("expire", authData.expire);
+      formData.append("token", authData.token);
+      formData.append("folder", "/WIND_Shopping"); // تحديد الفولدر في ImageKit
+
+      // 3. الرفع الفعلي لـ ImageKit مباشرة من المتصفح
+      const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+        method: "POST",
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await uploadRes.json();
 
-      if (res.ok && data.url) {
+      if (uploadRes.ok && data.url) {
         // لو كله تمام، بنبعت الرابط للصفحة الأساسية
         onUploadSuccess(data.url);
       } else {
-        setError(data.error || "حدث خطأ أثناء الرفع.");
+        setError(data.message || "حدث خطأ أثناء الرفع.");
       }
     } catch (err) {
       console.error(err);
-      setError("فشل الاتصال بالسيرفر.");
+      setError("فشل الاتصال بسيرفر الرفع.");
     } finally {
       setLoading(false);
     }
@@ -42,7 +54,7 @@ export default function ImageUploader({ onUploadSuccess }) {
     <div className="p-4 border border-dashed border-gray-600 bg-[#1a1a1a] rounded-lg text-center w-full max-w-sm">
       <label className="cursor-pointer flex flex-col items-center justify-center space-y-2">
         <span className={`px-6 py-2 rounded-md font-bold transition w-full text-center ${loading ? 'bg-gray-500 text-white cursor-not-allowed' : 'bg-[#F5C518] text-black hover:bg-yellow-500'}`}>
-          {loading ? "جاري الرفع لـ ImageKit..." : "اختر صورة لرفعها"}
+          {loading ? "جاري الرفع المباشر..." : "اختر صورة لرفعها"}
         </span>
         <input 
           type="file" 
