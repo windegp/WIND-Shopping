@@ -2,7 +2,7 @@
 import { db } from "@/lib/firebase"; 
 import { doc, getDoc } from "firebase/firestore";
 import { products as staticProducts } from "@/lib/products";
-import ProductView from "./ProductView"; // كودك الأصلي اللي سميناه ProductView
+import ProductView from "./ProductView"; 
 
 // دالة جلب البيانات موحدة للسيرفر
 async function getProductData(id) {
@@ -15,7 +15,7 @@ async function getProductData(id) {
   return null;
 }
 
-// 1. الجزء الخاص بـ Metadata (العنوان والوصف في جوجل)
+// 1. الجزء الخاص بـ Metadata
 export async function generateMetadata({ params }) {
   const { id } = params;
   const product = await getProductData(id);
@@ -36,14 +36,14 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// 2. الصفحة الرئيسية (تجمع بين البيانات المنظمة وتصميمك)
+// 2. الصفحة الرئيسية
 export default async function Page({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
   if (!product) return <div className="text-white text-center py-20">المنتج غير موجود</div>;
 
-  // البيانات المنظمة JSON-LD - دي اللي بتظهر السعر والنجوم في جوجل
+  // البيانات المنظمة JSON-LD
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -64,6 +64,9 @@ export default async function Page({ params }) {
     }
   };
 
+  // --- الزتونة هنا: تحويل البيانات لـ Plain Object عشان تهرب من الـ Error ---
+  const sanitizedProduct = JSON.parse(JSON.stringify(product));
+
   return (
     <>
       <script
@@ -71,8 +74,8 @@ export default async function Page({ params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      {/* تمرير البيانات الأولية لملفك الأصلي لسرعة التحميل */}
-      <ProductView initialProduct={product} /> 
+      {/* نمرر الـ sanitizedProduct بدل الـ product الأصلي */}
+      <ProductView initialProduct={sanitizedProduct} /> 
     </>
   );
 }
