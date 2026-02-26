@@ -3,18 +3,20 @@ import ImageKit from "@imagekit/nodejs";
 
 export async function GET() {
   try {
-    // حط مفاتيحك هنا يدوياً للتجربة (بدون process.env)
+    // 1. استخدام المفاتيح بشكل آمن من بيئة Vercel
     const imagekit = new ImageKit({
-      publicKey: "public_qxxjKJ3sgdFJWnCWYk/BzUuiZlY=", // الـ Public Key بتاعك من ImageKit
-      privateKey: "private_d/0OZReajja+/7TGxcbvQKUCl7g=", // الـ Private Key بتاعك
-      urlEndpoint: "https://ik.imagekit.io/windeg" // الـ URL Endpoint بتاعك
+      publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
     });
 
-    const authParams = imagekit.getAuthenticationParameters();
+    // 2. 💡 التعديل السحري: إضافة .helper قبل الدالة (للتوافق مع التحديث الجديد)
+    const authParams = imagekit.helper.getAuthenticationParameters();
+    
     return NextResponse.json(authParams);
 
   } catch (error) {
-    console.error("❌ Error:", error.message);
+    console.error("❌ ImageKit API Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
