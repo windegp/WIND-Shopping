@@ -8,109 +8,251 @@ export default function CartDrawer() {
   if (!isCartOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] overflow-hidden" dir="rtl">
-      {/* الخلفية الشفافة */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-md transition-opacity" onClick={toggleCart} />
-      
-      <div className="absolute inset-y-0 left-0 max-w-full flex">
-        <div className="w-screen max-w-md bg-[#121212] shadow-2xl flex flex-col border-r border-[#333]">
-          
-          {/* الهيدر */}
-          <div className="p-6 border-b border-[#333] flex items-center justify-between bg-[#1a1a1a]">
-            <div>
-              <h2 className="text-xl font-black text-white">حقيبة التسوق</h2>
-              <p className="text-[#F5C518] text-xs font-bold mt-1">{cartItems.length} منتجات في الحقيبة</p>
-            </div>
-            <button onClick={toggleCart} className="text-white hover:rotate-90 transition-transform duration-300">
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap');
+        .cart-drawer * { font-family: 'Cairo', sans-serif; }
 
-          {/* قائمة المنتجات */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-            {cartItems.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="mb-6 opacity-20 flex justify-center">
-                   <svg className="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" strokeWidth="1"/></svg>
-                </div>
-                <p className="text-gray-400 font-bold mb-6">حقيبتك فارغة، ابدأ بإضافة بعض الأناقة!</p>
-                <button onClick={toggleCart} className="bg-[#F5C518] text-black px-10 py-3 rounded-sm font-black transition active:scale-95">تسوق الآن</button>
-              </div>
-            ) : (
-              cartItems.map((item, index) => (
-                <div key={`${item.id}-${item.selectedSize}`} className="flex gap-4 bg-[#1a1a1a] p-3 rounded-sm border border-[#222] group hover:border-[#333] transition-colors">
-                  {/* صورة المنتج */}
-                  <div className="w-24 h-32 bg-[#222] rounded overflow-hidden flex-shrink-0 border border-[#333]">
-                    <img 
-                      // تأكد من أن المسار يطابق طريقة تخزينك (ممكن تستخدم item.image مباشرة لو هي رابط كامل)
-                      src={item.image || `/images/products/${item.folderName}/${item.mainImage}`} 
-                      alt={item.title} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                    />
+        /* ── Slide in from left ── */
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); opacity: 0; }
+          to   { transform: translateX(0);     opacity: 1; }
+        }
+        .cart-panel { animation: slideInLeft 0.28s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+        /* ── Fade in overlay ── */
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .cart-overlay { animation: fadeIn 0.2s ease forwards; }
+
+        /* ── Scrollbar ── */
+        .cart-scroll::-webkit-scrollbar { width: 4px; }
+        .cart-scroll::-webkit-scrollbar-track { background: #f5f5f0; }
+        .cart-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+
+        /* ── Item hover ── */
+        .cart-item { transition: box-shadow 0.15s; }
+        .cart-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+        /* ── Qty button ── */
+        .qty-btn { transition: background 0.12s, color 0.12s; }
+        .qty-btn:hover { background: #F5C518; color: #000; }
+
+        /* ── Checkout button shine ── */
+        @keyframes shine {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
+        .checkout-btn { position: relative; overflow: hidden; background: #F5C518; color: #111; }
+        .checkout-btn::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%);
+          background-size: 200% auto;
+        }
+        .checkout-btn:hover::after { animation: shine 0.6s linear; }
+        .checkout-btn:hover { background: #e6b800; }
+        .checkout-btn:active { transform: scale(0.99); }
+
+        /* ── Remove button ── */
+        .remove-btn { transition: color 0.15s, transform 0.15s; }
+        .remove-btn:hover { color: #ef4444; transform: scale(1.1); }
+      `}</style>
+
+      <div className="cart-drawer fixed inset-0 z-[1000] overflow-hidden" dir="rtl">
+
+        {/* ── Overlay ── */}
+        <div
+          className="cart-overlay absolute inset-0"
+          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)' }}
+          onClick={toggleCart}
+        />
+
+        {/* ── Panel ── */}
+        <div className="absolute inset-y-0 left-0 flex max-w-full">
+          <div className="cart-panel w-screen max-w-[400px] bg-[#f5f5f0] flex flex-col shadow-2xl">
+
+            {/* ════════════════════════════
+                HEADER
+            ════════════════════════════ */}
+            <div className="bg-white border-b border-gray-200 px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Cart icon with badge */}
+                <div className="relative">
+                  <div className="w-9 h-9 bg-[#F5C518]/10 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-[#F5C518]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
                   </div>
+                  {cartItems.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-[#F5C518] text-black text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                      {cartItems.reduce((acc, i) => acc + i.qty, 0)}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h2 className="font-black text-gray-900 text-base leading-tight">حقيبة التسوق</h2>
+                  <p className="text-[11px] text-gray-400 font-medium">
+                    {cartItems.length === 0 ? 'لا توجد منتجات' : `${cartItems.length} ${cartItems.length === 1 ? 'منتج' : 'منتجات'}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={toggleCart}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-                  {/* تفاصيل المنتج */}
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-white font-bold text-sm leading-tight max-w-[150px]">{item.title}</h3>
-                        <button onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-gray-500 hover:text-red-500 transition-colors">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {/* ════════════════════════════
+                ITEMS LIST
+            ════════════════════════════ */}
+            <div className="flex-1 overflow-y-auto cart-scroll px-4 py-4 space-y-3">
+
+              {cartItems.length === 0 ? (
+                /* ── Empty State ── */
+                <div className="flex flex-col items-center justify-center h-full py-24 text-center">
+                  <div className="w-20 h-20 bg-white rounded-2xl border border-gray-200 flex items-center justify-center mb-5 shadow-sm">
+                    <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </div>
+                  <p className="font-bold text-gray-500 text-sm mb-1">حقيبتك فارغة</p>
+                  <p className="text-xs text-gray-400 mb-6">ابدأ بإضافة بعض الأناقة!</p>
+                  <button
+                    onClick={toggleCart}
+                    className="bg-[#F5C518] text-black px-8 py-2.5 rounded-lg font-black text-sm hover:bg-[#e6b800] transition-colors"
+                  >
+                    تسوق الآن
+                  </button>
+                </div>
+
+              ) : (
+                cartItems.map((item) => (
+                  <div
+                    key={`${item.id}-${item.selectedSize}-${item.selectedColor || ''}`}
+                    className="cart-item bg-white rounded-xl border border-gray-100 p-3 flex gap-3"
+                  >
+                    {/* Product Image */}
+                    <div className="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-100">
+                      <img
+                        src={item.image || item.images?.[0] || `/images/products/${item.folderName}/${item.mainImage}` || 'https://placehold.co/80x96'}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Details */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-gray-900 text-sm leading-tight truncate">{item.title}</h3>
+                          {/* Size + Color badges */}
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {item.selectedSize && (
+                              <span className="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-md">
+                                {item.selectedSize}
+                              </span>
+                            )}
+                            {item.selectedColor && (
+                              <span className="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                {/* Color dot */}
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    width: '8px', height: '8px',
+                                    borderRadius: '50%',
+                                    background: item.selectedColor,
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    flexShrink: 0
+                                  }}
+                                />
+                                {item.selectedColor}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Remove button */}
+                        <button
+                          onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)}
+                          className="remove-btn text-gray-300 shrink-0 mt-0.5"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
-                      <p className="text-[#F5C518] text-[10px] font-black mt-1 uppercase tracking-tighter">المقاس: {item.selectedSize}</p>
-                    </div>
 
-                    <div className="flex justify-between items-end">
-                      {/* عداد الكمية */}
-                      <div className="flex items-center border border-[#333] rounded-sm bg-[#121212]">
-                        <button onClick={() => updateQty(item.id, item.selectedSize, -1)} className="px-3 py-1 text-white hover:bg-[#222]">-</button>
-                        <span className="px-2 text-xs font-bold text-[#F5C518] min-w-[20px] text-center">{item.qty}</span>
-                        <button onClick={() => updateQty(item.id, item.selectedSize, 1)} className="px-3 py-1 text-white hover:bg-[#222]">+</button>
-                      </div>
-                      <div className="text-left">
-                        <p className="text-white font-black text-sm">{item.price * item.qty} EGP</p>
+                      {/* Price + Qty */}
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="font-black text-gray-900 text-sm">
+                          {item.price * item.qty}
+                          <span className="text-xs font-medium text-gray-400 mr-1">ج.م</span>
+                        </p>
+                        {/* Qty control */}
+                        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                          <button
+                            onClick={() => updateQty(item.id, item.selectedSize, -1, item.selectedColor)}
+                            className="qty-btn w-7 h-7 flex items-center justify-center text-gray-500 font-bold text-sm"
+                          >
+                            −
+                          </button>
+                          <span className="px-2 text-xs font-black text-gray-800 min-w-[22px] text-center">
+                            {item.qty}
+                          </span>
+                          <button
+                            onClick={() => updateQty(item.id, item.selectedSize, 1, item.selectedColor)}
+                            className="qty-btn w-7 h-7 flex items-center justify-center text-gray-500 font-bold text-sm"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* الجزء السفلي (المجموع والتشيك أوت) */}
-          {cartItems.length > 0 && (
-            <div className="p-6 bg-[#1a1a1a] border-t border-[#333] shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
-              <div className="space-y-2 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 font-bold text-sm">المجموع الفرعي</span>
-                  <span className="text-white font-bold">{subtotal} EGP</span>
-                </div>
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-gray-500 italic">سيتم احتساب مصاريف الشحن عند إتمام الطلب</span>
-                  <span className="text-[#F5C518] font-bold">حسب المحافظة</span>
-                </div>
-              </div>
-
-              <Link 
-                href="/checkout" 
-                onClick={toggleCart}
-                className="group relative block w-full bg-[#F5C518] text-black text-center font-black py-4 rounded-sm text-lg overflow-hidden transition-all active:scale-95"
-              >
-                <span className="relative z-10">إتمام الطلب الآن</span>
-                <div className="absolute inset-0 bg-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <span className="absolute inset-0 flex items-center justify-center text-black font-black opacity-0 group-hover:opacity-100 z-20 transition-opacity duration-300">
-                   يلا بينا! ➔
-                </span>
-              </Link>
-              
-              <button onClick={toggleCart} className="w-full text-gray-500 font-bold text-xs mt-4 hover:text-white transition uppercase tracking-widest">إكمال التسوق</button>
+                ))
+              )}
             </div>
-          )}
+
+            {/* ════════════════════════════
+                FOOTER — Subtotal + CTA
+            ════════════════════════════ */}
+            {cartItems.length > 0 && (
+              <div className="bg-white border-t border-gray-100 px-5 pt-4 pb-6 shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
+
+                {/* Subtotal row */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-gray-500 font-medium">المجموع الفرعي</span>
+                  <span className="font-black text-gray-900 text-base">{subtotal} <span className="text-xs font-medium text-gray-400">ج.م</span></span>
+                </div>
+                <p className="text-[10px] text-gray-400 mb-4">سيتم احتساب مصاريف الشحن عند إتمام الطلب</p>
+
+                {/* Checkout CTA */}
+                <Link
+                  href="/checkout"
+                  onClick={toggleCart}
+                  className="checkout-btn block w-full text-center font-black py-3.5 rounded-xl text-base transition-all active:scale-[0.99] shadow-sm"
+                >
+                  إتمام الطلب — {subtotal} ج.م
+                </Link>
+
+                <button
+                  onClick={toggleCart}
+                  className="w-full text-center text-xs text-gray-400 hover:text-gray-600 font-medium mt-3 transition-colors"
+                >
+                  متابعة التسوق
+                </button>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
