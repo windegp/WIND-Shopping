@@ -65,56 +65,23 @@ function KashierIframeModal({ iframeData, onClose }) {
       <div className="relative w-full max-w-[480px] bg-white rounded-2xl overflow-hidden shadow-2xl"
            style={{ maxHeight: '90vh' }}>
 
-        {/* ── Modal Header — WIND Logo + Payment Icons ── */}
-        <div className="px-5 py-4 border-b border-gray-100 bg-white">
-          <div className="flex items-center justify-between mb-3">
-            {/* WIND Brand */}
-            <div className="flex items-center gap-2">
-              <img src="/logo.jpg" alt="WIND Shopping" style={{height:'32px',width:'auto',objectFit:'contain',borderRadius:'6px'}} />
-              <div>
-                <p className="font-black text-gray-900 text-sm tracking-tight">WIND <span className="font-light text-gray-400">Shopping</span></p>
-                <div className="flex items-center gap-1">
-                  <Lock size={9} className="text-green-500" />
-                  <span style={{fontSize:'9px',color:'#6b7280'}}>دفع آمن ومشفّر SSL</span>
-                </div>
-              </div>
+        {/* ── Modal Header ── */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#F5C518]/10 rounded-full flex items-center justify-center">
+              <Lock size={14} className="text-[#F5C518]" />
             </div>
-            {/* Kashier badge + Close */}
-            <div className="flex items-center gap-2">
-              <div style={{display:'flex',alignItems:'center',gap:'4px',background:'#f8f8f8',border:'1px solid #e5e7eb',borderRadius:'6px',padding:'3px 8px'}}>
-                <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="16" fill="#1a1a2e"/>
-                  <path d="M10 8h4v8l6-8h4l-7 9 7 7h-4l-6-7v7h-4V8z" fill="#F5C518"/>
-                </svg>
-                <span style={{fontSize:'10px',fontWeight:700,color:'#1a1a2e'}}>Kashier</span>
-              </div>
-              <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                <X size={14} className="text-gray-600" />
-              </button>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">بوابة الدفع الآمنة</p>
+              <p className="text-[10px] text-gray-400">مشفّر بـ SSL — كاشير</p>
             </div>
           </div>
-          {/* Payment method icons */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <div style={{background:'#1a1f71',borderRadius:'4px',padding:'2px 7px'}}>
-              <span style={{fontSize:'10px',fontWeight:900,color:'white',letterSpacing:'1px'}}>VISA</span>
-            </div>
-            <div style={{background:'white',border:'1px solid #e5e7eb',borderRadius:'4px',padding:'3px 5px',display:'flex',alignItems:'center'}}>
-              <div style={{width:'12px',height:'12px',borderRadius:'50%',background:'#EB001B',display:'inline-block'}}></div>
-              <div style={{width:'12px',height:'12px',borderRadius:'50%',background:'#F79E1B',display:'inline-block',marginLeft:'-5px'}}></div>
-            </div>
-            <div style={{background:'#6B2D8B',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white',letterSpacing:'0.5px'}}>meeza</span>
-            </div>
-            <div style={{background:'#F37021',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white'}}>Fawry</span>
-            </div>
-            <div style={{background:'#00C896',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white'}}>valU</span>
-            </div>
-            <div style={{background:'#111',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white'}}>sympl</span>
-            </div>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <X size={16} className="text-gray-600" />
+          </button>
         </div>
 
         {/* ── iFrame ── */}
@@ -173,30 +140,6 @@ export default function CheckoutPage() {
   });
 
   const [errors, setErrors] = useState({});
-
-  // ── أيقونات وسائل الدفع ──
-  const [showPaymentTooltip, setShowPaymentTooltip] = useState(false);
-  const paymentTooltipRef = useRef(null);
-  const paymentIcons = [
-    "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
-  ];
-  const maxVisible = 3;
-  const visiblePaymentIcons = paymentIcons.slice(0, maxVisible);
-  const hiddenPaymentIcons = paymentIcons.slice(maxVisible);
-
-  // إغلاق tooltip الأيقونات لو ضغط برّه
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (paymentTooltipRef.current && !paymentTooltipRef.current.contains(e.target)) {
-        setShowPaymentTooltip(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const validate = () => {
     let tempErrors = {};
@@ -658,8 +601,8 @@ export default function CheckoutPage() {
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
 
                 {/* Card */}
-                <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer overflow-visible ${paymentMethod === 'card' ? 'active' : ''}`}>
-                  <div className="flex items-center justify-between overflow-visible">
+                <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer ${paymentMethod === 'card' ? 'active' : ''}`}>
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'card' ? 'border-[#F5C518]' : 'border-gray-300'}`}>
                         {paymentMethod === 'card' && <div className="w-2 h-2 rounded-full bg-[#F5C518]"></div>}
@@ -670,35 +613,49 @@ export default function CheckoutPage() {
                         <span className="font-semibold text-sm text-gray-800">كارت / محفظة إلكترونية</span>
                       </div>
                     </div>
-                    {/* أيقونات وسائل الدفع — ديناميكية مع tooltip */}
-                    <div className="flex items-center gap-2 mr-auto overflow-visible relative">
-                      {visiblePaymentIcons.map((url, idx) => (
-                        <div key={idx} className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors">
-                          <img src={url} alt="payment-method" className="w-[85%] h-[85%] object-contain scale-125" onError={(e) => e.target.parentElement.style.display = 'none'} />
-                        </div>
-                      ))}
-                      {hiddenPaymentIcons.length > 0 && (
-                        <div className="relative" ref={paymentTooltipRef}>
-                          <button
-                            type="button"
-                            onClick={() => setShowPaymentTooltip(!showPaymentTooltip)}
-                            className="w-8 h-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-400 rounded-md flex items-center justify-center shadow-sm transition-all"
-                          >
-                            <span className="text-[10px] font-bold text-gray-500">+{hiddenPaymentIcons.length}</span>
-                          </button>
-                          {showPaymentTooltip && (
-                            <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-xl p-2.5 flex gap-2 z-50">
-                              <div className="absolute -bottom-1.5 left-3 w-3 h-3 bg-white border-b border-r border-gray-200 rotate-45"></div>
-                              {hiddenPaymentIcons.map((url, idx) => (
-                                <div key={idx} className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm">
-                                  <img src={url} alt="payment-method" className="w-[85%] h-[85%] object-contain scale-125" onError={(e) => e.target.parentElement.style.display = 'none'} />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                     {/* ==========================================
+    أيقونات وسائل الدفع — معدّلة
+    لإضافة أيقونة جديدة: ضيف رابطها في paymentIcons فقط
+    الباقي بيتحسب تلقائي
+    ========================================== */}
+{(() => {
+  // ✅ مصدر واحد فقط — عدّل هنا وبس
+  const paymentIcons = [
+    "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
+    "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
+    "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
+    "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
+  ];
+
+  const maxVisible = 3;
+  const visibleIcons = paymentIcons.slice(0, maxVisible);
+  const hiddenCount = paymentIcons.length - maxVisible;
+
+  return (
+    <div className="flex items-center gap-2 mr-auto" dir="ltr">
+      {visibleIcons.map((url, idx) => (
+        <div
+          key={idx}
+          className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors"
+        >
+          <img
+            src={url}
+            alt="payment-method"
+            className="w-[85%] h-[85%] object-contain scale-125"
+            onError={(e) => e.target.parentElement.style.display = 'none'}
+          />
+        </div>
+      ))}
+
+      {/* زر + يظهر فقط لو في أيقونات مخفية */}
+      {hiddenCount > 0 && (
+        <div className="w-8 h-6 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center shadow-sm">
+          <span className="text-[10px] font-bold text-gray-500">+{hiddenCount}</span>
+        </div>
+      )}
+    </div>
+  );
+})()}
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
