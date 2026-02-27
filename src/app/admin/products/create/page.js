@@ -8,7 +8,7 @@ import ImageUploader from "@/components/ImageUploader";
 import { 
   Save, Loader2, ArrowRight, Image as ImageIcon, 
   CheckCircle2, Globe, Box, Settings, Tag, 
-  Truck, Info, ListFilter, AlertCircle, Database, Layout, Trash2, X
+  Truck, Info, ListFilter, AlertCircle, Database, Layout, Trash2, X, ChevronRight, ChevronLeft
 } from "lucide-react";
 
 // ==========================================
@@ -250,7 +250,14 @@ function CreateProductForm() {
     }
   };
 
-  const handleImageKitSuccess = (url) => setImages((prev) => [...prev, url]);
+  // دعم الرفع المتعدد (يقبل رابط واحد أو مصفوفة روابط من ImageUploader)
+  const handleImageKitSuccess = (urls) => {
+    if (Array.isArray(urls)) {
+      setImages((prev) => [...prev, ...urls]);
+    } else {
+      setImages((prev) => [...prev, urls]);
+    }
+  };
   
   const handleAddImageUrl = () => {
     if (imageUrlInput.trim() !== "") {
@@ -261,6 +268,23 @@ function CreateProductForm() {
 
   const removeImage = (indexToRemove) => {
     setImages(images.filter((_, index) => index !== indexToRemove));
+  };
+
+  // دوال تحريك الصور (يمين ويسار) لترتيبها
+  const moveImageLeft = (index) => {
+    if (index === 0) return; // لو دي أول صورة، مفيش تحريك
+    const newImages = [...images];
+    // تبديل مكان الصورة مع الصورة اللي قبلها
+    [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
+    setImages(newImages);
+  };
+
+  const moveImageRight = (index) => {
+    if (index === images.length - 1) return; // لو دي آخر صورة، مفيش تحريك
+    const newImages = [...images];
+    // تبديل مكان الصورة مع الصورة اللي بعدها
+    [newImages[index + 1], newImages[index]] = [newImages[index], newImages[index + 1]];
+    setImages(newImages);
   };
 
   const addOption = () => setOptions([...options, { name: '', values: '' }]);
@@ -458,19 +482,52 @@ function CreateProductForm() {
                 </div>
               </div>
 
-              {images.length > 0 && (
+       {images.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-6">
                   {images.map((src, i) => (
                     <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group bg-gray-50">
                       <img src={src} className="w-full h-full object-cover" alt="product media"/>
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      
+                      {/* علامة الغلاف للصورة الأولى */}
+                      <div className="absolute top-1.5 right-1.5 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                        {i === 0 ? "الغلاف" : i + 1}
+                      </div>
+
+                      {/* طبقة التحكم عند الوقوف بالماوس */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                        {/* سهم يمين (يخليها تروح للأول عشان عربي RTL) */}
+                        {i > 0 && (
+                          <button 
+                            type="button"
+                            onClick={() => moveImageLeft(i)} 
+                            className="p-1 bg-white text-gray-800 rounded hover:bg-gray-200 transition-colors shadow-sm"
+                            title="تحريك للأول"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        )}
+
+                        {/* زر الحذف */}
                         <button 
+                          type="button"
                           onClick={() => removeImage(i)} 
-                          className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                          className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors shadow-sm"
                           title="حذف الصورة"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
+
+                        {/* سهم يسار (يخليها تروح للآخر) */}
+                        {i < images.length - 1 && (
+                          <button 
+                            type="button"
+                            onClick={() => moveImageRight(i)} 
+                            className="p-1 bg-white text-gray-800 rounded hover:bg-gray-200 transition-colors shadow-sm"
+                            title="تحريك للآخر"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
