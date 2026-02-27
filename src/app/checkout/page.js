@@ -60,7 +60,6 @@ export default function CheckoutPage() {
     let tempErrors = {};
     if (!formData.email) tempErrors.email = true;
     if (!formData.firstName) tempErrors.firstName = true;
-    if (!formData.lastName) tempErrors.lastName = true;
     if (!formData.address) tempErrors.address = true;
     if (!formData.city) tempErrors.city = true;
     if (!formData.phone || formData.phone.length < 11) tempErrors.phone = true;
@@ -223,7 +222,7 @@ export default function CheckoutPage() {
         <div className="max-w-[1080px] mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo / Brand */}
           <Link href="/" className="text-lg font-black text-gray-900 tracking-tight">
-            WIND
+            WIND <span className="font-light text-gray-400">Shopping</span>
           </Link>
 
           {/* breadcrumb-style steps — desktop only */}
@@ -238,7 +237,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
-            <Shield size={13} className="text-[#F5C518]" />
+            <ShoppingBag size={15} className="text-[#F5C518]" />
             <span>دفع آمن</span>
           </div>
         </div>
@@ -257,11 +256,12 @@ export default function CheckoutPage() {
             <span>{summaryOpen ? 'إخفاء تفاصيل الطلب' : 'عرض تفاصيل الطلب'}</span>
             <ChevronDown size={14} className={`transition-transform ${summaryOpen ? 'rotate-180' : ''} text-gray-500`} />
           </div>
-          <span className="font-black text-base text-gray-900">ج.م {finalTotal}.00</span>
+          {/* Show subtotal (product price only) before opening */}
+          <span className="font-black text-base text-gray-900">ج.م {subtotal}.00</span>
         </div>
 
         {summaryOpen && (
-          <div className="mt-4 pb-2 slide-down space-y-3">
+          <div className="mt-4 pb-2 slide-down space-y-3" onClick={e => e.stopPropagation()}>
             {cartItems.map((item, idx) => (
               <div key={idx} className="flex items-center gap-3">
                 <div className="relative w-12 h-12 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
@@ -275,9 +275,33 @@ export default function CheckoutPage() {
                 <span className="text-sm font-bold text-gray-800">ج.م {item.price * item.qty}.00</span>
               </div>
             ))}
+
+            {/* Promo code — mobile */}
+            <div className="pt-2 pb-1">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text" placeholder="كود الخصم"
+                    value={discountCode} onChange={e => setDiscountCode(e.target.value)}
+                    className="w-full pr-8 pl-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#F5C518]/30 focus:border-[#F5C518] placeholder-gray-400 bg-gray-50 uppercase transition"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyPromoCode(discountCode)}
+                  className="bg-gray-900 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-black transition-colors"
+                >
+                  تطبيق
+                </button>
+              </div>
+              {discountError && <p className="text-red-500 text-[10px] mt-1.5 pr-1">{discountError}</p>}
+              {appliedPromo && <p className="promo-success pr-1">✓ تم تطبيق كود: {appliedPromo}</p>}
+            </div>
+
             <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
-              <div className="flex justify-between text-gray-500"><span>المنتجات</span><span className="text-gray-800 font-medium">ج.م {subtotal}.00</span></div>
-              <div className="flex justify-between text-gray-500"><span>الشحن</span><span className={`font-medium ${SHIPPING_COST === 0 ? 'text-green-600' : 'text-gray-800'}`}>{SHIPPING_COST === 0 ? 'مجاناً' : `ج.م ${SHIPPING_COST}.00`}</span></div>
+              <div className="flex justify-between text-gray-500"><span>سعر المنتج</span><span className="text-gray-800 font-medium">ج.م {subtotal}.00</span></div>
+              <div className="flex justify-between text-gray-500"><span>سعر الشحن</span><span className={`font-medium ${SHIPPING_COST === 0 ? 'text-green-600' : 'text-gray-800'}`}>{SHIPPING_COST === 0 ? 'مجاناً' : `ج.م ${SHIPPING_COST}.00`}</span></div>
               <div className="flex justify-between font-black text-base pt-2 border-t border-gray-100">
                 <span>الإجمالي</span>
                 <span>ج.م {finalTotal}.00</span>
@@ -302,9 +326,8 @@ export default function CheckoutPage() {
             <div className="mb-8">
               <p className="section-label">التواصل</p>
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <div className="px-4 py-3.5 border-b border-gray-100">
                   <span className="text-sm text-gray-500">البريد الإلكتروني</span>
-                  <Link href="#" className="text-xs text-[#F5C518] font-semibold hover:underline">تسجيل الدخول</Link>
                 </div>
                 <div className="px-4 py-1">
                   <InputField error={errors.email}>
@@ -331,28 +354,47 @@ export default function CheckoutPage() {
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
 
                 {/* Country — full row */}
-                <div className="px-4 py-1">
-                  <select className="w-full py-3 text-sm bg-transparent outline-none text-gray-700 border-0 cursor-not-allowed" disabled style={{ border:'none', boxShadow:'none' }}>
-                    <option>مصر</option>
+                <div className="px-4 py-1 relative">
+                  <select
+                    className="w-full py-3 text-sm bg-transparent outline-none text-gray-800 border-0 appearance-none"
+                    style={{ border:'none', boxShadow:'none' }}
+                    defaultValue="EG"
+                  >
+                    <option value="EG">🇪🇬 مصر</option>
+                    <option value="SA">🇸🇦 المملكة العربية السعودية</option>
+                    <option value="AE">🇦🇪 الإمارات العربية المتحدة</option>
+                    <option value="KW">🇰🇼 الكويت</option>
+                    <option value="QA">🇶🇦 قطر</option>
+                    <option value="BH">🇧🇭 البحرين</option>
+                    <option value="OM">🇴🇲 عُمان</option>
+                    <option value="JO">🇯🇴 الأردن</option>
+                    <option value="LB">🇱🇧 لبنان</option>
+                    <option value="IQ">🇮🇶 العراق</option>
+                    <option value="LY">🇱🇾 ليبيا</option>
+                    <option value="TN">🇹🇳 تونس</option>
+                    <option value="MA">🇲🇦 المغرب</option>
+                    <option value="DZ">🇩🇿 الجزائر</option>
+                    <option value="SD">🇸🇩 السودان</option>
                   </select>
+                  <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                 </div>
 
-                {/* First name — full row */}
+                {/* First name — full row — REQUIRED */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="firstName"
-                    placeholder="الاسم الأول (اختياري)"
+                    placeholder="الاسم الأول"
                     value={formData.firstName} onChange={handleInputChange}
                     className={`w-full py-3 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800 border-0 ${errors.firstName ? 'placeholder-red-300' : ''}`}
                     style={{ border:'none', boxShadow:'none' }}
                   />
                 </div>
 
-                {/* Last name — full row */}
+                {/* Last name — full row — OPTIONAL */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="lastName"
-                    placeholder="اسم العائلة"
+                    placeholder="اسم العائلة (اختياري)"
                     value={formData.lastName} onChange={handleInputChange}
                     className="w-full py-3 text-sm bg-transparent outline-none placeholder-gray-400 text-gray-800 border-0"
                     style={{ border:'none', boxShadow:'none' }}
@@ -440,7 +482,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Field errors */}
-              {(errors.firstName || errors.lastName || errors.address || errors.city || errors.phone) && (
+              {(errors.firstName || errors.address || errors.city || errors.phone) && (
                 <p className="text-red-500 text-xs mt-2 pr-1 flex items-center gap-1"><span>⚠</span> يرجى تعبئة جميع الحقول المطلوبة</p>
               )}
             </div>
