@@ -14,21 +14,23 @@ export default function CollectionsPage() {
     const [originalSlug, setOriginalSlug] = useState(""); 
     const [originalProductIds, setOriginalProductIds] = useState([]); 
     
-    // --- 1. تحديث الـ Form Data ---
+    // --- 1. تحديث الـ Form Data (إضافة الـ SEO) ---
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
-        subtitle: '', // الوصف الفرعي الجديد
+        subtitle: '', 
         description: '',
-        bottomDescription: '', // وصف الـ SEO السفلي
-        image: ''
+        bottomDescription: '', 
+        image: '',
+        seoTitle: '',
+        seoDescription: ''
     });
 
     // --- 2. إدارة نافذة المنتجات العريضة (Modal) ---
     const [selectedProducts, setSelectedProducts] = useState([]); 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [allProducts, setAllProducts] = useState([]); // لحفظ كل المنتجات في المودال
+    const [allProducts, setAllProducts] = useState([]); 
     const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
@@ -68,7 +70,9 @@ export default function CollectionsPage() {
                 subtitle: collectionItem.subtitle || '',
                 description: collectionItem.description || '',
                 bottomDescription: collectionItem.bottomDescription || '',
-                image: collectionItem.image || ''
+                image: collectionItem.image || '',
+                seoTitle: collectionItem.seoTitle || '',
+                seoDescription: collectionItem.seoDescription || ''
             });
 
             setLoading(true);
@@ -85,7 +89,7 @@ export default function CollectionsPage() {
             setOriginalSlug("");
             setOriginalProductIds([]);
             setSelectedProducts([]);
-            setFormData({ name: '', slug: '', subtitle: '', description: '', bottomDescription: '', image: '' });
+            setFormData({ name: '', slug: '', subtitle: '', description: '', bottomDescription: '', image: '', seoTitle: '', seoDescription: '' });
         }
         setView('editor');
     };
@@ -108,13 +112,15 @@ export default function CollectionsPage() {
             if (!cleanSlug) cleanSlug = formData.name.trim().toLowerCase().replace(/\s+/g, '-');
             cleanSlug = cleanSlug.replace(/^\/+/, '');
 
-            const collectionPayload = {
+         const collectionPayload = {
                 name: formData.name.trim(),
                 slug: cleanSlug,
                 subtitle: formData.subtitle.trim(),
                 description: formData.description,
                 bottomDescription: formData.bottomDescription,
                 image: formData.image,
+                seoTitle: formData.seoTitle?.trim() || "",
+                seoDescription: formData.seoDescription?.trim() || "",
                 updatedAt: new Date(),
                 productCount: selectedProducts.length
             };
@@ -244,6 +250,66 @@ export default function CollectionsPage() {
                                 إدارة المنتجات
                             </button>
                         </div>
+
+                        {/* 4. محركات البحث (SEO Shopify Style) */}
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6">
+                            <h3 className="text-sm font-bold mb-5 text-[#202223]">محركات البحث (SEO)</h3>
+                            
+                            {/* معاينة محرك البحث */}
+                            <div className="mb-6">
+                                <p className="text-xs font-medium text-gray-600 mb-2">معاينة محرك البحث</p>
+                                <div className="text-sm">
+                                    <span className="text-[#202223] font-medium block">WIND Shopping</span>
+                                    <span className="text-[#008060] text-xs block mt-0.5" dir="ltr">https://windeg.com/collections/{formData.slug || 'shop-all'}</span>
+                                    <span className="text-[#1a0dab] text-base font-medium block mt-1.5 line-clamp-1">{formData.seoTitle || formData.name || 'اسم القسم'}</span>
+                                    <span className="text-[#4d5156] text-sm line-clamp-2 mt-1">{formData.seoDescription || formData.description || 'وصف القسم سيظهر هنا في محركات البحث...'}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-5 border-t border-gray-100">
+                                <div>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="text-xs font-medium text-gray-600 block">عنوان الصفحة (Page title)</label>
+                                        <span className="text-[10px] text-gray-500">{(formData.seoTitle || "").length} of 70 characters used</span>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        maxLength={70}
+                                        value={formData.seoTitle || ""} 
+                                        onChange={(e) => setFormData({...formData, seoTitle: e.target.value})} 
+                                        className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all" 
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="text-xs font-medium text-gray-600 block">الوصف (Meta description)</label>
+                                        <span className="text-[10px] text-gray-500">{(formData.seoDescription || "").length} of 160 characters used</span>
+                                    </div>
+                                    <textarea 
+                                        rows={3}
+                                        maxLength={160}
+                                        value={formData.seoDescription || ""} 
+                                        onChange={(e) => setFormData({...formData, seoDescription: e.target.value})} 
+                                        className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none resize-none transition-all" 
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">رابط الصفحة (URL handle)</label>
+                                    <div className="flex items-center text-sm bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:border-[#008060] focus-within:ring-1 focus-within:ring-[#008060] transition-all" dir="ltr">
+                                        <span className="text-gray-500 whitespace-nowrap py-2.5 pl-3 pr-1 bg-gray-50 border-r border-gray-300">https://windeg.com/collections/</span>
+                                        <input 
+                                            type="text" 
+                                            value={formData.slug} 
+                                            onChange={(e) => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} 
+                                            className="bg-transparent text-[#202223] outline-none flex-1 py-2.5 px-2 w-full min-w-0 font-mono" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     {/* Left Column (1/3): Settings */}
@@ -254,11 +320,6 @@ export default function CollectionsPage() {
                                 {formData.image ? <img src={formData.image} alt="Preview" className="w-full h-full object-cover" /> : <div className="text-center p-4"><ImageIcon size={28} className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-500">لا توجد صورة</span></div>}
                             </div>
                             <input type="url" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-xs text-[#202223] outline-none focus:border-[#008060] focus:ring-1 focus:ring-[#008060] transition-all font-mono" placeholder="رابط الصورة (URL)" dir="ltr" />
-                        </div>
-
-                        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 lg:p-6">
-                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">رابط الصفحة (Slug)</h3>
-                            <input type="text" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm text-[#202223] focus:border-[#008060] focus:ring-1 focus:ring-[#008060] outline-none transition-all font-mono" dir="ltr" />
                         </div>
                     </div>
                 </div>
