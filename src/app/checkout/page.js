@@ -65,56 +65,23 @@ function KashierIframeModal({ iframeData, onClose }) {
       <div className="relative w-full max-w-[480px] bg-white rounded-2xl overflow-hidden shadow-2xl"
            style={{ maxHeight: '90vh' }}>
 
-        {/* ── Modal Header — WIND Logo + Payment Icons ── */}
-        <div className="px-5 py-4 border-b border-gray-100 bg-white">
-          <div className="flex items-center justify-between mb-3">
-            {/* WIND Brand */}
-            <div className="flex items-center gap-2">
-              <img src="/logo.jpg" alt="WIND Shopping" style={{height:'32px',width:'auto',objectFit:'contain',borderRadius:'6px'}} />
-              <div>
-                <p className="font-black text-gray-900 text-sm tracking-tight">WIND <span className="font-light text-gray-400">Shopping</span></p>
-                <div className="flex items-center gap-1">
-                  <Lock size={9} className="text-green-500" />
-                  <span style={{fontSize:'9px',color:'#6b7280'}}>دفع آمن ومشفّر SSL</span>
-                </div>
-              </div>
+        {/* ── Modal Header ── */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#F5C518]/10 rounded-full flex items-center justify-center">
+              <Lock size={14} className="text-[#F5C518]" />
             </div>
-            {/* Kashier badge + Close */}
-            <div className="flex items-center gap-2">
-              <div style={{display:'flex',alignItems:'center',gap:'4px',background:'#f8f8f8',border:'1px solid #e5e7eb',borderRadius:'6px',padding:'3px 8px'}}>
-                <svg width="14" height="14" viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="16" fill="#1a1a2e"/>
-                  <path d="M10 8h4v8l6-8h4l-7 9 7 7h-4l-6-7v7h-4V8z" fill="#F5C518"/>
-                </svg>
-                <span style={{fontSize:'10px',fontWeight:700,color:'#1a1a2e'}}>Kashier</span>
-              </div>
-              <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                <X size={14} className="text-gray-600" />
-              </button>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">بوابة الدفع الآمنة</p>
+              <p className="text-[10px] text-gray-400">مشفّر بـ SSL — كاشير</p>
             </div>
           </div>
-          {/* Payment method icons */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <div style={{background:'#1a1f71',borderRadius:'4px',padding:'2px 7px'}}>
-              <span style={{fontSize:'10px',fontWeight:900,color:'white',letterSpacing:'1px'}}>VISA</span>
-            </div>
-            <div style={{background:'white',border:'1px solid #e5e7eb',borderRadius:'4px',padding:'3px 5px',display:'flex',alignItems:'center'}}>
-              <div style={{width:'12px',height:'12px',borderRadius:'50%',background:'#EB001B',display:'inline-block'}}></div>
-              <div style={{width:'12px',height:'12px',borderRadius:'50%',background:'#F79E1B',display:'inline-block',marginLeft:'-5px'}}></div>
-            </div>
-            <div style={{background:'#6B2D8B',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white',letterSpacing:'0.5px'}}>meeza</span>
-            </div>
-            <div style={{background:'#F37021',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white'}}>Fawry</span>
-            </div>
-            <div style={{background:'#00C896',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white'}}>valU</span>
-            </div>
-            <div style={{background:'#111',borderRadius:'4px',padding:'2px 6px'}}>
-              <span style={{fontSize:'9px',fontWeight:900,color:'white'}}>sympl</span>
-            </div>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <X size={16} className="text-gray-600" />
+          </button>
         </div>
 
         {/* ── iFrame ── */}
@@ -646,28 +613,9 @@ export default function CheckoutPage() {
                         <span className="font-semibold text-sm text-gray-800">كارت / محفظة إلكترونية</span>
                       </div>
                     </div>
-                    <div className="flex gap-1 items-center flex-wrap justify-end">
-                      {/* VISA */}
-                      <div style={{background:'#1a1f71',borderRadius:'3px',padding:'1px 5px'}}>
-                        <span style={{fontSize:'8px',fontWeight:900,color:'white',letterSpacing:'0.5px'}}>VISA</span>
-                      </div>
-                      {/* Mastercard */}
-                      <div style={{background:'white',border:'1px solid #e5e7eb',borderRadius:'3px',padding:'2px 3px',display:'flex',alignItems:'center'}}>
-                        <div style={{width:'10px',height:'10px',borderRadius:'50%',background:'#EB001B',display:'inline-block'}}></div>
-                        <div style={{width:'10px',height:'10px',borderRadius:'50%',background:'#F79E1B',display:'inline-block',marginLeft:'-4px'}}></div>
-                      </div>
-                      {/* Meeza */}
-                      <div style={{background:'#6B2D8B',borderRadius:'3px',padding:'1px 4px'}}>
-                        <span style={{fontSize:'7px',fontWeight:900,color:'white'}}>meeza</span>
-                      </div>
-                      {/* Fawry */}
-                      <div style={{background:'#F37021',borderRadius:'3px',padding:'1px 4px'}}>
-                        <span style={{fontSize:'7px',fontWeight:900,color:'white'}}>Fawry</span>
-                      </div>
-                      {/* +more hint */}
-                      <div style={{background:'#f3f4f6',borderRadius:'3px',padding:'1px 4px'}}>
-                        <span style={{fontSize:'7px',fontWeight:700,color:'#6b7280'}}>+المزيد</span>
-                      </div>
+                    <div className="flex gap-1.5 items-center">
+                      <span className="px-1.5 py-0.5 bg-[#1a1f71] rounded text-white text-[9px] font-black tracking-wide">VISA</span>
+                      <span className="px-1.5 py-0.5 bg-[#eb5c28] rounded text-white text-[9px] font-black">M/C</span>
                     </div>
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
