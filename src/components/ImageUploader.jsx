@@ -6,7 +6,6 @@ export default function ImageUploader({ onUploadSuccess }) {
   const [error, setError] = useState(null);
 
   const handleFileChange = async (e) => {
-    // 1. تحويل الملفات لمصفوفة (Array)
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
 
@@ -14,60 +13,67 @@ export default function ImageUploader({ onUploadSuccess }) {
     setError(null);
 
     try {
-      // 2. نجيب التوقيع مرة واحدة بس للدفعة كلها (أسرع بكتير)
-      const authRes = await fetch('/api/upload');
-      if (!authRes.ok) throw new Error("فشل الاتصال بالـ API");
-      
-      const { signature, expire, token, publicKey } = await authRes.json();
-
-      // 3. نجهز عمليات الرفع لكل صورة (Promise Array)
+      // نجهز عمليات الرفع لكل صورة بشكل مستقل (كل صورة تجيب التوكن بتاعها)
       const uploadPromises = files.map(async (file) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("fileName", file.name.replace(/\s+/g, '-'));
-        formData.append("publicKey", publicKey);
-        formData.append("signature", signature);
-        formData.append("expire", expire);
-        formData.append("token", token);
-        formData.append("folder", "/WIND_Shopping");
+        try {
+          // 1. جلب توكن "جديد" ومستقل لكل صورة
+          const authRes = await fetch('/api/upload');
+          if (!authRes.ok) return null;
+          const { signature, expire, token, publicKey } = await authRes.json();
 
-        const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
-          method: "POST",
-          body: formData,
-        });
+          // 2. تجهيز بيانات الرفع للصورة دي
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("fileName", file.name.replace(/\s+/g, '-'));
+          formData.append("publicKey", publicKey);
+          formData.append("signature", signature);
+          formData.append("expire", expire);
+          formData.append("token", token);
+          formData.append("folder", "/WIND_Shopping");
 
-        const data = await uploadRes.json();
-        
-        if (uploadRes.ok && data.url) {
-          return data.url;
-        } else {
-          console.error("Failed to upload:", file.name);
-          return null; // لو صورة فشلت، نرجع null عشان منبوظش الباقي
+          // 3. رفع الصورة لـ ImageKit
+          const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await uploadRes.json();
+          
+          if (uploadRes.ok && data.url) {
+            return data.url;
+          } else {
+            console.error("Failed to upload:", file.name, data);
+            return null; 
+          }
+        } catch (err) {
+          console.error("Error with file:", file.name, err);
+          return null;
         }
       });
 
-      // 4. ننفذ كل عمليات الرفع في نفس اللحظة
+      // 4. تنفيذ كل العمليات بالتوازي
       const results = await Promise.all(uploadPromises);
       
-      // 5. نفلتر الروابط الناجحة بس
+      // 5. فلترة الروابط الناجحة فقط
       const successfulUrls = results.filter(url => url !== null);
 
       if (successfulUrls.length > 0) {
-        // نبعت المصفوفة كلها للصفحة الأساسية
         onUploadSuccess(successfulUrls);
       }
 
-      // لو فيه صور فشلت، نبلغ الأدمن
+      // إظهار تنبيه لو في صورة وقعت في السكة
       if (successfulUrls.length < files.length) {
         setError(`تم رفع ${successfulUrls.length} من أصل ${files.length} صورة بنجاح.`);
+      } else {
+        setError(null);
       }
 
     } catch (err) {
       console.error(err);
-      setError("فشل الاتصال بسيرفر الرفع.");
+      setError("فشل معالجة الصور.");
     } finally {
       setLoading(false);
-      // تصفير الـ input عشان تقدر تختار نفس الصور تاني لو حبيت
+      // تصفير الـ input عشان لو حبيت ترفع نفس الصور تاني
       e.target.value = null; 
     }
   };
