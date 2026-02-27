@@ -614,48 +614,72 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                      {/* ==========================================
-    أيقونات وسائل الدفع — معدّلة
-    لإضافة أيقونة جديدة: ضيف رابطها في paymentIcons فقط
-    الباقي بيتحسب تلقائي
+    أيقونات وسائل الدفع — الصق الـ state ده فوق الـ return بتاع الكومبوننت
     ========================================== */}
-{(() => {
-  // ✅ مصدر واحد فقط — عدّل هنا وبس
+
+{/* 
+  ⚠️ الصق السطرين دول فوق الـ return في نفس الكومبوننت:
+
+  const [showPaymentTooltip, setShowPaymentTooltip] = useState(false);
   const paymentIcons = [
     "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
   ];
-
   const maxVisible = 3;
-  const visibleIcons = paymentIcons.slice(0, maxVisible);
-  const hiddenCount = paymentIcons.length - maxVisible;
+  const visiblePaymentIcons = paymentIcons.slice(0, maxVisible);
+  const hiddenPaymentIcons = paymentIcons.slice(maxVisible);
+*/}
 
-  return (
-    <div className="flex items-center gap-2 mr-auto" dir="ltr">
-      {visibleIcons.map((url, idx) => (
-        <div
-          key={idx}
-          className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors"
-        >
-          <img
-            src={url}
-            alt="payment-method"
-            className="w-[85%] h-[85%] object-contain scale-125"
-            onError={(e) => e.target.parentElement.style.display = 'none'}
-          />
-        </div>
-      ))}
+{/* ثم الصق الـ JSX ده في مكان الكود القديم */}
+<div className="flex items-center gap-2 mr-auto" dir="ltr">
 
-      {/* زر + يظهر فقط لو في أيقونات مخفية */}
-      {hiddenCount > 0 && (
-        <div className="w-8 h-6 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center shadow-sm">
-          <span className="text-[10px] font-bold text-gray-500">+{hiddenCount}</span>
+  {visiblePaymentIcons.map((url, idx) => (
+    <div
+      key={idx}
+      className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors"
+    >
+      <img
+        src={url}
+        alt="payment-method"
+        className="w-[85%] h-[85%] object-contain scale-125"
+        onError={(e) => e.target.parentElement.style.display = 'none'}
+      />
+    </div>
+  ))}
+
+  {hiddenPaymentIcons.length > 0 && (
+    <div className="relative">
+      <button
+        onClick={() => setShowPaymentTooltip(!showPaymentTooltip)}
+        className="w-8 h-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-400 rounded-md flex items-center justify-center shadow-sm transition-all"
+      >
+        <span className="text-[10px] font-bold text-gray-500">+{hiddenPaymentIcons.length}</span>
+      </button>
+
+      {showPaymentTooltip && (
+        <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-xl p-2.5 flex gap-2 z-50">
+          <div className="absolute -bottom-1.5 left-3 w-3 h-3 bg-white border-b border-r border-gray-200 rotate-45"></div>
+          {hiddenPaymentIcons.map((url, idx) => (
+            <div
+              key={idx}
+              className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm"
+            >
+              <img
+                src={url}
+                alt="payment-method"
+                className="w-[85%] h-[85%] object-contain scale-125"
+                onError={(e) => e.target.parentElement.style.display = 'none'}
+              />
+            </div>
+          ))}
         </div>
       )}
     </div>
-  );
-})()}
+  )}
+
+</div>
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
