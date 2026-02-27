@@ -615,52 +615,46 @@ export default function CheckoutPage() {
                     </div>
                     
                     <div className="flex items-center -space-x-1.5 space-x-reverse" dir="ltr">
-
-  {/* هنا حط روابطك من ImageKit بالترتيب */}
-
+                      
+                    {/* حاوية الأيقونات - مستقلة وبأحجام واضحة */}
+<div className="flex items-center gap-2 mr-auto" dir="ltr">
   {[
-
     "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
-
     "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
-
     "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
-
     "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
-
-  ].slice(0, 3).map((url, idx) => (
-
-    <div key={idx} className="w-9 h-6 bg-white border border-gray-200 rounded flex items-center justify-center p-0.5 shadow-sm relative z-10">
-
+  ].slice(0, 3).map((url, idx, fullArray) => (
+    <div 
+      key={idx} 
+      className="w-12 h-8 bg-white border border-gray-200 rounded-md flex items-center justify-center p-1.5 shadow-sm hover:border-gray-300 transition-colors"
+    >
       <img 
-
         src={url} 
-
         alt="payment-method" 
-
         className="w-full h-full object-contain" 
-
-        onError={(e) => e.target.style.display = 'none'} // حماية لو الصورة محملتش
-
+        onError={(e) => e.target.parentElement.style.display = 'none'} 
       />
-
     </div>
-
   ))}
 
+  {/* زر الـ + يحسب تلقائياً أي أيقونات تانية تضيفها مستقبلاً */}
+  {(() => {
+    const icons = [
+      "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
+      "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
+      "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg",
+      "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg"
+    ];
+    if (icons.length > 3) {
+      return (
+        <div className="w-12 h-8 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center shadow-sm">
+          <span className="text-[11px] font-bold text-gray-500">+{icons.length - 3}</span>
+        </div>
+      );
+    }
+  })()}
+</div>
 
-
-  {/* مربع الـ +1 عشان يظهر بوضوح */}
-
-  <div className="w-9 h-6 bg-gray-100 border border-gray-300 rounded flex items-center justify-center shadow-inner relative z-0">
-
-    <span className="text-[10px] font-bold text-gray-700">+1</span>
-
-  </div>
-
-</div>  
-                      
-                    
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
