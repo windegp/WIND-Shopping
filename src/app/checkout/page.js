@@ -613,44 +613,49 @@ export default function CheckoutPage() {
                         <span className="font-semibold text-sm text-gray-800">كارت / محفظة إلكترونية</span>
                       </div>
                     </div>
-                     {/* حاوية الأيقونات - مستقلة وبأحجام واضحة */}
-<div className="flex items-center gap-2 mr-auto" dir="ltr">
-  {[
+                     {/* ==========================================
+    أيقونات وسائل الدفع — معدّلة
+    لإضافة أيقونة جديدة: ضيف رابطها في paymentIcons فقط
+    الباقي بيتحسب تلقائي
+    ========================================== */}
+{(() => {
+  // ✅ مصدر واحد فقط — عدّل هنا وبس
+  const paymentIcons = [
     "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
-  ].slice(0, 3).map((url, idx, fullArray) => (
-    <div 
-      key={idx} 
-      className="w-12 h-8 bg-white border border-gray-200 rounded-md flex items-center justify-center p-1.5 shadow-sm hover:border-gray-300 transition-colors"
-    >
-      <img 
-        src={url} 
-        alt="payment-method" 
-        className="w-full h-full object-contain" 
-        onError={(e) => e.target.parentElement.style.display = 'none'} 
-      />
-    </div>
-  ))}
+  ];
 
-  {/* زر الـ + يحسب تلقائياً أي أيقونات تانية تضيفها مستقبلاً */}
-  {(() => {
-    const icons = [
-      "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
-      "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
-      "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
-      "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
-    ];
-    if (icons.length > 3) {
-      return (
-        <div className="w-12 h-8 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center shadow-sm">
-          <span className="text-[11px] font-bold text-gray-500">+{icons.length - 3}</span>
+  const maxVisible = 3;
+  const visibleIcons = paymentIcons.slice(0, maxVisible);
+  const hiddenCount = paymentIcons.length - maxVisible;
+
+  return (
+    <div className="flex items-center gap-2 mr-auto" dir="ltr">
+      {visibleIcons.map((url, idx) => (
+        <div
+          key={idx}
+          className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors"
+        >
+          <img
+            src={url}
+            alt="payment-method"
+            className="w-[85%] h-[85%] object-contain scale-125"
+            onError={(e) => e.target.parentElement.style.display = 'none'}
+          />
         </div>
-      );
-    }
-  })()}
-</div>
+      ))}
+
+      {/* زر + يظهر فقط لو في أيقونات مخفية */}
+      {hiddenCount > 0 && (
+        <div className="w-8 h-6 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center shadow-sm">
+          <span className="text-[10px] font-bold text-gray-500">+{hiddenCount}</span>
+        </div>
+      )}
+    </div>
+  );
+})()}
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
