@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from "../../context/CartContext";
 import Link from "next/link";
-import { ChevronDown, Info, CheckCircle2, Phone, ShoppingBag, Shield, Tag, ChevronLeft, Truck, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { ChevronDown, Info, CheckCircle2, Phone, ShoppingBag, Shield, Tag, ChevronLeft, Truck, CreditCard, Banknote, Smartphone, X, Lock } from 'lucide-react';
 
 const governorates = [
   "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "القليوبية", "الشرقية", "المنوفية", "الغربية", "البحيرة", "دمياط", "بورسعيد", "السويس", "الإسماعيلية", "كفر الشيخ", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "البحر الأحمر", "الوادي الجديد", "مطروح", "شمال سيناء", "جنوب سيناء"
@@ -20,6 +20,88 @@ const InputField = ({ label, error, children }) => (
   </div>
 );
 
+// ============================================================
+// مكوّن الـ iFrame Modal — يظهر فوق الصفحة عند الدفع بالكارت
+// ============================================================
+function KashierIframeModal({ iframeData, onClose }) {
+  const iframeRef = useRef(null);
+
+  // ── بناء رابط كاشير iFrame ──
+  const kashierUrl =
+    `https://checkout.kashier.io?` +
+    `merchantId=${iframeData.merchantId}` +
+    `&orderId=${iframeData.orderId}` +
+    `&amount=${iframeData.amount}` +
+    `&currency=${iframeData.currency}` +
+    `&hash=${iframeData.hash}` +
+    `&merchantRedirect=${encodeURIComponent(iframeData.merchantRedirect)}` +
+    `&failureRedirect=${encodeURIComponent(iframeData.failureRedirect)}` +
+    `&allowedMethods=${iframeData.allowedMethods}` +
+    `&redirectMethod=get` +
+    `&display=${iframeData.display}` +
+    `&brandColor=${encodeURIComponent(iframeData.brandColor)}` +
+    `&mode=${iframeData.mode}` +
+    `&metaData=embedded`;  // ← يخبر كاشير إنه شغال داخل iFrame
+
+  // ── إغلاق بـ Escape ──
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleEsc);
+    document.body.style.overflow = 'hidden'; // منع scroll الصفحة
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  return (
+    // ── Overlay ──
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* ── Modal Container ── */}
+      <div className="relative w-full max-w-[480px] bg-white rounded-2xl overflow-hidden shadow-2xl"
+           style={{ maxHeight: '90vh' }}>
+
+        {/* ── Modal Header ── */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-[#F5C518]/10 rounded-full flex items-center justify-center">
+              <Lock size={14} className="text-[#F5C518]" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">بوابة الدفع الآمنة</p>
+              <p className="text-[10px] text-gray-400">مشفّر بـ SSL — كاشير</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <X size={16} className="text-gray-600" />
+          </button>
+        </div>
+
+        {/* ── iFrame ── */}
+        <iframe
+          ref={iframeRef}
+          src={kashierUrl}
+          title="Kashier Payment"
+          width="100%"
+          style={{ height: '520px', border: 'none', display: 'block' }}
+          allow="payment"
+          sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-top-navigation"
+        />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// الصفحة الرئيسية — CheckoutPage
+// ============================================================
 export default function CheckoutPage() {
   const { 
     cartItems, 
@@ -40,6 +122,9 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [discountCode, setDiscountCode] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(false);
+
+  // ── state جديد للـ iFrame ──
+  const [iframeData, setIframeData] = useState(null); // بيانات الـ iFrame من السيرفر
 
   const [formData, setFormData] = useState({
     email: '',
@@ -82,6 +167,10 @@ export default function CheckoutPage() {
 
     try {
       if (paymentMethod === 'card') {
+        // ══════════════════════════════════════════════
+        // ✅ تغيير: بدل redirect → نجيب بيانات الـ iFrame
+        //    من السيرفر ونفتح الـ Modal في نفس الصفحة
+        // ══════════════════════════════════════════════
         const res = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -97,12 +186,18 @@ export default function CheckoutPage() {
         });
 
         const data = await res.json();
-        if (!res.ok || !data.paymentUrl) {
+        if (!res.ok || !data.iframeData) {
           throw new Error(data.error || 'حدث خطأ، حاول مرة أخرى');
         }
-        window.location.href = data.paymentUrl;
+
+        // ✅ فتح الـ iFrame Modal بدل window.location.href
+        setIframeData(data.iframeData);
+        setLoading(false);
 
       } else {
+        // ══════════════════════════════════════════════
+        // COD أو InstaPay — لم يتغير شيء هنا بالكامل
+        // ══════════════════════════════════════════════
         const res = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -131,6 +226,7 @@ export default function CheckoutPage() {
     }
   };
 
+  // ── صفحة النجاح (COD / InstaPay) — لم تتغير ──
   if (orderCompleted) {
     return (
       <div className="min-h-screen bg-[#f5f5f0] flex flex-col items-center justify-center p-6 text-center" dir="rtl">
@@ -164,7 +260,6 @@ export default function CheckoutPage() {
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap');
         * { font-family: 'Cairo', sans-serif; }
 
-        /* ── Section Label ── */
         .section-label {
           font-size: 11px;
           font-weight: 700;
@@ -174,22 +269,18 @@ export default function CheckoutPage() {
           margin-bottom: 14px;
         }
 
-        /* ── Payment Options ── */
         .pay-opt { transition: border-color 0.18s, background 0.18s; }
         .pay-opt:hover { border-color: #d1d5db; }
         .pay-opt.active { border-color: #F5C518 !important; background: #fffef5; }
 
-        /* ── Slide animation ── */
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .slide-down { animation: slideDown 0.22s ease forwards; }
 
-        /* ── Promo success ── */
         .promo-success { color: #059669; font-size: 11px; margin-top: 5px; font-weight: 600; }
 
-        /* ── Pay button shine ── */
         @keyframes shine {
           0%   { background-position: -200% center; }
           100% { background-position: 200% center; }
@@ -215,17 +306,20 @@ export default function CheckoutPage() {
         select option { background: white; }
       `}</style>
 
-      {/* ═══════════════════════════════════
-          HEADER — Shopify-style minimal bar
-      ═══════════════════════════════════ */}
+      {/* ✅ iFrame Modal — يظهر فوق كل شيء لما iframeData موجود */}
+      {iframeData && (
+        <KashierIframeModal
+          iframeData={iframeData}
+          onClose={() => setIframeData(null)}
+        />
+      )}
+
+      {/* HEADER */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-[1080px] mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo / Brand */}
           <Link href="/" className="text-lg font-black text-gray-900 tracking-tight">
             WIND <span className="font-light text-gray-400">Shopping</span>
           </Link>
-
-          {/* breadcrumb-style steps — desktop only */}
           <div className="hidden md:flex items-center gap-2 text-xs text-gray-400 font-medium select-none">
             <span className="text-gray-900 font-semibold">السلة</span>
             <span className="mx-1 opacity-40">›</span>
@@ -235,7 +329,6 @@ export default function CheckoutPage() {
             <span className="mx-1 opacity-40">›</span>
             <span>الدفع</span>
           </div>
-
           <div className="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
             <ShoppingBag size={15} className="text-[#F5C518]" />
             <span>دفع آمن</span>
@@ -243,9 +336,7 @@ export default function CheckoutPage() {
         </div>
       </header>
 
-      {/* ═══════════════════════════════════
-          MOBILE: Order Summary Toggle
-      ═══════════════════════════════════ */}
+      {/* MOBILE: Order Summary Toggle */}
       <div
         className="lg:hidden bg-white border-b border-gray-200 px-5 py-3.5 cursor-pointer"
         onClick={() => setSummaryOpen(!summaryOpen)}
@@ -256,7 +347,6 @@ export default function CheckoutPage() {
             <span>{summaryOpen ? 'إخفاء تفاصيل الطلب' : 'عرض تفاصيل الطلب'}</span>
             <ChevronDown size={14} className={`transition-transform ${summaryOpen ? 'rotate-180' : ''} text-gray-500`} />
           </div>
-          {/* Show subtotal (product price only) before opening */}
           <span className="font-black text-base text-gray-900">ج.م {subtotal}.00</span>
         </div>
 
@@ -311,18 +401,14 @@ export default function CheckoutPage() {
         )}
       </div>
 
-      {/* ═══════════════════════════════════
-          MAIN LAYOUT
-      ═══════════════════════════════════ */}
+      {/* MAIN LAYOUT */}
       <div className="max-w-[1080px] mx-auto flex flex-col lg:flex-row lg:gap-0">
 
-        {/* ─────────────────────────────────
-            LEFT COLUMN — Form
-        ───────────────────────────────── */}
+        {/* LEFT COLUMN — Form */}
         <div className="w-full lg:w-[58%] px-5 py-8 lg:px-10 lg:py-10 order-2 lg:order-1">
           <form onSubmit={handleSubmit}>
 
-            {/* ── SECTION: Contact ── */}
+            {/* SECTION: Contact */}
             <div className="mb-8">
               <p className="section-label">التواصل</p>
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -348,12 +434,12 @@ export default function CheckoutPage() {
               </label>
             </div>
 
-            {/* ── SECTION: Delivery ── */}
+            {/* SECTION: Delivery */}
             <div className="mb-8">
               <p className="section-label">عنوان التوصيل</p>
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
 
-                {/* Country — full row */}
+                {/* Country */}
                 <div className="px-4 py-1 relative">
                   <select
                     className="w-full py-3 text-sm bg-transparent outline-none text-gray-800 border-0 appearance-none"
@@ -379,7 +465,7 @@ export default function CheckoutPage() {
                   <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                 </div>
 
-                {/* First name — full row — REQUIRED */}
+                {/* First name — REQUIRED */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="firstName"
@@ -390,7 +476,7 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* Last name — full row — OPTIONAL */}
+                {/* Last name — OPTIONAL */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="lastName"
@@ -401,7 +487,7 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* Address — full row */}
+                {/* Address */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="address"
@@ -412,7 +498,7 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* Landmark — full row */}
+                {/* Landmark */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="landmark"
@@ -423,7 +509,7 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* City — full row */}
+                {/* City */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="city"
@@ -434,7 +520,7 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* Governorate — full row */}
+                {/* Governorate */}
                 <div className="px-4 py-1 relative">
                   <select
                     name="governorate" value={formData.governorate} onChange={handleInputChange}
@@ -446,7 +532,7 @@ export default function CheckoutPage() {
                   <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                 </div>
 
-                {/* Postal code — full row */}
+                {/* Postal code */}
                 <div className="px-4 py-1">
                   <input
                     type="text" name="postalCode"
@@ -457,7 +543,7 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* Phone — full row */}
+                {/* Phone */}
                 <div className="px-4 py-1 relative">
                   <input
                     type="tel" name="phone"
@@ -469,7 +555,7 @@ export default function CheckoutPage() {
                   <Info size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
 
-                {/* Alt phone — full row */}
+                {/* Alt phone */}
                 <div className="px-4 py-1">
                   <input
                     type="tel" name="altPhone"
@@ -481,13 +567,12 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Field errors */}
               {(errors.firstName || errors.address || errors.city || errors.phone) && (
                 <p className="text-red-500 text-xs mt-2 pr-1 flex items-center gap-1"><span>⚠</span> يرجى تعبئة جميع الحقول المطلوبة</p>
               )}
             </div>
 
-            {/* ── SECTION: Shipping Method ── */}
+            {/* SECTION: Shipping Method */}
             <div className="mb-8">
               <p className="section-label">طريقة الشحن</p>
               <div className="bg-white border border-[#F5C518] rounded-xl px-4 py-3.5 flex justify-between items-center">
@@ -508,7 +593,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* ── SECTION: Payment ── */}
+            {/* SECTION: Payment */}
             <div className="mb-8">
               <p className="section-label">طريقة الدفع</p>
               <p className="text-xs text-gray-400 mb-3">جميع المعاملات مشفرة وآمنة</p>
@@ -533,14 +618,16 @@ export default function CheckoutPage() {
                       <span className="px-1.5 py-0.5 bg-[#eb5c28] rounded text-white text-[9px] font-black">M/C</span>
                     </div>
                   </div>
+                  {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
-                    <div className="mt-3 slide-down px-3 py-3 bg-gray-50 rounded-lg text-center text-xs text-gray-600 font-medium border border-gray-100">
-                      سيتم توجيهك لبوابة الدفع الآمنة لإتمام العملية
+                    <div className="mt-3 slide-down px-3 py-3 bg-gray-50 rounded-lg text-center text-xs text-gray-600 font-medium border border-gray-100 flex items-center justify-center gap-1.5">
+                      <Lock size={11} className="text-[#F5C518]" />
+                      ستظهر بوابة الدفع الآمنة مباشرةً في نفس الصفحة
                     </div>
                   )}
                 </label>
 
-                {/* COD */}
+                {/* COD — لم يتغير */}
                 <label className={`pay-opt flex items-center gap-3 px-4 py-4 cursor-pointer ${paymentMethod === 'cod' ? 'active' : ''}`}>
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'cod' ? 'border-[#F5C518]' : 'border-gray-300'}`}>
                     {paymentMethod === 'cod' && <div className="w-2 h-2 rounded-full bg-[#F5C518]"></div>}
@@ -553,7 +640,7 @@ export default function CheckoutPage() {
                   </div>
                 </label>
 
-                {/* InstaPay */}
+                {/* InstaPay — لم يتغير */}
                 <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer ${paymentMethod === 'instapay' ? 'active' : ''}`}>
                   <div className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'instapay' ? 'border-[#F5C518]' : 'border-gray-300'}`}>
@@ -588,7 +675,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* ── SUBMIT BUTTON ── */}
+            {/* SUBMIT BUTTON */}
             <button
               type="submit"
               disabled={loading}
@@ -597,7 +684,7 @@ export default function CheckoutPage() {
               {loading ? (
                 <>
                   <span className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></span>
-                  {paymentMethod === 'card' ? 'جارٍ التحويل لكاشير...' : 'جارٍ المعالجة...'}
+                  {paymentMethod === 'card' ? 'جارٍ تحضير بوابة الدفع...' : 'جارٍ المعالجة...'}
                 </>
               ) : paymentMethod === 'card' ? (
                 <>ادفع الآن — ج.م {finalTotal}.00</>
@@ -606,7 +693,7 @@ export default function CheckoutPage() {
               )}
             </button>
 
-            {/* Footer links */}
+            {/* Footer links — لم تتغير */}
             <div className="flex flex-wrap justify-center gap-5 pt-4 border-t border-gray-200">
               {['سياسة الاسترجاع', 'سياسة الشحن', 'سياسة الخصوصية', 'الشروط والأحكام'].map(link => (
                 <Link key={link} href="#" className="text-[11px] text-gray-400 hover:text-gray-700 transition underline underline-offset-2">{link}</Link>
@@ -616,13 +703,10 @@ export default function CheckoutPage() {
           </form>
         </div>
 
-        {/* ─────────────────────────────────
-            RIGHT COLUMN — Order Summary
-        ───────────────────────────────── */}
+        {/* RIGHT COLUMN — Order Summary — لم يتغير */}
         <div className="hidden lg:block w-full lg:w-[42%] bg-white border-r border-gray-200 order-1 lg:order-2">
           <div className="sticky top-[65px] px-8 py-10">
 
-            {/* Cart Items */}
             <div className="space-y-5 mb-6 max-h-[320px] overflow-y-auto">
               {cartItems.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-4">
@@ -639,7 +723,6 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            {/* Discount Code */}
             <div className="mb-6 pb-6 border-b border-gray-100">
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -662,21 +745,17 @@ export default function CheckoutPage() {
               {appliedPromo && <p className="promo-success pr-1">✓ تم تطبيق كود: {appliedPromo}</p>}
             </div>
 
-            {/* Totals */}
             <div className="space-y-3">
-              {/* Product subtotal */}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">سعر المنتج</span>
                 <span className="font-medium text-gray-800">ج.م {subtotal}.00</span>
               </div>
-              {/* Shipping — separate line */}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">سعر الشحن</span>
                 <span className={`font-medium ${SHIPPING_COST === 0 ? 'text-green-600' : 'text-gray-800'}`}>
                   {SHIPPING_COST === 0 ? 'مجاناً' : `ج.م ${SHIPPING_COST}.00`}
                 </span>
               </div>
-              {/* Total */}
               <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                 <div>
                   <span className="text-base font-black text-gray-900">الإجمالي</span>
@@ -686,7 +765,6 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Trust badges */}
             <div className="mt-8 pt-6 border-t border-gray-100 flex justify-around text-center">
               {[
                 { icon: <Shield size={15} />, label: 'دفع آمن' },

@@ -31,7 +31,10 @@ export async function POST(req) {
     } = body;
 
     // ============================================
-    // 1. كاشير — إنشاء رابط الدفع
+    // 1. كاشير — إرجاع بيانات الـ iFrame (hash + params)
+    //    ⚠️ تغيير: بدل ما نرجع paymentUrl للـ redirect،
+    //    نرجع الـ hash والبيانات عشان الـ iFrame يشتغل
+    //    في نفس الصفحة بدون redirect
     // ============================================
     if (paymentMethod === 'card') {
       const merchantId = process.env.KASHIER_MERCHANT_ID;
@@ -49,32 +52,35 @@ export async function POST(req) {
 
       const amountStr = parseFloat(amount).toFixed(2);
 
+      // توليد الـ hash (HMAC SHA256) — نفس المنطق بالظبط
       const hashPath = `/?payment=${merchantId}.${orderId}.${amountStr}.${currency}`;
       const hash = crypto
         .createHmac('sha256', paymentApiKey)
         .update(hashPath)
         .digest('hex');
 
-      const hppUrl =
-        `https://checkout.kashier.io?` +
-        `merchantId=${merchantId}` +
-        `&orderId=${orderId}` +
-        `&amount=${amountStr}` +
-        `&currency=${currency}` +
-        `&hash=${hash}` +
-        `&merchantRedirect=${baseUrl}/checkout/success` +
-        `&failureRedirect=${baseUrl}/checkout/failure` +
-        `&allowedMethods=bank_installments,card,wallet` +
-        `&redirectMethod=get` +
-        `&display=ar` +
-        `&brandColor=${encodeURIComponent('#F5C518')}` +
-        `&mode=${mode}`;
-
-      return NextResponse.json({ success: true, paymentUrl: hppUrl, orderId });
+      // ✅ إرجاع بيانات الـ iFrame بدل رابط الـ redirect
+      return NextResponse.json({
+        success: true,
+        iframeData: {
+          merchantId,
+          hash,
+          orderId,
+          amount: amountStr,
+          currency,
+          mode,
+          merchantRedirect: `${baseUrl}/checkout/success`,
+          failureRedirect: `${baseUrl}/checkout/failed`,
+          allowedMethods: 'bank_installments,card,wallet',
+          display: 'ar',
+          brandColor: '#F5C518',
+        }
+      });
     }
 
     // ============================================
     // 2. COD أو InstaPay أو Card_Success — إرسال الإيميل
+    //    ⚠️ لم يتغير شيء هنا — نفس الكود بالكامل
     // ============================================
     const orderNumber = generateOrderNumber(); 
 
@@ -140,12 +146,10 @@ export async function POST(req) {
     `;
 
     // ============================================
-    // 3. إرسال الإيميل عبر Resend
+    // 3. إرسال الإيميل عبر Resend — لم يتغير شيء
     // ============================================
     try {
       await resend.emails.send({
-        // إذا لم يتم تفعيل الدومين بعد، استخدم 'onboarding@resend.dev'
-        // إذا تم التفعيل بنجاح، استخدم 'Wind Website <info@windeg.com>'
         from: 'Wind Website <info@windeg.com>', 
         to: 'info@windeg.com',
         subject: `طلب جديد من ${formData.firstName} #${orderNumber}`,
