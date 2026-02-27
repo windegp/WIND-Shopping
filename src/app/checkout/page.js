@@ -613,10 +613,7 @@ export default function CheckoutPage() {
                         <span className="font-semibold text-sm text-gray-800">كارت / محفظة إلكترونية</span>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center -space-x-1.5 space-x-reverse" dir="ltr">
-                      
-                    {/* حاوية الأيقونات - مستقلة وبأحجام واضحة */}
+                     {/* حاوية الأيقونات - مستقلة وبأحجام واضحة */}
 <div className="flex items-center gap-2 mr-auto" dir="ltr">
   {[
     "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
@@ -642,8 +639,8 @@ export default function CheckoutPage() {
     const icons = [
       "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
       "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
-      "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg",
-      "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg"
+      "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
+      "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
     ];
     if (icons.length > 3) {
       return (
@@ -654,7 +651,6 @@ export default function CheckoutPage() {
     }
   })()}
 </div>
-
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
