@@ -673,8 +673,8 @@ export default function CheckoutPage() {
                     {/* أيقونات وسائل الدفع — ديناميكية مع tooltip */}
                     <div className="flex items-center gap-2 mr-auto" dir="ltr">
                       {visiblePaymentIcons.map((url, idx) => (
-                        <div key={idx} className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors">
-                          <img src={url} alt="payment-method" className="w-[85%] h-[85%] object-contain scale-125" onError={(e) => e.target.parentElement.style.display = 'none'} />
+                        <div key={idx} className="h-8 px-2 bg-white border border-gray-200 rounded-md flex items-center justify-center shadow-sm hover:border-gray-300 transition-colors">
+                          <img src={url} alt="payment-method" className="h-5 w-auto object-contain" onError={(e) => e.target.parentElement.style.display = 'none'} />
                         </div>
                       ))}
                       {hiddenPaymentIcons.length > 0 && (
