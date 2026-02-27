@@ -658,8 +658,8 @@ export default function CheckoutPage() {
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
 
                 {/* Card */}
-                <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer ${paymentMethod === 'card' ? 'active' : ''}`}>
-                  <div className="flex items-center justify-between">
+                <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer overflow-visible ${paymentMethod === 'card' ? 'active' : ''}`}>
+                  <div className="flex items-center justify-between overflow-visible">
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'card' ? 'border-[#F5C518]' : 'border-gray-300'}`}>
                         {paymentMethod === 'card' && <div className="w-2 h-2 rounded-full bg-[#F5C518]"></div>}
@@ -671,7 +671,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                     {/* أيقونات وسائل الدفع — ديناميكية مع tooltip */}
-                    <div className="flex items-center gap-2 mr-auto" dir="ltr">
+                    <div className="flex items-center gap-2 mr-auto overflow-visible relative">
                       {visiblePaymentIcons.map((url, idx) => (
                         <div key={idx} className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors">
                           <img src={url} alt="payment-method" className="w-[85%] h-[85%] object-contain scale-125" onError={(e) => e.target.parentElement.style.display = 'none'} />
