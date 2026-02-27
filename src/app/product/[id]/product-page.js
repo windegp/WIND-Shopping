@@ -4,7 +4,6 @@ import { doc, getDoc } from "firebase/firestore";
 import { products as staticProducts } from "@/lib/products";
 import ProductView from "./ProductView"; 
 
-// دالة جلب البيانات موحدة للسيرفر
 async function getProductData(id) {
   const staticProduct = staticProducts.find((p) => p.id.toString() === id.toString());
   if (staticProduct) return staticProduct;
@@ -15,7 +14,6 @@ async function getProductData(id) {
   return null;
 }
 
-// 1. الجزء الخاص بـ Metadata
 export async function generateMetadata({ params }) {
   const { id } = params;
   const product = await getProductData(id);
@@ -36,24 +34,20 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// 2. الصفحة الرئيسية
 export default async function Page({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  if (!product) return <div className="text-white text-center py-20">المنتج غير موجود</div>;
+  // text-white → text-gray-900 ، bg لم يوجد هنا أصلاً
+  if (!product) return <div className="text-gray-900 text-center py-20">المنتج غير موجود</div>;
 
-  // البيانات المنظمة JSON-LD
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.title,
     "image": product.images || [product.mainImage],
     "description": product.seo?.description || product.description?.replace(/<[^>]*>?/gm, ''),
-    "brand": {
-      "@type": "Brand",
-      "name": "WIND"
-    },
+    "brand": { "@type": "Brand", "name": "WIND" },
     "offers": {
       "@type": "Offer",
       "url": `https://www.windeg.com/product/${id}`,
@@ -64,7 +58,6 @@ export default async function Page({ params }) {
     }
   };
 
-  // --- الزتونة هنا: تحويل البيانات لـ Plain Object عشان تهرب من الـ Error ---
   const sanitizedProduct = JSON.parse(JSON.stringify(product));
 
   return (
@@ -73,8 +66,6 @@ export default async function Page({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      
-      {/* نمرر الـ sanitizedProduct بدل الـ product الأصلي */}
       <ProductView initialProduct={sanitizedProduct} /> 
     </>
   );
