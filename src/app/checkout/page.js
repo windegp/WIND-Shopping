@@ -613,21 +613,54 @@ export default function CheckoutPage() {
                         <span className="font-semibold text-sm text-gray-800">كارت / محفظة إلكترونية</span>
                       </div>
                     </div>
+                    
                     <div className="flex items-center -space-x-1.5 space-x-reverse" dir="ltr">
+
+  {/* هنا حط روابطك من ImageKit بالترتيب */}
+
   {[
-    { name: "Visa", url: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" },
-    { name: "Mastercard", url: "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" },
-    { name: "Meeza", url: "https://upload.wikimedia.org/wikipedia/commons/f/f2/Meeza_Logo.svg" },
-    { name: "Apple Pay", url: "https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg" }
-  ].slice(0, 3).map((icon, idx) => (
-    <div key={idx} className="w-8 h-5 bg-white border border-gray-200 rounded flex items-center justify-center p-0.5 shadow-sm relative z-10">
-      <img src={icon.url} alt={icon.name} className="w-full h-full object-contain" />
+
+    "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
+
+    "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
+
+    "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
+
+    "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
+
+  ].slice(0, 3).map((url, idx) => (
+
+    <div key={idx} className="w-9 h-6 bg-white border border-gray-200 rounded flex items-center justify-center p-0.5 shadow-sm relative z-10">
+
+      <img 
+
+        src={url} 
+
+        alt="payment-method" 
+
+        className="w-full h-full object-contain" 
+
+        onError={(e) => e.target.style.display = 'none'} // حماية لو الصورة محملتش
+
+      />
+
     </div>
+
   ))}
-  <div className="w-8 h-5 bg-gray-50 border border-gray-100 rounded flex items-center justify-center shadow-sm relative z-0">
-    <span className="text-[9px] font-bold text-gray-500">+1</span>
+
+
+
+  {/* مربع الـ +1 عشان يظهر بوضوح */}
+
+  <div className="w-9 h-6 bg-gray-100 border border-gray-300 rounded flex items-center justify-center shadow-inner relative z-0">
+
+    <span className="text-[10px] font-bold text-gray-700">+1</span>
+
   </div>
-</div>
+
+</div>  
+                      
+                    
                   </div>
                   {/* ✅ تغيير النص التوضيحي: بدل redirect → popup */}
                   {paymentMethod === 'card' && (
