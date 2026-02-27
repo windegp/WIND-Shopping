@@ -1,96 +1,52 @@
 "use client";
-import Link from "next/link";
-import { useCart } from "../../context/CartContext";
 
-export default function ProductCard({ id, handle, title, price, oldPrice, compareAtPrice, rating, category, productCategory, type, folderName, mainImage, image, images, variants }) {
-  
-  const { addToCart } = useCart() || {};
-
-  const displayPrice = variants && variants.length > 0 && variants[0].price ? variants[0].price : price;
-  const displayOldPrice = variants && variants.length > 0 && variants[0].compareAtPrice ? variants[0].compareAtPrice : (compareAtPrice || oldPrice);
-  
-  const discount = displayOldPrice && displayOldPrice > displayPrice 
-    ? Math.round(((displayOldPrice - displayPrice) / displayOldPrice) * 100) 
-    : null;
-
-  const productImage = (images && images.length > 0) ? images[0] : (image || `/images/products/${folderName}/${mainImage}`);
-  const displayCategory = type || productCategory || category || "";
-  const productLink = handle ? `/product/${handle}` : `/product/${id}`;
-
-  const handleAddToCart = (e) => {
-    e.preventDefault();
-    if (addToCart) {
-      addToCart({
-        id: handle || id,
-        title,
-        price: displayPrice,
-        image: productImage,
-        quantity: 1
-      });
-    }
-  };
-
+export default function ProductCard({ image, title, price, rating, category }) {
   return (
-    <div className="block group h-full relative">
-      {/* bg-[#1A1A1A] → bg-white ، border-[#333] → border-gray-200 */}
-      <div className="bg-white rounded-[4px] overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow border border-gray-200">
-        
-        <Link href={productLink} className="cursor-pointer">
-          {/* bg-[#222] → bg-gray-100 */}
-          <div className="relative aspect-[2/3] bg-gray-100">
-            {discount && (
-              <div className="absolute top-0 left-0 bg-[#F5C518] text-black text-[10px] font-black px-2 py-0.5 z-10">
-                %{discount}
-              </div>
-            )}
-            <img 
-              src={productImage} 
-              alt={title}
-              className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-              loading="lazy"
-            />
-          </div>
-        </Link>
+    <div className="bg-[#1a1a1a] rounded overflow-hidden border border-[#333] hover:bg-[#252525] transition-all duration-300 group flex flex-col h-full shadow-lg">
+      
+      {/* منطقة الصورة (البوستر) */}
+      <div className="relative aspect-[2/3] overflow-hidden">
+        {/* علامة الحفظ - Bookmark بستايل Wind */}
+        <div className="absolute top-0 right-0 z-10 p-2 text-white/50 hover:text-[#F5C518] cursor-pointer transition">
+          <svg className="w-8 h-8 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+          </svg>
+        </div>
 
-        <div className="p-3 flex flex-col flex-grow">
+        {/* الصورة مع تأثير الزووم عند التمرير */}
+        <img 
+          src={image} 
+          alt={title}
+          className="w-full h-full object-cover transition duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100"
+        />
+      </div>
+
+      {/* تفاصيل المنتج */}
+      <div className="p-4 flex flex-col flex-grow">
+        {/* التقييم بالنجوم الذهبية */}
+        <div className="flex items-center gap-1 mb-2">
+          <svg className="w-4 h-4 text-[#F5C518]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+          <span className="text-sm font-bold text-gray-300">{rating}</span>
+        </div>
+
+        {/* العنوان والنوع */}
+        <h3 className="text-white font-bold text-base mb-1 group-hover:text-[#F5C518] transition line-clamp-1">
+          {title}
+        </h3>
+        <p className="text-xs text-gray-500 mb-4">{category}</p>
+
+        {/* السعر وزر الإضافة */}
+        <div class="mt-auto">
+          <div className="text-[#F5C518] font-black text-xl mb-3 tracking-tighter">
+            {price} <span className="text-xs font-normal">ر.س</span>
+          </div>
           
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-[#F5C518] text-[10px]">★</span>
-            {/* text-gray-400 → text-gray-500 */}
-            <span className="text-gray-500 text-[10px]">{rating || "4.8"}</span>
-            <span className="text-gray-300 text-[10px] px-1">•</span>
-            <span className="text-gray-400 text-[9px] truncate">{displayCategory}</span>
-          </div>
-
-          <Link href={productLink}>
-            {/* text-white → text-gray-900 */}
-            <h3 className="text-gray-900 text-[13px] font-semibold leading-tight mb-2 line-clamp-2 min-h-[2.2em] hover:text-[#5799ef] transition-colors">
-              {title}
-            </h3>
-          </Link>
-
-          <div className="mt-auto pt-2">
-            <div className="flex items-baseline gap-2 mb-3">
-              {/* text-white → text-gray-900 */}
-              <span className="text-gray-900 font-bold text-sm">
-                {displayPrice} <span className="text-[9px] font-normal text-gray-400">EGP</span>
-              </span>
-              {displayOldPrice && (
-                <span className="text-gray-400 text-[10px] line-through">{displayOldPrice}</span>
-              )}
-            </div>
-
-            {/* bg-[#2C2C2C] → bg-gray-100 ، hover:bg-[#F5C518] يفضل */}
-            <button 
-              onClick={handleAddToCart}
-              className="w-full bg-gray-100 hover:bg-[#F5C518] text-[#5799ef] hover:text-black text-[11px] font-black py-2 rounded-[4px] border-none transition-all duration-300 flex items-center justify-center gap-2 active:scale-95"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              أضف إلى السلة
-            </button>
-          </div>
+          <button className="w-full bg-[#2c2c2c] hover:bg-[#333] text-[#5799ef] font-bold py-2.5 rounded transition flex items-center justify-center gap-2 group/btn">
+            <span className="text-xl group-hover/btn:scale-125 transition">+</span>
+            <span className="text-sm">إضافة للسلة</span>
+          </button>
         </div>
       </div>
     </div>
