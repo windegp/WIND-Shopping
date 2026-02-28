@@ -615,9 +615,10 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                      {/* ==========================================
-    أيقونات وسائل الدفع التفاعلية
+    أيقونات وسائل الدفع التفاعلية - النسخة الكاملة والمظبوطة بالملّي
     ========================================== */}
 {(() => {
+  // 1. مصفوفة الأيقونات (كاملة وبنفس روابطك)
   const paymentIcons = [
     { name: "Apple Pay", url: "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg" },
     { name: "Mastercard", url: "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg" },
@@ -630,9 +631,10 @@ export default function CheckoutPage() {
   const hiddenIcons = paymentIcons.slice(maxVisible);
 
   return (
+    // الحاوية الأساسية بنفس الـ gap والاتجاه
     <div className="flex items-center gap-2.5 mr-auto relative !overflow-visible" dir="ltr">
       
-      {/* 1. زر الـ + والبالونة - في أقصى اليسار كما طلبت */}
+      {/* 1. زر الـ + والبالونة - التعديل هنا لضمان السنترة فوق الـ +1 بالظبط */}
       {hiddenIcons.length > 0 && (
         <div className="relative !overflow-visible flex items-center justify-center w-8 shrink-0">
           <button
@@ -642,7 +644,7 @@ export default function CheckoutPage() {
               e.stopPropagation();
               setShowAllIcons(!showAllIcons);
             }}
-            // تصميم مستطيل حاد ومتناسق مع أحجام الكروت الجديدة
+            // الحجم كما هو w-8 h-4
             className="w-8 h-4 bg-gray-50 border border-gray-300 rounded-sm flex items-center justify-center shadow-sm hover:bg-gray-100 cursor-pointer transition-all"
           >
             <span className="text-[11px] font-black text-gray-600">+{hiddenIcons.length}</span>
@@ -650,21 +652,27 @@ export default function CheckoutPage() {
 
           {/* البالونة السوداء الاحترافية */}
           {showAllIcons && (
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center slide-down">
-              <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20 min-w-max">
+            /* الحاوية دي دلوقتي شايلة (المربعات + السهم) وبتسنترهم إجباري فوق نص الزرار */
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center slide-down" style={{ width: 'max-content' }}>
+              
+              {/* محتوى البالونة باللون الأسود */}
+              <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20">
                 {hiddenIcons.map((icon, idx) => (
                   <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
+                    {/* وضوح اللوجو داخل البالونة (scale-110) */}
                     <img src={icon.url} alt={icon.name} className="w-full h-full object-contain scale-110" />
                   </div>
                 ))}
               </div>
-              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95"></div>
+              
+              {/* السهم (المثلث) - الآن مسنتر تلقائياً تحت البالونة وفي منتصف زر الـ + بالملّي */}
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 flex-shrink-0"></div>
             </div>
           )}
         </div>
       )}
 
-      {/* 2. الأيقونات الأساسية - مستطيلة، حادة، وشعار واشح (Zoomed) */}
+      {/* 2. الأيقونات الأساسية - بنفس الحجم والزوم اللي عجبك بدون أي تغيير */}
       {visibleIcons.map((icon, idx) => (
         <div 
           key={idx} 
@@ -673,7 +681,7 @@ export default function CheckoutPage() {
           <img 
             src={icon.url} 
             alt={icon.name} 
-            // زوم اللوجو ليكون مالي الكارت بوضوح (Zoom 1.2x)
+            // الزوم كما طلبت (scale-1.18)
             className="w-[85%] h-[85%] object-contain scale-[1.18] transition-transform" 
           />
         </div>
