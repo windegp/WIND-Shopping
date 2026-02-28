@@ -5,60 +5,63 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { 
-  ShoppingBag, Search, Filter, Package,
+  ShoppingBag, Search, Filter, Monitor, Archive, Layers,
   ChevronLeft, ChevronRight, Truck 
 } from "lucide-react";
 
 export default function OrdersListPage() {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [productImages, setProductImages] = useState({}); // خريطة لحفظ صور المنتجات
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   
+  // نظام التبويبات (Tabs) لفصل المنشأ
+  const [activeTab, setActiveTab] = useState('shopify'); // 'wind', 'shopify', 'all'
+
   // إعدادات ترقيم الصفحات (Pagination)
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20; // عدد الطلبات في كل صفحة
+  const itemsPerPage = 20; 
 
   const router = useRouter();
 
   useEffect(() => {
-    fetchOrdersAndProducts();
+    fetchOrders();
   }, []);
 
-  // فلترة الطلبات عند البحث
+  // فلترة الطلبات عند البحث أو تغيير التبويب
   useEffect(() => {
-    const filtered = orders.filter(o => 
-      o.Name?.toLowerCase().includes(search.toLowerCase()) || 
-      o.Email?.toLowerCase().includes(search.toLowerCase()) ||
-      o['Lineitem name']?.toLowerCase().includes(search.toLowerCase())
-    );
-    setFilteredOrders(filtered);
-    setCurrentPage(1); // الرجوع للصفحة الأولى عند البحث
-  }, [search, orders]);
+    let result = orders;
 
-  const fetchOrdersAndProducts = async () => {
+    // 1. الفلترة حسب مصدر الطلب (التبويبات)
+    if (activeTab === 'shopify') {
+      result = result.filter(o => o.data_source === 'Shopify_Import');
+    } else if (activeTab === 'wind') {
+      result = result.filter(o => o.data_source === 'WIND_Web'); 
+    }
+
+    // 2. الفلترة حسب البحث
+    if (search) {
+      result = result.filter(o => 
+        o.Name?.toLowerCase().includes(search.toLowerCase()) || 
+        o.Email?.toLowerCase().includes(search.toLowerCase()) ||
+        o['Lineitem name']?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    setFilteredOrders(result);
+    setCurrentPage(1); // نرجع للصفحة الأولى لو غيرنا الفلتر
+  }, [search, activeTab, orders]);
+
+  const fetchOrders = async () => {
     setLoading(true);
     try {
-      // 1. جلب كل الأوردرات (بدون limit عشان نقدر نبحث فيهم كلهم براحتنا)
+      // بنجيب الأوردرات كلها عشان نقسمها براحتنا من غير ما نحمل صور ونتقل الصفحة
       const q = query(collection(db, "Orders"), orderBy("Created at", "desc"));
       const querySnapshot = await getDocs(q);
       const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOrders(docs);
-      setFilteredOrders(docs);
-
-      // 2. جلب صور المنتجات من قاعدة البيانات لربطها بالأوردرات
-      const pSnap = await getDocs(collection(db, "products"));
-      const imgMap = {};
-      pSnap.docs.forEach(doc => {
-        const productData = doc.data();
-        // بنحفظ الصورة المرتبطة باسم المنتج
-        imgMap[productData.title] = productData.images?.[0] || null; 
-      });
-      setProductImages(imgMap);
-
     } catch (err) {
-      console.error("Error fetching data:", err);
+      console.error("Error fetching orders:", err);
     } finally {
       setLoading(false);
     }
@@ -77,7 +80,7 @@ export default function OrdersListPage() {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -86,13 +89,35 @@ export default function OrdersListPage() {
       <div className="max-w-7xl mx-auto">
         
         {/* الهيدر */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h1 className="text-2xl font-black flex items-center gap-2">
             <ShoppingBag className="text-[#008060]" /> جميع الطلبات
           </h1>
           <span className="text-xs font-bold text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-            إجمالي السجلات: <span className="text-[#008060] font-black">{filteredOrders.length}</span> أوردر
+            إجمالي المعروض: <span className="text-[#008060] font-black">{filteredOrders.length}</span> طلب
           </span>
+        </div>
+
+        {/* التبويبات (Tabs) لفصل القديم عن الجديد */}
+        <div className="flex gap-2 sm:gap-6 mb-6 border-b border-gray-200 overflow-x-auto scrollbar-hide">
+          <button 
+            onClick={() => setActiveTab('wind')} 
+            className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'wind' ? 'border-b-2 border-[#008060] text-[#008060]' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <Monitor size={16}/> طلبات موقع WIND
+          </button>
+          <button 
+            onClick={() => setActiveTab('shopify')} 
+            className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'shopify' ? 'border-b-2 border-[#008060] text-[#008060]' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <Archive size={16}/> أرشيف شوبيفاي
+          </button>
+          <button 
+            onClick={() => setActiveTab('all')} 
+            className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'all' ? 'border-b-2 border-[#008060] text-[#008060]' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <Layers size={16}/> كل الطلبات
+          </button>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
@@ -114,7 +139,7 @@ export default function OrdersListPage() {
             </button>
           </div>
 
-          {/* الجدول الرئيسي */}
+          {/* الجدول الرئيسي (بدون صور) */}
           <div className="overflow-x-auto">
             <table className="w-full text-right border-collapse min-w-[900px]">
               <thead>
@@ -131,12 +156,18 @@ export default function OrdersListPage() {
                 {loading ? (
                   <tr><td colSpan="6" className="text-center py-24 text-[#008060] font-black animate-pulse">جاري تحميل سجلات WIND...</td></tr>
                 ) : currentOrders.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-24 text-gray-400 font-bold">لا توجد طلبات مطابقة للبحث</td></tr>
+                  <tr>
+                    <td colSpan="6" className="text-center py-24 text-gray-400">
+                      <Archive size={40} className="mx-auto mb-3 opacity-20"/>
+                      <p className="font-bold">لا توجد طلبات في هذا القسم</p>
+                    </td>
+                  </tr>
                 ) : (
                   currentOrders.map((order) => {
-                    const productName = order['Lineitem name'];
-                    const productImage = productImages[productName];
-                    const quantity = order['Lineitem quantity'] || 1;
+                    // تحديد عدد المنتجات (لو فيه مصفوفة lineItems بنعرض أول اسم وجنبه إشارة إن فيه كمان)
+                    const hasMultiple = order.lineItems && order.lineItems.length > 1;
+                    const displayProductName = order['Lineitem name'] || (order.lineItems && order.lineItems[0]?.name) || 'منتج غير محدد';
+                    const displayQuantity = order['Lineitem quantity'] || (order.lineItems && order.lineItems[0]?.quantity) || 1;
 
                     return (
                       <tr 
@@ -156,23 +187,15 @@ export default function OrdersListPage() {
                           <p className="text-[10px] text-gray-500 font-mono mt-0.5">{order.Email}</p>
                         </td>
 
-                        {/* المنتج والصورة والكمية (التعديل الجديد) */}
+                        {/* المنتج والكمية (نص فقط بدون صورة) */}
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 shrink-0 overflow-hidden flex items-center justify-center">
-                              {productImage ? (
-                                <img src={productImage} alt={productName} className="w-full h-full object-cover" />
-                              ) : (
-                                <Package size={16} className="text-gray-300" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-gray-700 line-clamp-1 max-w-[180px]">{productName}</p>
-                              <p className="text-[10px] text-[#008060] font-black mt-1">
-                                الكمية: <span className="bg-green-100 px-1.5 py-0.5 rounded-md">{quantity}</span>
-                              </p>
-                            </div>
-                          </div>
+                           <p className="text-xs font-bold text-gray-700 line-clamp-1 max-w-[220px]">
+                             {displayProductName}
+                           </p>
+                           <p className="text-[10px] text-gray-500 font-bold mt-1.5 flex items-center gap-2">
+                              <span>الكمية: <span className="text-[#008060] font-black">{displayQuantity}</span></span>
+                              {hasMultiple && <span className="bg-gray-100 text-gray-600 px-1.5 rounded-sm text-[9px]">+ منتجات أخرى</span>}
+                           </p>
                         </td>
 
                         {/* حالة الدفع */}
@@ -201,7 +224,7 @@ export default function OrdersListPage() {
             </table>
           </div>
 
-          {/* ترقيم الصفحات (Pagination المبرمج حقيقي) */}
+          {/* ترقيم الصفحات */}
           {!loading && filteredOrders.length > 0 && (
             <div className="p-4 sm:p-6 bg-white border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-xs font-bold text-gray-500">
