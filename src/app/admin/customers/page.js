@@ -9,11 +9,11 @@ import { Users, Target, Mail, ShoppingCart, Download, Crown, UserMinus, Search, 
 // المسميات هنا مطابقة لصورة الفايربيس بتاعتك بالظبط (الكابيتال كابيتال)
 const segmentsList = [
   { id: 'all', label: 'كل العملاء', icon: <Users size={16} /> },
-  { id: 'purchased_once', label: 'اشتروا مرة واحدة', icon: <ShoppingCart size={16} /> },
-  { id: 'subscribers', label: 'المشتركين', icon: <Mail size={16} /> },
-  { id: 'abandoned', label: 'تركوا السلة', icon: <UserMinus size={16} /> },
-  { id: 'purchased_multiple', label: 'اشتروا أكثر من مرة', icon: <Crown size={16} /> },
-  { id: 'no_purchase', label: 'لم يشتروا بعد', icon: <Target size={16} /> },
+  { id: 'Purchased_Once', label: 'اشتروا مرة واحدة', icon: <ShoppingCart size={16} /> },
+  { id: 'Email_Subscriber', label: 'المشتركين', icon: <Mail size={16} /> },
+  { id: 'Abandoned_Checkout', label: 'تركوا السلة', icon: <UserMinus size={16} /> },
+  { id: 'VIP_Customer', label: 'اشتروا أكثر من مرة', icon: <Crown size={16} /> },
+  { id: 'Potential_Customer', label: 'لم يشتروا بعد', icon: <Target size={16} /> },
 ];
 
 export default function CustomersPage() {
