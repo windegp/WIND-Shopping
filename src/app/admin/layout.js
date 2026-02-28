@@ -6,7 +6,8 @@ import { auth } from "@/lib/firebase";
 import { 
   LayoutDashboard, ShoppingBag, PlusCircle, 
   Palette, FolderTree, Menu, 
-  FileText, LogOut, ChevronLeft, Lock 
+  FileText, LogOut, ChevronLeft, Lock,
+  Package, Users // ← ضيف الاثنين دول هنا بالظبط عشان الـ Build ينجح
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
