@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from "../../context/CartContext";
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
+// 🔥 استدعاء الفايربيس
+import { db } from "@/lib/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ChevronDown, Info, CheckCircle2, Phone, ShoppingBag, Shield, Tag, ChevronLeft, Truck, CreditCard, Banknote, Smartphone, X, Lock } from 'lucide-react';
 
 const governorates = [
@@ -165,10 +168,10 @@ export default function CheckoutPage() {
     if (!validate()) return window.scrollTo(0, 0);
     setLoading(true);
 
-    // 1. توليد رقم طلب موحد لاستخدامه في كل الصفحات
-    const orderId = `WIND-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // 1. توليد رقم طلب موحد بمظهر احترافي (WIND-123456-ABC)
+    const orderId = `WIND-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-    // 2. تجهيز البيانات للتخزين المؤقت (عشان صفحة thank-you تبعت الإيميل)
+    // 2. تجهيز البيانات للتخزين المؤقت
     const pendingOrder = {
       orderId,
       formData,
@@ -180,6 +183,76 @@ export default function CheckoutPage() {
     };
 
     try {
+      // ============================================================
+      // 🚀 رفع الداتا للفايربيس (Orders & Customers)
+      // ============================================================
+      const orderData = {
+        Name: orderId,
+        Email: formData.email ? formData.email.toLowerCase() : '',
+        Phone: formData.phone,
+        "Billing Name": `${formData.firstName} ${formData.lastName}`,
+        "Shipping Address1": `${formData.address} ${formData.landmark ? '- ' + formData.landmark : ''}`,
+        "Shipping City": formData.city,
+        "Shipping Province": formData.governorate,
+        "Shipping Phone": formData.phone,
+        "Shipping Zip": formData.postalCode || '',
+        Subtotal: subtotal,
+        Shipping: shipping,
+        Total: finalTotal,
+        Currency: "EGP",
+        "Financial Status": paymentMethod === 'card' ? "pending_payment" : "pending",
+        "Payment Method": paymentMethod,
+        "Created at": new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }),
+        data_source: "WIND_Web", // عشان الأدمن يفصلهم عن شوبيفاي
+        
+        // جلب الصور الدقيقة من سلة المشتريات
+        lineItems: cartItems.map(item => ({
+          name: `${item.title} ${item.selectedSize ? '- ' + item.selectedSize : ''}`,
+          price: item.price,
+          quantity: item.qty,
+          image: item.image || item.images?.[0] || ''
+        }))
+      };
+
+      if (appliedPromo) orderData['Discount Code'] = appliedPromo;
+
+      // 1. إنشاء الأوردر
+      await setDoc(doc(db, "Orders", orderId), orderData);
+
+      // 2. تحديث أو إنشاء ملف العميل
+      const customerId = formData.email ? formData.email.toLowerCase() : formData.phone;
+      const customerRef = doc(db, "Customers", customerId);
+      const customerSnap = await getDoc(customerRef);
+
+      if (customerSnap.exists()) {
+        const existingData = customerSnap.data();
+        await setDoc(customerRef, {
+          "Total Orders": (existingData['Total Orders'] || 0) + 1,
+          "Total Spent": (existingData['Total Spent'] || 0) + finalTotal,
+          Last_Order_Status: "New",
+          data_source: "WIND_Web",
+          Phone: formData.phone,
+          "Default Address City": formData.city,
+          "Default Address Province": formData.governorate
+        }, { merge: true });
+      } else {
+        await setDoc(customerRef, {
+          "First Name": formData.firstName,
+          "Last Name": formData.lastName,
+          Email: formData.email ? formData.email.toLowerCase() : '',
+          Phone: formData.phone,
+          "Default Address City": formData.city,
+          "Default Address Province": formData.governorate,
+          "Default Address Address1": formData.address,
+          "Total Orders": 1,
+          "Total Spent": finalTotal,
+          Last_Order_Status: "New",
+          data_source: "WIND_Web",
+          segments: ["Potential_Customer"]
+        });
+      }
+      // ============================================================
+
       if (paymentMethod === 'card') {
         // حفظ الطلب في المتصفح قبل فتح بوابة كاشير
         localStorage.setItem('pendingOrder', JSON.stringify(pendingOrder));
