@@ -6,200 +6,180 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { 
   ArrowRight, Mail, Phone, MapPin, CreditCard, 
-  Package, Calendar, Tag, Info, ExternalLink, 
-  User, ShieldCheck, ShoppingBag
+  Package, ShoppingBag, ChevronLeft, ExternalLink, Info
 } from "lucide-react";
 
 export default function CustomerDetailsPage() {
-  const { email } = useParams(); // بناخد الإيميل من الرابط
+  const { email } = useParams();
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [customerOrders, setCustomerOrders] = useState([]); // جاهزة لخطوة الأوردرات
+  const [orders, setOrders] = useState([]);
 
   useEffect(() => {
-    if (email) {
-      fetchCustomerData();
-    }
+    if (email) fetchAllData();
   }, [email]);
 
-  const fetchCustomerData = async () => {
+  const fetchAllData = async () => {
     setLoading(true);
     try {
-      // 1. جلب بيانات العميل (فك شفيرة الإيميل لو فيه رموز)
       const decodedEmail = decodeURIComponent(email);
-      const docRef = doc(db, "Customers", decodedEmail);
-      const docSnap = await getDoc(docRef);
+      // 1. جلب بيانات العميل الأساسية من الفايربيس
+      const cSnap = await getDoc(doc(db, "Customers", decodedEmail));
+      
+      if (cSnap.exists()) {
+        const cData = cSnap.data();
+        setCustomer(cData);
 
-      if (docSnap.exists()) {
-        setCustomer(docSnap.data());
-        
-        // 2. تهيئة جلب الأوردرات (الربط اللي سألت عليه)
-        // بنجهز الكود عشان يدور في درج "Orders" عن أي أوردر فيه نفس الإيميل
-        const ordersQ = query(collection(db, "Orders"), where("Email", "==", decodedEmail));
-        const ordersSnap = await getDocs(ordersQ);
-        setCustomerOrders(ordersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        // 2. جلب كل الأوردرات المرتبطة بهذا الإيميل
+        const q = query(collection(db, "Orders"), where("Email", "==", decodedEmail));
+        const oSnap = await getDocs(q);
+        const oList = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // 🔥 الربط بصورة المنتج من درج (products) بناءً على اسم المنتج المكتوب في الأوردر
+        const ordersWithRealImages = await Promise.all(oList.map(async (order) => {
+          // هندور في المنتجات على منتج عنوانه يطابق 'Lineitem name' اللي في شيت الأوردرات
+          const pQuery = query(collection(db, "products"), where("title", "==", order['Lineitem name']));
+          const pSnap = await getDocs(pQuery);
+          
+          let productImage = null;
+          if (!pSnap.empty) {
+            productImage = pSnap.docs[0].data().images?.[0]; // لو لقى المنتج هيجيب أول صورة له
+          }
+          return { ...order, productImage };
+        }));
+
+        setOrders(ordersWithRealImages);
       }
-    } catch (err) {
-      console.error("Error:", err);
-    } finally {
-      setLoading(false);
+    } catch (err) { 
+      console.error("Error fetching data:", err); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center text-[#008060] font-bold animate-pulse">جاري تحميل ملف العميل...</div>;
-  if (!customer) return <div className="p-10 text-center">العميل غير موجود!</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#f4f6f8] flex items-center justify-center flex-col gap-4">
+      <div className="w-10 h-10 border-4 border-[#008060] border-t-transparent rounded-full animate-spin"></div>
+      <p className="font-bold text-gray-500">جاري سحب ملفات العميل من WIND...</p>
+    </div>
+  );
+
+  if (!customer) return <div className="p-20 text-center font-bold text-red-500">العميل غير موجود في قاعدة البيانات.</div>;
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] p-4 sm:p-8 font-sans text-[#202223]" dir="rtl">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         
-        {/* هيدر الصفحة */}
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => router.back()} className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
-            <ArrowRight size={20} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-black">{customer['First Name']} {customer['Last Name']}</h1>
-            <p className="text-xs text-gray-500 font-mono">{customer.Email}</p>
+        {/* هيدر الصفحة والرجوع */}
+        <button 
+          onClick={() => router.back()} 
+          className="mb-8 flex items-center gap-2 text-xs font-black text-gray-400 hover:text-[#008060] transition-colors group"
+        >
+          <div className="p-2 bg-white rounded-lg border border-gray-200 group-hover:border-[#008060]">
+            <ArrowRight size={16}/>
           </div>
-          {customer.Tags && (
-            <div className="mr-auto flex gap-2">
-              <span className="bg-[#008060]/10 text-[#008060] px-3 py-1 rounded-full text-[10px] font-bold border border-[#008060]/20">
-                {customer.Tags}
-              </span>
-            </div>
-          )}
-        </div>
+          العودة لقائمة العملاء
+        </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* العمود الأيمن: البطاقات السريعة والبيانات الشخصية */}
+          {/* العمود الأيمن: كارت العميل التعريفي */}
           <div className="lg:col-span-1 space-y-6">
-            
-            {/* كارت الحالة المالية */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-[#008060]"></div>
-              <h3 className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">ملخص النشاط</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-[10px] text-gray-400">إجمالي الإنفاق</p>
-                    <p className="text-xl font-black text-[#008060]">{customer['Total Spent'] || 0} EGP</p>
-                  </div>
-                  <CreditCard size={24} className="text-gray-100" />
+            <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-[#008060]">
+                  <Users size={40} />
                 </div>
-                <div className="flex justify-between items-end pt-4 border-t border-gray-50">
+                <h2 className="text-2xl font-black">{customer['First Name']} {customer['Last Name']}</h2>
+                <p className="text-xs text-gray-400 font-mono mt-1">{customer.Email}</p>
+              </div>
+              
+              <div className="space-y-5 pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center"><Phone size={18}/></div>
                   <div>
-                    <p className="text-[10px] text-gray-400">عدد الطلبات</p>
-                    <p className="text-lg font-black">{customer['Total Orders'] || 0}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">رقم الهاتف</p>
+                    <p className="text-sm font-black tracking-widest" dir="ltr">{customer.Phone || '---'}</p>
                   </div>
-                  <Package size={24} className="text-gray-100" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center"><MapPin size={18}/></div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">الموقع</p>
+                    <p className="text-sm font-bold">{customer['Default Address City'] || '---'}</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* كارت التواصل */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-xs font-bold text-gray-400 mb-4">بيانات التواصل</h3>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400"><Mail size={16}/></div>
-                  <p className="text-sm font-bold truncate">{customer.Email}</p>
-                </div>
-                {customer.Phone && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400"><Phone size={16}/></div>
-                    <p className="text-sm font-bold" dir="ltr">{customer.Phone}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* كارت الشرائح (Segments) */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-xs font-bold text-gray-400 mb-4">الشرائح (Segments)</h3>
-              <div className="flex flex-wrap gap-2">
-                {customer.segments?.map(seg => (
-                  <span key={seg} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold">
-                    #{seg.replace(/_/g, ' ')}
-                  </span>
-                ))}
-              </div>
+            {/* إحصائيات سريعة */}
+            <div className="grid grid-cols-2 gap-4">
+               <div className="bg-white p-6 rounded-3xl border border-gray-200 text-center">
+                  <p className="text-[10px] text-gray-400 font-bold mb-2">عدد الطلبات</p>
+                  <p className="text-2xl font-black text-[#202223]">{customer['Total Orders'] || 0}</p>
+               </div>
+               <div className="bg-white p-6 rounded-3xl border border-gray-200 text-center">
+                  <p className="text-[10px] text-gray-400 font-bold mb-2">إجمالي الصرف</p>
+                  <p className="text-xl font-black text-[#008060]">{customer['Total Spent'] || 0} ج.م</p>
+               </div>
             </div>
           </div>
 
-          {/* العمود الأوسط/الأيسر: العناوين والأوردرات */}
+          {/* العمود الأيسر: سجل الطلبات المتصل بصور منتجاتك */}
           <div className="lg:col-span-2 space-y-6">
-            
-            {/* كارت العنوان الافتراضي */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin size={18} className="text-[#008060]" />
-                <h3 className="text-sm font-bold">العنوان المفضل للشحن</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <div>
-                  <p className="text-[10px] text-gray-400 mb-1">المحافظة / المدينة</p>
-                  <p className="text-sm font-bold">{customer['Default Address City'] || '---'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-gray-400 mb-1">الرمز البريدي</p>
-                  <p className="text-sm font-bold">{customer['Default Address Zip'] || '---'}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] text-gray-400 mb-1">العنوان بالتفصيل</p>
-                  <p className="text-sm font-bold">{customer['Default Address Address1']} {customer['Default Address Address2']}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 🔥 قسم الأوردرات (مهيء للربط الكامل) 🔥 */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag size={18} className="text-[#008060]" />
-                  <h3 className="text-sm font-bold">سجل الطلبات</h3>
-                </div>
-                <span className="text-xs font-bold bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">
-                  {customerOrders.length} طلب
-                </span>
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden min-h-[500px]">
+              <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+                <h3 className="text-md font-black flex items-center gap-2">
+                  <ShoppingBag size={20} className="text-[#008060]"/> سجل المشتريات
+                </h3>
+                <span className="text-xs font-black text-gray-400">({orders.length}) طلب مسجل</span>
               </div>
               
               <div className="divide-y divide-gray-50">
-                {customerOrders.length > 0 ? customerOrders.map((order) => (
-                  <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer group"
-                       onClick={() => router.push(`/admin/orders/${order.Name}`)}>
-                    <div>
-                      <p className="text-sm font-black text-[#005bd3]">#{order.Name}</p>
-                      <p className="text-[10px] text-gray-400">{order['Created at']}</p>
+                {orders.length > 0 ? orders.map((o) => (
+                  <div 
+                    key={o.id} 
+                    className="p-5 flex items-center gap-5 hover:bg-gray-50 transition-all cursor-pointer group"
+                    onClick={() => router.push(`/admin/orders/${encodeURIComponent(o.Name)}`)}
+                  >
+                    {/* صورة المنتج المسحوبة من درج products */}
+                    <div className="w-16 h-16 rounded-2xl bg-gray-50 overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
+                       {o.productImage ? (
+                         <img src={o.productImage} className="w-full h-full object-cover" alt={o['Lineitem name']} />
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center text-gray-300">
+                           <Package size={24}/>
+                         </div>
+                       )}
                     </div>
-                    <div className="text-left">
-                      <p className="text-sm font-black">{order.Total} EGP</p>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${order['Financial Status'] === 'paid' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
-                        {order['Financial Status']}
-                      </span>
+
+                    <div className="flex-1">
+                      <p className="text-sm font-black text-[#005bd3] group-hover:underline">#{o.Name}</p>
+                      <p className="text-[11px] text-gray-500 font-bold mt-0.5 line-clamp-1">{o['Lineitem name']}</p>
+                      <p className="text-[9px] text-gray-400 mt-1">{o['Created at']}</p>
                     </div>
-                    <ChevronLeft size={16} className="text-gray-300 mr-2 group-hover:text-[#008060] transition-colors" />
+
+                    <div className="text-left shrink-0">
+                      <p className="text-md font-black text-gray-900">{o.Total} EGP</p>
+                      <div className="mt-1 flex gap-1 justify-end">
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${o['Financial Status'] === 'paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {o['Financial Status']}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronLeft size={18} className="text-gray-300 group-hover:text-[#008060] transition-colors" />
                   </div>
                 )) : (
-                  <div className="p-10 text-center flex flex-col items-center gap-3">
-                    <Package className="text-gray-200" size={40} />
-                    <p className="text-xs text-gray-400">لا توجد طلبات مسجلة لهذا العميل حتى الآن</p>
+                  <div className="flex flex-col items-center justify-center py-24 text-gray-300 gap-4">
+                    <Package size={60} className="opacity-10" />
+                    <p className="text-sm font-bold">لا توجد طلبات مرتبطة بهذا العميل حتى الآن</p>
                   </div>
                 )}
               </div>
-
-              {customerOrders.length > 0 && (
-                <div className="p-4 bg-gray-50 text-center">
-                  <button className="text-[11px] font-bold text-[#005bd3] hover:underline flex items-center justify-center gap-1 mx-auto">
-                    عرض كل أوردرات العميل في صفحة الطلبات <ExternalLink size={12} />
-                  </button>
-                </div>
-              )}
             </div>
-
           </div>
+
         </div>
       </div>
     </div>
