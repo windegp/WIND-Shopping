@@ -650,7 +650,7 @@ export default function CheckoutPage() {
 
           {/* البالونة السوداء الاحترافية */}
           {showAllIcons && (
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] slide-down">
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center slide-down">
               <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20 min-w-max">
                 {hiddenIcons.map((icon, idx) => (
                   <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
@@ -658,7 +658,7 @@ export default function CheckoutPage() {
                   </div>
                 ))}
               </div>
-              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 absolute left-1/2 -translate-x-1/2"></div>
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95"></div>
             </div>
           )}
         </div>
