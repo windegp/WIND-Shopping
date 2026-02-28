@@ -599,10 +599,10 @@ export default function CheckoutPage() {
               <p className="section-label">طريقة الدفع</p>
               <p className="text-xs text-gray-400 mb-3">جميع المعاملات مشفرة وآمنة</p>
 
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+              <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
 
                 {/* Card */}
-                <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer ${paymentMethod === 'card' ? 'active' : ''}`}>
+                <label className={`pay-opt flex flex-col px-4 py-4 cursor-pointer relative !overflow-visible ${paymentMethod === 'card' ? 'active' : ''}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === 'card' ? 'border-[#F5C518]' : 'border-gray-300'}`}>
@@ -618,7 +618,6 @@ export default function CheckoutPage() {
     أيقونات وسائل الدفع التفاعلية
     ========================================== */}
 {(() => {
-  // 1. تعريف الأيقونات
   const paymentIcons = [
     { name: "Visa", url: "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg" },
     { name: "Mastercard", url: "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg" },
@@ -631,24 +630,17 @@ export default function CheckoutPage() {
   const hiddenIcons = paymentIcons.slice(maxVisible);
 
   return (
-    <div className="flex items-center gap-2 mr-auto relative" dir="ltr">
-      {/* الأيقونات الأساسية - بدون تأثيرات ضغط أو تفاعل */}
+    <div className="flex items-center gap-2 mr-auto relative !overflow-visible" dir="ltr">
+      {/* الأيقونات الأساسية */}
       {visibleIcons.map((icon, idx) => (
-        <div
-          key={idx}
-          className="w-10 h-7 bg-white border border-gray-200 rounded flex items-center justify-center overflow-hidden shadow-sm"
-        >
-          <img
-            src={icon.url}
-            alt={icon.name}
-            className="w-[80%] h-[80%] object-contain"
-          />
+        <div key={idx} className="w-10 h-7 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm">
+          <img src={icon.url} alt={icon.name} className="w-[80%] h-[80%] object-contain" />
         </div>
       ))}
 
-      {/* زر الـ + مع البالونة السوداء (Popover) */}
+      {/* زر الـ + والبالونة السوداء */}
       {hiddenIcons.length > 0 && (
-        <div className="relative flex items-center">
+        <div className="relative !overflow-visible flex items-center">
           <button
             type="button"
             onClick={(e) => {
@@ -656,23 +648,23 @@ export default function CheckoutPage() {
               e.stopPropagation();
               setShowAllIcons(!showAllIcons);
             }}
-            className="w-8 h-6 bg-gray-50 border border-gray-300 rounded flex items-center justify-center shadow-sm hover:bg-gray-100 transition-colors"
+            className="w-8 h-6 bg-gray-50 border border-gray-300 rounded flex items-center justify-center shadow-sm hover:bg-gray-100 cursor-pointer transition-all"
           >
             <span className="text-[10px] font-black text-gray-600">+{hiddenIcons.length}</span>
           </button>
 
-          {/* البالونة السوداء - معدلة لتظهر فوق الإطار */}
+          {/* البالونة السوداء (Popover) */}
           {showAllIcons && (
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[100] slide-down">
-              <div className="bg-black/90 backdrop-blur-md rounded-lg p-2 shadow-2xl flex gap-2 border border-white/20 min-w-max">
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] slide-down">
+              <div className="bg-black/95 backdrop-blur-md rounded-lg p-2 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.5)] flex gap-2 border border-white/20 min-w-max">
                 {hiddenIcons.map((icon, idx) => (
-                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1 shadow-sm">
+                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1">
                     <img src={icon.url} alt={icon.name} className="w-full h-full object-contain" />
                   </div>
                 ))}
               </div>
               {/* المثلث السفلي */}
-              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/90 mx-auto"></div>
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 mx-auto"></div>
             </div>
           )}
         </div>
