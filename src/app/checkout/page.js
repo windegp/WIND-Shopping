@@ -120,6 +120,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [showAllIcons, setShowAllIcons] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(false);
 
@@ -614,44 +615,70 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                      {/* ==========================================
-    أيقونات وسائل الدفع — معدّلة
-    لإضافة أيقونة جديدة: ضيف رابطها في paymentIcons فقط
-    الباقي بيتحسب تلقائي
+    أيقونات وسائل الدفع التفاعلية
     ========================================== */}
 {(() => {
-  // ✅ مصدر واحد فقط — عدّل هنا وبس
   const paymentIcons = [
     "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
     "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg"
+    "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg",
+    // تقدر تضيف أي روابط أيقونات تانية هنا وهتتحسب في الـ + تلقائياً
   ];
 
   const maxVisible = 3;
-  const visibleIcons = paymentIcons.slice(0, maxVisible);
+  // لو المستخدم ضغط على الزر، بنعرض كل الأيقونات، غير كده بنعرض أول 3 بس
+  const iconsToDisplay = showAllIcons ? paymentIcons : paymentIcons.slice(0, maxVisible);
   const hiddenCount = paymentIcons.length - maxVisible;
 
   return (
     <div className="flex items-center gap-2 mr-auto" dir="ltr">
-      {visibleIcons.map((url, idx) => (
-        <div
-          key={idx}
-          className="w-10 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden shadow-sm hover:border-gray-300 transition-colors"
-        >
-          <img
-            src={url}
-            alt="payment-method"
-            className="w-[85%] h-[85%] object-contain scale-125"
-            onError={(e) => e.target.parentElement.style.display = 'none'}
-          />
-        </div>
-      ))}
+      {/* عرض الأيقونات */}
+      <div className="flex items-center gap-2 transition-all duration-500 ease-in-out">
+        {iconsToDisplay.map((url, idx) => (
+          <div
+            key={idx}
+            className="w-11 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center p-1 shadow-sm hover:border-gray-400 transition-all transform hover:scale-105"
+          >
+            <img
+              src={url}
+              alt="payment"
+              className="w-full h-full object-contain"
+              onError={(e) => e.target.parentElement.style.display = 'none'}
+            />
+          </div>
+        ))}
+      </div>
 
-      {/* زر + يظهر فقط لو في أيقونات مخفية */}
-      {hiddenCount > 0 && (
-        <div className="w-8 h-6 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-center shadow-sm">
-          <span className="text-[10px] font-bold text-gray-500">+{hiddenCount}</span>
-        </div>
+      {/* زر الـ + التفاعلي: يظهر فقط في حالة عدم العرض الكامل ووجود أيقونات مخفية */}
+      {!showAllIcons && hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault(); // منع الفورم من الإرسال
+            e.stopPropagation(); // منع اختيار وسيلة الدفع عند الضغط على الزرار
+            setShowAllIcons(true);
+          }}
+          className="w-9 h-7 bg-gray-100 border border-gray-300 rounded-md flex items-center justify-center shadow-sm hover:bg-gray-200 hover:border-gray-400 transition-all group"
+          title="عرض المزيد من الوسائل"
+        >
+          <span className="text-[10px] font-black text-gray-600 group-hover:text-gray-900">+{hiddenCount}</span>
+        </button>
+      )}
+
+      {/* زر إغلاق (اختياري) يظهر لما نعرض الكل عشان يرجعهم تاني */}
+      {showAllIcons && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowAllIcons(false);
+          }}
+          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X size={14} />
+        </button>
       )}
     </div>
   );
