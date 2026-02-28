@@ -624,6 +624,7 @@ export default function CheckoutPage() {
     { name: "Mastercard", url: "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg" },
     { name: "Visa", url: "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg" },
     { name: "Meeza", url: "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg" },
+    { name: "American Express", url: "https://ik.imagekit.io/windeg/WIND_Shopping/amex-svgrepo-com.svg" },
   ];
 
   const maxVisible = 3;
