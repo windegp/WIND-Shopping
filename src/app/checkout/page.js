@@ -630,7 +630,7 @@ export default function CheckoutPage() {
   const hiddenIcons = paymentIcons.slice(maxVisible);
 
   return (
-    <div className="flex items-center gap-2 mr-auto relative !overflow-visible" dir="ltr">
+    <div className="flex items-center gap-2.3 mr-auto relative !overflow-visible" dir="ltr">
       
       {/* 1. زر الـ + والبالونة - في أقصى اليسار كما طلبت */}
       {hiddenIcons.length > 0 && (
@@ -643,7 +643,7 @@ export default function CheckoutPage() {
               setShowAllIcons(!showAllIcons);
             }}
             // تصميم مستطيل حاد ومتناسق مع أحجام الكروت الجديدة
-            className="w-8 h-7 bg-gray-50 border border-gray-300 rounded-sm flex items-center justify-center shadow-sm hover:bg-gray-100 cursor-pointer transition-all"
+            className="w-8 h-4 bg-gray-50 border border-gray-300 rounded-sm flex items-center justify-center shadow-sm hover:bg-gray-100 cursor-pointer transition-all"
           >
             <span className="text-[11px] font-black text-gray-600">+{hiddenIcons.length}</span>
           </button>
@@ -653,7 +653,7 @@ export default function CheckoutPage() {
             <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] slide-down">
               <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20 min-w-max">
                 {hiddenIcons.map((icon, idx) => (
-                  <div key={idx} className="w-10 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
+                  <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
                     <img src={icon.url} alt={icon.name} className="w-full h-full object-contain scale-110" />
                   </div>
                 ))}
@@ -668,13 +668,13 @@ export default function CheckoutPage() {
       {visibleIcons.map((icon, idx) => (
         <div 
           key={idx} 
-          className="w-11 h-7 bg-white border border-gray-200 rounded-sm flex items-center justify-center shadow-sm"
+          className="w-12 h-8 bg-white border border-gray-200 rounded-sm flex items-center justify-center shadow-sm"
         >
           <img 
             src={icon.url} 
             alt={icon.name} 
             // زوم اللوجو ليكون مالي الكارت بوضوح (Zoom 1.2x)
-            className="w-[85%] h-[85%] object-contain scale-[1.15] transition-transform" 
+            className="w-[85%] h-[85%] object-contain scale-[1.18] transition-transform" 
           />
         </div>
       ))}
