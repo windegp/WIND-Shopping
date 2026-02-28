@@ -652,22 +652,23 @@ export default function CheckoutPage() {
 
           {/* البالونة السوداء الاحترافية */}
           {showAllIcons && (
-            /* الحاوية دي دلوقتي شايلة (المربعات + السهم) وبتسنترهم إجباري فوق نص الزرار */
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] slide-down" style={{ width: 'max-content' }}>
-  
-  {/* محتوى البالونة باللون الأسود */}
-  <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20">
-    {hiddenIcons.map((icon, idx) => (
-      <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
-        <img src={icon.url} alt={icon.name} className="w-full h-full object-contain scale-110" />
-      </div>
-    ))}
-  </div>
-  
-  {/* السهم absolute مسنتر على الـ wrapper بتاع الزر مش على البالونة */}
-  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95"></div>
-</div>
-          )}
+  <>
+    <div
+      className="absolute z-[9999] slide-down bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20"
+      style={{ bottom: 'calc(100% + 10px)', left: '50%', transform: 'translateX(-50%)', width: 'max-content' }}
+    >
+      {hiddenIcons.map((icon, idx) => (
+        <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
+          <img src={icon.url} alt={icon.name} className="w-full h-full object-contain scale-110" />
+        </div>
+      ))}
+    </div>
+    <div
+      className="absolute z-[9999] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95"
+      style={{ bottom: 'calc(100% + 4px)', left: '50%', transform: 'translateX(-50%)' }}
+    />
+  </>
+)}
         </div>
       )}
 
