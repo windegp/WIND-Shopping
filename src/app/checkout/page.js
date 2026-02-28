@@ -634,7 +634,7 @@ export default function CheckoutPage() {
       
       {/* 1. زر الـ + والبالونة - في أقصى اليسار كما طلبت */}
       {hiddenIcons.length > 0 && (
-        <div className="relative !overflow-visible flex items-center justify-center w-8">
+        <div className="relative !overflow-visible flex items-center justify-center w-8 shrink-0">
           <button
             type="button"
             onClick={(e) => {
@@ -658,7 +658,7 @@ export default function CheckoutPage() {
                   </div>
                 ))}
               </div>
-              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 mx-auto"></div>
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 absolute left-1/2 -translate-x-1/2"></div>
             </div>
           )}
         </div>
