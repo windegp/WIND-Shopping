@@ -653,21 +653,20 @@ export default function CheckoutPage() {
           {/* البالونة السوداء الاحترافية */}
           {showAllIcons && (
             /* الحاوية دي دلوقتي شايلة (المربعات + السهم) وبتسنترهم إجباري فوق نص الزرار */
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center slide-down" style={{ width: 'max-content' }}>
-              
-              {/* محتوى البالونة باللون الأسود */}
-              <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20">
-                {hiddenIcons.map((icon, idx) => (
-                  <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
-                    {/* وضوح اللوجو داخل البالونة (scale-110) */}
-                    <img src={icon.url} alt={icon.name} className="w-full h-full object-contain scale-110" />
-                  </div>
-                ))}
-              </div>
-              
-              {/* السهم (المثلث) - الآن مسنتر تلقائياً تحت البالونة وفي منتصف زر الـ + بالملّي */}
-              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 flex-shrink-0"></div>
-            </div>
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] slide-down" style={{ width: 'max-content' }}>
+  
+  {/* محتوى البالونة باللون الأسود */}
+  <div className="bg-black/95 backdrop-blur-md rounded-lg p-2.5 shadow-2xl flex gap-2.5 border border-white/20">
+    {hiddenIcons.map((icon, idx) => (
+      <div key={idx} className="w-11 h-7 bg-white rounded-sm flex items-center justify-center p-1 shadow-sm">
+        <img src={icon.url} alt={icon.name} className="w-full h-full object-contain scale-110" />
+      </div>
+    ))}
+  </div>
+  
+  {/* السهم absolute مسنتر على الـ wrapper بتاع الزر مش على البالونة */}
+  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95"></div>
+</div>
           )}
         </div>
       )}
