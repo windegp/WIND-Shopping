@@ -9,14 +9,14 @@ import {
   Crown, UserMinus, Search, ChevronLeft 
 } from "lucide-react";
 
-// المسميات مطابقة لسكريبت الرفع (migrate.js) اللي عملناه في wind-data-tool
+// المسميات هنا أصبحت متطابقة 100% مع أسماء شيتات الإكسيل بتاعتك (بدون .csv)
 const segmentsList = [
   { id: 'all', label: 'كل العملاء', icon: <Users size={16} /> },
-  { id: 'Purchased_Once', label: 'اشتروا مرة واحدة', icon: <ShoppingCart size={16} /> },
-  { id: 'Email_Subscriber', label: 'المشتركين', icon: <Mail size={16} /> },
-  { id: 'Abandoned_Checkout', label: 'تركوا السلة', icon: <UserMinus size={16} /> },
-  { id: 'VIP_Customer', label: 'اشتروا أكثر من مرة', icon: <Crown size={16} /> },
-  { id: 'Potential_Customer', label: 'لم يشتروا بعد', icon: <Target size={16} /> },
+  { id: 'purchased_once', label: 'اشتروا مرة واحدة', icon: <ShoppingCart size={16} /> },
+  { id: 'subscribers', label: 'المشتركين', icon: <Mail size={16} /> },
+  { id: 'abandoned', label: 'تركوا السلة', icon: <UserMinus size={16} /> },
+  { id: 'purchased_multiple', label: 'اشتروا أكثر من مرة', icon: <Crown size={16} /> },
+  { id: 'no_purchase', label: 'لم يشتروا بعد', icon: <Target size={16} /> },
 ];
 
 export default function CustomersPage() {
@@ -43,10 +43,9 @@ export default function CustomersPage() {
     finally { setLoading(false); }
   };
 
-  // دالة التصدير للإكسيل (نفس بيانات الشريحة المفتوحة)
   const exportToExcel = () => {
     const headers = ["الاسم الأول,الاسم الأخير,الإيميل,إجمالي الإنفاق,عدد الطلبات,المدينة"];
-    const rows = customers.map(c => `"${c['First Name']}","${c['Last Name']}","${c.Email}","${c['Total Spent']}","${c['Total Orders']}","${c['Default Address City']}"`);
+    const rows = customers.map(c => `"${c['First Name'] || ''}","${c['Last Name'] || ''}","${c.Email || ''}","${c['Total Spent'] || 0}","${c['Total Orders'] || 0}","${c['Default Address City'] || ''}"`);
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.concat(rows).join("\n");
     const link = document.createElement("a");
     link.setAttribute("href", encodeURI(csvContent));
@@ -72,7 +71,6 @@ export default function CustomersPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* الجانب الأيمن: الشرائح */}
           <div className="lg:col-span-1 space-y-2">
             <p className="text-xs font-bold text-gray-400 mb-4 px-2 uppercase tracking-widest">الشرائح (Segments)</p>
             {segmentsList.map((seg) => (
@@ -91,7 +89,6 @@ export default function CustomersPage() {
             ))}
           </div>
 
-          {/* الجانب الأيسر: جدول البيانات */}
           <div className="lg:col-span-3 space-y-4 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-gray-100 relative">
                 <Search className="absolute right-7 top-7 text-gray-400" size={18} />
@@ -118,7 +115,8 @@ export default function CustomersPage() {
                     ) : (
                       customers.filter(c => c.Email?.toLowerCase().includes(search.toLowerCase()) || (c['First Name'] + ' ' + c['Last Name']).toLowerCase().includes(search.toLowerCase()))
                       .map((customer) => (
-                        <tr key={customer.id} className="hover:bg-gray-50 transition-colors cursor-pointer group" onClick={() => router.push(`/admin/customers/${encodeURIComponent(customer.Email)}`)}>
+                        <tr key={customer.id} className="hover:bg-gray-50 transition-colors cursor-pointer group" 
+                            onClick={() => router.push(`/admin/customers/${encodeURIComponent(customer.Email)}`)}>
                           <td className="px-6 py-4">
                             <p className="text-sm font-bold text-[#005bd3] group-hover:underline">{customer['First Name']} {customer['Last Name']}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{customer.Email}</p>

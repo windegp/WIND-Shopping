@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { 
   ArrowRight, Mail, Phone, MapPin, CreditCard, 
-  Package, ShoppingBag, ChevronLeft, ExternalLink, Info
+  Package, ShoppingBag, ChevronLeft
 } from "lucide-react";
 
 export default function CustomerDetailsPage() {
@@ -23,28 +23,36 @@ export default function CustomerDetailsPage() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const decodedEmail = decodeURIComponent(email);
-      // 1. جلب بيانات العميل الأساسية من الفايربيس
+      const decodedEmail = decodeURIComponent(email).trim();
+      let cData = null;
+
+      // 1. البحث الشامل عن العميل (لتفادي مشكلة العميل غير موجود)
       const cSnap = await getDoc(doc(db, "Customers", decodedEmail));
-      
       if (cSnap.exists()) {
-        const cData = cSnap.data();
+        cData = cSnap.data();
+      } else {
+        const fallbackQuery = query(collection(db, "Customers"), where("Email", "==", decodedEmail));
+        const fallbackSnap = await getDocs(fallbackQuery);
+        if (!fallbackSnap.empty) {
+          cData = fallbackSnap.docs[0].data();
+        }
+      }
+      
+      if (cData) {
         setCustomer(cData);
 
-        // 2. جلب كل الأوردرات المرتبطة بهذا الإيميل
-        const q = query(collection(db, "Orders"), where("Email", "==", decodedEmail));
+        // 2. جلب الأوردرات المرتبطة بالإيميل
+        const q = query(collection(db, "Orders"), where("Email", "==", cData.Email));
         const oSnap = await getDocs(q);
         const oList = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // 🔥 الربط بصورة المنتج من درج (products) بناءً على اسم المنتج المكتوب في الأوردر
+        // 3. جلب صور المنتجات الحقيقية
         const ordersWithRealImages = await Promise.all(oList.map(async (order) => {
-          // هندور في المنتجات على منتج عنوانه يطابق 'Lineitem name' اللي في شيت الأوردرات
           const pQuery = query(collection(db, "products"), where("title", "==", order['Lineitem name']));
           const pSnap = await getDocs(pQuery);
-          
           let productImage = null;
           if (!pSnap.empty) {
-            productImage = pSnap.docs[0].data().images?.[0]; // لو لقى المنتج هيجيب أول صورة له
+            productImage = pSnap.docs[0].data().images?.[0];
           }
           return { ...order, productImage };
         }));
@@ -65,13 +73,17 @@ export default function CustomerDetailsPage() {
     </div>
   );
 
-  if (!customer) return <div className="p-20 text-center font-bold text-red-500">العميل غير موجود في قاعدة البيانات.</div>;
+  if (!customer) return (
+    <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center gap-4">
+        <p className="text-xl font-black text-red-500">العميل غير موجود في قاعدة البيانات.</p>
+        <button onClick={() => router.back()} className="px-4 py-2 bg-white border rounded-lg font-bold">العودة</button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] p-4 sm:p-8 font-sans text-[#202223]" dir="rtl">
       <div className="max-w-6xl mx-auto">
         
-        {/* هيدر الصفحة والرجوع */}
         <button 
           onClick={() => router.back()} 
           className="mb-8 flex items-center gap-2 text-xs font-black text-gray-400 hover:text-[#008060] transition-colors group"
@@ -84,7 +96,6 @@ export default function CustomerDetailsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* العمود الأيمن: كارت العميل التعريفي */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
               <div className="flex flex-col items-center text-center mb-8">
@@ -113,7 +124,6 @@ export default function CustomerDetailsPage() {
               </div>
             </div>
 
-            {/* إحصائيات سريعة */}
             <div className="grid grid-cols-2 gap-4">
                <div className="bg-white p-6 rounded-3xl border border-gray-200 text-center">
                   <p className="text-[10px] text-gray-400 font-bold mb-2">عدد الطلبات</p>
@@ -126,7 +136,6 @@ export default function CustomerDetailsPage() {
             </div>
           </div>
 
-          {/* العمود الأيسر: سجل الطلبات المتصل بصور منتجاتك */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden min-h-[500px]">
               <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
@@ -143,7 +152,6 @@ export default function CustomerDetailsPage() {
                     className="p-5 flex items-center gap-5 hover:bg-gray-50 transition-all cursor-pointer group"
                     onClick={() => router.push(`/admin/orders/${encodeURIComponent(o.Name)}`)}
                   >
-                    {/* صورة المنتج المسحوبة من درج products */}
                     <div className="w-16 h-16 rounded-2xl bg-gray-50 overflow-hidden border border-gray-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
                        {o.productImage ? (
                          <img src={o.productImage} className="w-full h-full object-cover" alt={o['Lineitem name']} />
