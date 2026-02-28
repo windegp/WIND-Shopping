@@ -618,67 +618,65 @@ export default function CheckoutPage() {
     أيقونات وسائل الدفع التفاعلية
     ========================================== */}
 {(() => {
+  // 1. تعريف الأيقونات
   const paymentIcons = [
-    "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg",
-    "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg",
-    // تقدر تضيف أي روابط أيقونات تانية هنا وهتتحسب في الـ + تلقائياً
+    { name: "Visa", url: "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg" },
+    { name: "Mastercard", url: "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg" },
+    { name: "Meeza", url: "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg" },
+    { name: "Apple Pay", url: "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg" },
   ];
 
   const maxVisible = 3;
-  // لو المستخدم ضغط على الزر، بنعرض كل الأيقونات، غير كده بنعرض أول 3 بس
-  const iconsToDisplay = showAllIcons ? paymentIcons : paymentIcons.slice(0, maxVisible);
-  const hiddenCount = paymentIcons.length - maxVisible;
+  const visibleIcons = paymentIcons.slice(0, maxVisible);
+  const hiddenIcons = paymentIcons.slice(maxVisible);
 
   return (
-    <div className="flex items-center gap-2 mr-auto" dir="ltr">
-      {/* عرض الأيقونات */}
-      <div className="flex items-center gap-2 transition-all duration-500 ease-in-out">
-        {iconsToDisplay.map((url, idx) => (
-          <div
-            key={idx}
-            className="w-11 h-7 bg-white border border-gray-200 rounded-md flex items-center justify-center p-1 shadow-sm hover:border-gray-400 transition-all transform hover:scale-105"
+    <div className="flex items-center gap-2 mr-auto relative" dir="ltr">
+      {/* الأيقونات الأساسية - بدون تأثيرات ضغط أو تفاعل */}
+      {visibleIcons.map((icon, idx) => (
+        <div
+          key={idx}
+          className="w-10 h-7 bg-white border border-gray-200 rounded flex items-center justify-center overflow-hidden shadow-sm"
+        >
+          <img
+            src={icon.url}
+            alt={icon.name}
+            className="w-[80%] h-[80%] object-contain"
+          />
+        </div>
+      ))}
+
+      {/* زر الـ + مع البالونة السوداء (Popover) */}
+      {hiddenIcons.length > 0 && (
+        <div className="relative flex items-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowAllIcons(!showAllIcons);
+            }}
+            className="w-8 h-6 bg-gray-50 border border-gray-300 rounded flex items-center justify-center shadow-sm hover:bg-gray-100 transition-colors"
           >
-            <img
-              src={url}
-              alt="payment"
-              className="w-full h-full object-contain"
-              onError={(e) => e.target.parentElement.style.display = 'none'}
-            />
-          </div>
-        ))}
-      </div>
+            <span className="text-[10px] font-black text-gray-600">+{hiddenIcons.length}</span>
+          </button>
 
-      {/* زر الـ + التفاعلي: يظهر فقط في حالة عدم العرض الكامل ووجود أيقونات مخفية */}
-      {!showAllIcons && hiddenCount > 0 && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault(); // منع الفورم من الإرسال
-            e.stopPropagation(); // منع اختيار وسيلة الدفع عند الضغط على الزرار
-            setShowAllIcons(true);
-          }}
-          className="w-9 h-7 bg-gray-100 border border-gray-300 rounded-md flex items-center justify-center shadow-sm hover:bg-gray-200 hover:border-gray-400 transition-all group"
-          title="عرض المزيد من الوسائل"
-        >
-          <span className="text-[10px] font-black text-gray-600 group-hover:text-gray-900">+{hiddenCount}</span>
-        </button>
-      )}
-
-      {/* زر إغلاق (اختياري) يظهر لما نعرض الكل عشان يرجعهم تاني */}
-      {showAllIcons && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowAllIcons(false);
-          }}
-          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <X size={14} />
-        </button>
+          {/* البالونة السوداء (Popover) */}
+          {showAllIcons && (
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 slide-down">
+              {/* محتوى البالونة */}
+              <div className="bg-black/90 backdrop-blur-sm rounded-lg p-2 shadow-xl flex gap-2 border border-white/10">
+                {hiddenIcons.map((icon, idx) => (
+                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1">
+                    <img src={icon.url} alt={icon.name} className="w-full h-full object-contain" />
+                  </div>
+                ))}
+              </div>
+              {/* المثلث الصغير السفلي */}
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/90 mx-auto"></div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
