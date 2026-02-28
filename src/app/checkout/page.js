@@ -438,7 +438,7 @@ export default function CheckoutPage() {
             {/* SECTION: Delivery */}
             <div className="mb-8">
               <p className="section-label">عنوان التوصيل</p>
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+              <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
 
                 {/* Country */}
                 <div className="px-4 py-1 relative">
@@ -661,18 +661,17 @@ export default function CheckoutPage() {
             <span className="text-[10px] font-black text-gray-600">+{hiddenIcons.length}</span>
           </button>
 
-          {/* البالونة السوداء (Popover) */}
+          {/* البالونة السوداء - معدلة لتظهر فوق الإطار */}
           {showAllIcons && (
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 slide-down">
-              {/* محتوى البالونة */}
-              <div className="bg-black/90 backdrop-blur-sm rounded-lg p-2 shadow-xl flex gap-2 border border-white/10">
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[100] slide-down">
+              <div className="bg-black/90 backdrop-blur-md rounded-lg p-2 shadow-2xl flex gap-2 border border-white/20 min-w-max">
                 {hiddenIcons.map((icon, idx) => (
-                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1">
+                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1 shadow-sm">
                     <img src={icon.url} alt={icon.name} className="w-full h-full object-contain" />
                   </div>
                 ))}
               </div>
-              {/* المثلث الصغير السفلي */}
+              {/* المثلث السفلي */}
               <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/90 mx-auto"></div>
             </div>
           )}
