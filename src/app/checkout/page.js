@@ -630,7 +630,7 @@ export default function CheckoutPage() {
   const hiddenIcons = paymentIcons.slice(maxVisible);
 
   return (
-    <div className="flex items-center gap-2.3 mr-auto relative !overflow-visible" dir="ltr">
+    <div className="flex items-center gap-2.6 mr-auto relative !overflow-visible" dir="ltr">
       
       {/* 1. زر الـ + والبالونة - في أقصى اليسار كما طلبت */}
       {hiddenIcons.length > 0 && (
