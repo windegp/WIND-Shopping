@@ -18,32 +18,39 @@ export default function OrderDetailsPage() {
   const fetchOrderDetails = async () => {
     try {
       const decodedId = decodeURIComponent(id).trim();
-      const orderIdWithHash = decodedId.startsWith('#') ? decodedId : `#${decodedId}`;
-      const docSnap = await getDoc(doc(db, "Orders", orderIdWithHash));
+      
+      // 🔥 الحل السحري: لو الأوردر WIND مش هنحط شباك، لو شوبيفاي هنحط الشباك
+      let orderIdToFetch = decodedId;
+      if (!decodedId.startsWith('WIND') && !decodedId.startsWith('#')) {
+        orderIdToFetch = `#${decodedId}`;
+      }
+
+      const docSnap = await getDoc(doc(db, "Orders", orderIdToFetch));
       
       if (docSnap.exists()) {
         const orderData = docSnap.data();
         setOrder(orderData);
 
-        // 🔥 الداتا دلوقتي فيها lineItems (بفضل سكريبت الرفع الجديد)
-        const items = orderData.lineItems || [];
-        
-        // جلب الصور الحقيقية بذكاء (عن طريق فصل الاسم الأساسي عن تفاصيل اللون/المقاس)
-        const itemsWithImages = await Promise.all(items.map(async (item) => {
-          // استخراج اسم المنتج الأساسي (مثال: "T-shirt - Black" يتحول لـ "T-shirt")
-          const baseName = item.name.split(' - ')[0].trim(); 
-          
-          const pQ = query(collection(db, "products"), where("title", "==", baseName));
-          const pSnap = await getDocs(pQ);
-          
-          let img = null;
-          if (!pSnap.empty) {
-            img = pSnap.docs[0].data().images?.[0]; // سحب أول صورة للمنتج
-          }
-          return { ...item, image: img, baseName };
-        }));
+        const isWind = orderData.data_source === 'WIND_Web';
 
-        setProductsList(itemsWithImages);
+        if (isWind) {
+          // داتا WIND بتيجي جاهزة بالصور والأسماء والمقاسات، مفيش داعي ندور!
+          setProductsList(orderData.lineItems || []);
+        } else {
+          // داتا شوبيفاي القديمة اللي بتحتاج ندور على الصور
+          const items = orderData.lineItems || [];
+          const itemsWithImages = await Promise.all(items.map(async (item) => {
+            const baseName = item.name.split(' - ')[0].trim(); 
+            const pQ = query(collection(db, "products"), where("title", "==", baseName));
+            const pSnap = await getDocs(pQ);
+            let img = null;
+            if (!pSnap.empty) {
+              img = pSnap.docs[0].data().images?.[0]; 
+            }
+            return { ...item, image: img, baseName };
+          }));
+          setProductsList(itemsWithImages);
+        }
       }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -59,7 +66,10 @@ export default function OrderDetailsPage() {
           <div className="flex items-center gap-4">
              <button onClick={()=>router.back()} className="p-2 bg-white border rounded-lg hover:bg-gray-50"><ArrowRight size={20}/></button>
              <div>
-               <h1 className="text-xl sm:text-2xl font-black text-[#202223]">طلب رقم {order.Name}</h1>
+               <h1 className="text-xl sm:text-2xl font-black text-[#202223] flex items-center gap-2">
+                 طلب رقم {order.Name}
+                 {order.data_source === 'WIND_Web' && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">WIND Web</span>}
+               </h1>
                <p className="text-xs text-gray-400 mt-1 font-bold">التاريخ: {order['Created at']}</p>
              </div>
           </div>
@@ -68,7 +78,6 @@ export default function OrderDetailsPage() {
 
         <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
            
-           {/* بيانات العميل */}
            <div>
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><User size={14}/> بيانات العميل</h3>
               <p className="text-sm font-black text-[#202223]">{order['Billing Name']}</p>
@@ -79,16 +88,14 @@ export default function OrderDetailsPage() {
                 <p className="text-xs text-gray-700 leading-relaxed font-bold">
                   {order['Shipping Address1']}<br/>
                   {order['Shipping City']} - {order['Shipping Province']}<br/>
-                  <span className="text-[#008060] mt-2 inline-block">الهاتف: <span dir="ltr">{order['Shipping Phone'] || '---'}</span></span>
+                  <span className="text-[#008060] mt-2 inline-block">الهاتف: <span dir="ltr">{order['Shipping Phone'] || order.Phone || '---'}</span></span>
                 </p>
               </div>
            </div>
 
-           {/* المنتجات والإجمالي */}
            <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Package size={14}/> المنتجات المطلوبة</h3>
               
-              {/* قائمة المنتجات المتعددة */}
               <div className="space-y-4 mb-6">
                 {productsList.map((product, idx) => (
                   <div key={idx} className="flex gap-4 items-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -117,15 +124,12 @@ export default function OrderDetailsPage() {
                      <span>مصاريف الشحن:</span><span>{order.Shipping} EGP</span>
                    </div>
                  )}
-                 
-                 {/* حل مشكلة كود الخصم الفاضي */}
-                 {order['Discount Amount'] > 0 && (
+                 {order['Discount Code'] && (
                    <div className="flex justify-between text-xs text-red-500 font-bold bg-red-50 p-2 rounded-lg">
-                     <span>خصم {order['Discount Code'] ? `(${order['Discount Code']})` : 'مُطبق'}:</span>
-                     <span>- {order['Discount Amount']} EGP</span>
+                     <span>كود الخصم:</span>
+                     <span>({order['Discount Code']})</span>
                    </div>
                  )}
-                 
                  <div className="flex justify-between text-lg font-black pt-4 border-t border-gray-200 text-[#008060]">
                    <span>الإجمالي:</span><span>{order.Total} EGP</span>
                  </div>
