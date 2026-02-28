@@ -631,16 +631,16 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex items-center gap-2 mr-auto relative !overflow-visible" dir="ltr">
-      {/* الأيقونات الأساسية */}
+      {/* الأيقونات الثابتة */}
       {visibleIcons.map((icon, idx) => (
         <div key={idx} className="w-10 h-7 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm">
           <img src={icon.url} alt={icon.name} className="w-[80%] h-[80%] object-contain" />
         </div>
       ))}
 
-      {/* زر الـ + والبالونة السوداء */}
+      {/* زر الـ + والبالونة المتحررة */}
       {hiddenIcons.length > 0 && (
-        <div className="relative !overflow-visible flex items-center">
+        <div className="relative !overflow-visible">
           <button
             type="button"
             onClick={(e) => {
@@ -653,17 +653,18 @@ export default function CheckoutPage() {
             <span className="text-[10px] font-black text-gray-600">+{hiddenIcons.length}</span>
           </button>
 
-          {/* البالونة السوداء (Popover) */}
+          {/* البالونة السوداء - الضربة القاضية */}
           {showAllIcons && (
-            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[9999] slide-down">
-              <div className="bg-black/95 backdrop-blur-md rounded-lg p-2 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.5)] flex gap-2 border border-white/20 min-w-max">
+            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[999] slide-down pointer-events-auto">
+              {/* محتوى البالونة */}
+              <div className="bg-black/95 backdrop-blur-md rounded-lg p-2 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] flex gap-2 border border-white/20 min-w-max">
                 {hiddenIcons.map((icon, idx) => (
-                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1">
+                  <div key={idx} className="w-9 h-6 bg-white rounded flex items-center justify-center p-1 shadow-sm">
                     <img src={icon.url} alt={icon.name} className="w-full h-full object-contain" />
                   </div>
                 ))}
               </div>
-              {/* المثلث السفلي */}
+              {/* المثلث */}
               <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black/95 mx-auto"></div>
             </div>
           )}
