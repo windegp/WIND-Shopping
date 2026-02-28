@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from "../../context/CartContext";
+import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { ChevronDown, Info, CheckCircle2, Phone, ShoppingBag, Shield, Tag, ChevronLeft, Truck, CreditCard, Banknote, Smartphone, X, Lock } from 'lucide-react';
 
@@ -117,8 +118,8 @@ export default function CheckoutPage() {
   const SHIPPING_COST = shipping;
   const finalTotal = total;
 
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [orderCompleted, setOrderCompleted] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [showAllIcons, setShowAllIcons] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
@@ -164,14 +165,25 @@ export default function CheckoutPage() {
     if (!validate()) return window.scrollTo(0, 0);
     setLoading(true);
 
+    // 1. توليد رقم طلب موحد لاستخدامه في كل الصفحات
     const orderId = `WIND-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    // 2. تجهيز البيانات للتخزين المؤقت (عشان صفحة thank-you تبعت الإيميل)
+    const pendingOrder = {
+      orderId,
+      formData,
+      cartItems,
+      total: finalTotal,
+      amount: finalTotal,
+      appliedPromo,
+      customerEmail: formData.email,
+    };
 
     try {
       if (paymentMethod === 'card') {
-        // ══════════════════════════════════════════════
-        // ✅ تغيير: بدل redirect → نجيب بيانات الـ iFrame
-        //    من السيرفر ونفتح الـ Modal في نفس الصفحة
-        // ══════════════════════════════════════════════
+        // حفظ الطلب في المتصفح قبل فتح بوابة كاشير
+        localStorage.setItem('pendingOrder', JSON.stringify(pendingOrder));
+
         const res = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -187,23 +199,33 @@ export default function CheckoutPage() {
         });
 
         const data = await res.json();
-        if (!res.ok || !data.iframeData) {
-          throw new Error(data.error || 'حدث خطأ، حاول مرة أخرى');
-        }
+        if (!res.ok || !data.iframeData) throw new Error(data.error || 'حدث خطأ');
 
-        // ✅ فتح الـ iFrame Modal بدل window.location.href
+       // ✅ حفظ بيانات الطلب في المتصفح قبل ما نفتح بوابة كاشير
+        localStorage.setItem('pendingOrder', JSON.stringify({
+          orderId,
+          amount: finalTotal.toFixed(2),
+          customerName: `${formData.firstName} ${formData.lastName}`,
+          customerEmail: formData.email,
+          phone: formData.phone,
+          formData,
+          cartItems,
+          total: finalTotal,
+          appliedPromo,
+        }));
+
+        // ✅ فتح الـ iFrame Modal
         setIframeData(data.iframeData);
         setLoading(false);
 
       } else {
-        // ══════════════════════════════════════════════
-        // COD أو InstaPay — لم يتغير شيء هنا بالكامل
-        // ══════════════════════════════════════════════
+        // للدفع عند الاستلام وإنستا باي
         const res = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             paymentMethod,
+            orderId, // نرسل الـ orderId الموحد
             formData,
             cartItems,
             total: finalTotal,
@@ -211,14 +233,17 @@ export default function CheckoutPage() {
           }),
         });
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error('حدث خطأ، حاول مرة أخرى');
-        }
+        if (!res.ok) throw new Error('حدث خطأ في إنشاء الطلب');
 
-        setOrderCompleted(true);
+       // 1. مسح أي طلبات معلقة في المتصفح عشان الإيميل متبعتش مرتين
+        localStorage.removeItem('pendingOrder');
+
+        // 2. تنظيف السلة
         clearCart();
         setLoading(false);
+
+        // 3. التوجيه لصفحة الشكر مع تمرير رقم الطلب الموحد
+        router.push(`/thank-you?orderId=${orderId}`);
       }
 
     } catch (err) {
@@ -227,28 +252,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // ── صفحة النجاح (COD / InstaPay) — لم تتغير ──
-  if (orderCompleted) {
-    return (
-      <div className="min-h-screen bg-[#f5f5f0] flex flex-col items-center justify-center p-6 text-center" dir="rtl">
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap');
-          * { font-family: 'Cairo', sans-serif; }
-        `}</style>
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 max-w-md w-full shadow-sm">
-          <div className="w-16 h-16 bg-[#F5C518]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 size={36} className="text-[#F5C518]" />
-          </div>
-          <h1 className="text-2xl font-black text-gray-900 mb-3">تم استلام طلبك بنجاح</h1>
-          <p className="text-gray-500 mb-2 leading-relaxed text-sm">شكراً لثقتك بنا. سنتواصل معك هاتفياً في أقرب وقت لتأكيد الشحن.</p>
-          <p className="text-xs text-gray-400 mb-8">مدة التوصيل المتوقعة: ٣ - ٥ أيام عمل</p>
-          <Link href="/" className="block bg-[#F5C518] text-black px-8 py-3.5 rounded-lg font-bold text-sm hover:bg-[#e6b800] transition-all">
-            العودة للمتجر
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const inputClass = (field) =>
     `w-full px-4 py-3 border rounded-lg outline-none transition-all text-sm bg-white placeholder-gray-400 text-gray-800
