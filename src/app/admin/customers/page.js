@@ -6,7 +6,6 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { Users, Target, Mail, ShoppingCart, Download, Crown, UserMinus, Search, ChevronLeft } from "lucide-react";
 
-// المسميات هنا مطابقة لصورة الفايربيس بتاعتك بالظبط (الكابيتال كابيتال)
 const segmentsList = [
   { id: 'all', label: 'كل العملاء', icon: <Users size={16} /> },
   { id: 'Purchased_Once', label: 'اشتروا مرة واحدة', icon: <ShoppingCart size={16} /> },
@@ -38,14 +37,43 @@ export default function CustomersPage() {
     finally { setLoading(false); }
   };
 
-  const exportToExcel = () => {
+  // 🔥 دالة التصدير الاحترافية لمنصات الإعلانات (Meta, Google, TikTok) 100%
+  const exportToExcelForAds = () => {
     if(customers.length === 0) return alert("لا توجد بيانات للتصدير");
-    const headers = ["الاسم,الإيميل,إجمالي الإنفاق,عدد الطلبات,المدينة,العنوان التفصيلي"];
-    const rows = customers.map(c => `"${c['First Name']||''} ${c['Last Name']||''}","${c.Email||''}","${c['Total Spent']||0}","${c['Total Orders']||0}","${c['Default Address City']||''}","${c['Default Address Address1']||''}"`);
+
+    // العناوين القياسية اللي بتعمل Auto-Map في مدير إعلانات فيسبوك وجوجل
+    const headers = ["Email,Phone,FirstName,LastName,City,Value,Currency"];
+
+    const rows = customers.map(c => {
+      // 1. الإيميل: لقط كل الاحتمالات + تنظيف + حروف صغيرة (Lowercase)
+      const rawEmail = c.Email || c.email || '';
+      const email = rawEmail.toString().trim().toLowerCase();
+
+      // 2. رقم الهاتف: تنظيف من أي رموز أو مسافات، وترك الأرقام فقط
+      const rawPhone = c.Phone || c['Default Address Phone'] || '';
+      const phone = rawPhone.toString().replace(/[^0-9+]/g, '');
+
+      // 3. فصل الأسماء: الاسم الأول والأخير كل واحد في خانة
+      const firstName = c['First Name'] ? c['First Name'].toString().trim() : '';
+      const lastName = c['Last Name'] ? c['Last Name'].toString().trim() : '';
+      
+      const city = c['Default Address City'] ? c['Default Address City'].toString().trim() : '';
+      
+      // 4. قيمة العميل: إجمالي المنصرف (Value-Based Lookalike)
+      const value = c['Total Spent'] || 0;
+      
+      // 5. العملة
+      const currency = "EGP";
+
+      // تجميع السطر بالإحداثيات المظبوطة
+      return `"${email}","${phone}","${firstName}","${lastName}","${city}","${value}","${currency}"`;
+    });
+
+    // تجميع الملف وإضافة دعم اللغة العربية (UTF-8 BOM) عشان العناوين متضربش
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.concat(rows).join("\n");
     const link = document.createElement("a");
     link.href = encodeURI(csvContent);
-    link.download = `WIND_${activeSegment}.csv`;
+    link.download = `WIND_Ads_Audience_${activeSegment}.csv`;
     link.click();
   };
 
@@ -54,7 +82,13 @@ export default function CustomersPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-black flex items-center gap-2"><Users className="text-[#008060]" /> إدارة العملاء</h1>
-          <button onClick={exportToExcel} className="bg-white border px-4 py-2 rounded-lg text-sm font-bold flex gap-2 shadow-sm hover:bg-gray-50"><Download size={16} /> تصدير (Excel)</button>
+          
+          <button 
+            onClick={exportToExcelForAds} 
+            className="bg-white border px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-gray-50 transition-all text-[#008060] border-[#008060]/30"
+          >
+            <Download size={16} /> تصدير للإعلانات (CSV)
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -75,16 +109,30 @@ export default function CustomersPage() {
 
             <div className="overflow-x-auto">
               <table className="w-full text-right">
-                <thead className="bg-gray-50 text-[11px] font-bold text-gray-400 uppercase tracking-wider"><tr><th className="px-6 py-4">العميل</th><th className="px-6 py-4">الموقع</th><th className="px-6 py-4 text-center">الطلبات</th><th className="px-6 py-4">الإنفاق</th></tr></thead>
+                <thead className="bg-gray-50 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4">العميل</th>
+                    {/* 🔥 تم إفراد عمود خاص للإيميل لتأكيد ظهوره */}
+                    <th className="px-6 py-4">الإيميل</th>
+                    <th className="px-6 py-4">الموقع</th>
+                    <th className="px-6 py-4 text-center">الطلبات</th>
+                    <th className="px-6 py-4">الإنفاق</th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {loading ? <tr><td colSpan="4" className="text-center py-20 text-gray-400 font-bold animate-pulse">جاري التحميل...</td></tr> : 
-                    customers.filter(c => c.Email?.includes(search) || c['First Name']?.includes(search)).map((c) => {
-                      // 🔥 لو العميل ملوش إيميل، بناخد الـ ID بتاعه عشان ميضربش undefined
+                  {loading ? <tr><td colSpan="5" className="text-center py-20 text-gray-400 font-bold animate-pulse">جاري التحميل...</td></tr> : 
+                    customers.filter(c => (c.Email||'').toLowerCase().includes(search.toLowerCase()) || (c['First Name']||'').includes(search)).map((c) => {
                       const safeId = c.Email || c.id; 
+                      // سحب الإيميل بأي طريقة كان متسجل بيها
+                      const displayEmail = c.Email || c.email || '---';
+                      
                       return (
                         <tr key={c.id} className="hover:bg-gray-50 cursor-pointer group transition-all" onClick={() => router.push(`/admin/customers/${encodeURIComponent(safeId)}`)}>
-                          <td className="px-6 py-4"><p className="text-sm font-bold text-[#005bd3] group-hover:underline">{c['First Name']} {c['Last Name']}</p><p className="text-[10px] text-gray-400 font-mono mt-0.5">{c.Email || 'بدون إيميل'}</p></td>
-                          <td className="px-6 py-4 text-xs text-gray-600 line-clamp-1 max-w-[200px] mt-3">{c['Default Address City'] || '---'}</td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-bold text-[#005bd3] group-hover:underline">{c['First Name']} {c['Last Name']}</p>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-mono text-gray-600">{displayEmail}</td>
+                          <td className="px-6 py-4 text-xs text-gray-600 line-clamp-1 max-w-[150px] mt-3">{c['Default Address City'] || '---'}</td>
                           <td className="px-6 py-4 text-sm font-bold text-center">{c['Total Orders'] || 0}</td>
                           <td className="px-6 py-4 text-sm font-black text-[#008060]">{c['Total Spent'] || 0} EGP</td>
                         </tr>
