@@ -621,8 +621,8 @@ export default function CheckoutPage() {
   const paymentIcons = [
     { name: "Visa", url: "https://ik.imagekit.io/windeg/WIND_Shopping/visa.svg" },
     { name: "Mastercard", url: "https://ik.imagekit.io/windeg/WIND_Shopping/mastercard.svg" },
-    { name: "Meeza", url: "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg" },
     { name: "Apple Pay", url: "https://ik.imagekit.io/windeg/WIND_Shopping/icons8-apple-pay.svg" },
+    { name: "Meeza", url: "https://ik.imagekit.io/windeg/WIND_Shopping/Meeza.svg" },
   ];
 
   const maxVisible = 3;
