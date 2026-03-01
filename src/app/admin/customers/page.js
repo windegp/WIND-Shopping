@@ -107,18 +107,38 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      // 1. 🔥 هنجيب البيانات من "الطلبات" مش العملاء، عشان نضمن الدقة 100%
-      const q = query(collection(db, "Orders"));
-      const querySnapshot = await getDocs(q);
-      const allOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+      // 1. نجيب كل العملاء من الداتا بيز (عشان منخسرش أرشيف شوبيفاي المتروك أو اللي لسه مشتراش)
+      const customersSnap = await getDocs(collection(db, "Customers"));
       const customersMap = new Map();
 
-      // 2. تجميع الطلبات وحساب إجماليات كل عميل
+      customersSnap.docs.forEach(doc => {
+        const data = doc.data();
+        const email = (data.Email || data.email || '').toLowerCase().trim();
+        const rawPhone = data.Phone || data['Default Address Phone'] || '';
+        const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+        // المعرف الأساسي: الإيميل، ولو مفيش يبقى التليفون، ولو مفيش يبقى الـ ID بتاع الدوكيومنت
+        const uniqueId = email || cleanPhone || doc.id;
+
+        customersMap.set(uniqueId, {
+          id: uniqueId,
+          ...data,
+          // هنصفر الأرقام دي ونحسبها من الطلبات الحقيقية عشان الدقة 100%
+          'Calculated Orders': 0,
+          'Calculated Spent': 0,
+          hasAbandoned: false,
+          originalSegments: data.segments || [],
+          data_source: data.data_source || 'Shopify_Import' // تأمين المنشأ
+        });
+      });
+
+      // 2. نجيب كل الطلبات ونحدث بيها بيانات العملاء المجمعة
+      const ordersSnap = await getDocs(collection(db, "Orders"));
+      const allOrders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
       allOrders.forEach(order => {
         if (order['Financial Status'] === 'deleted') return;
 
-        // هل الطلب ده سلة متروكة ولا حقيقي؟
+        // تحديد هل الطلب سلة متروكة/غير مكتملة ولا أوردر حقيقي
         const isAbandoned = order['Financial Status'] === 'abandoned' || 
                             order['Financial Status'] === 'pending_payment' || 
                             order.Name?.startsWith('DRAFT-');
@@ -126,9 +146,8 @@ export default function CustomersPage() {
         const rawPhone = order.Phone || order['Shipping Phone'] || '';
         const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
         const email = (order.Email || '').toLowerCase().trim();
-
-        // المعرف الأساسي للعميل: الإيميل (لو مفيش إيميل نستخدم التليفون)
         const uniqueId = email || cleanPhone;
+        
         if (!uniqueId) return; 
 
         if (!customersMap.has(uniqueId)) {
@@ -142,19 +161,20 @@ export default function CustomersPage() {
             Email: email,
             Phone: rawPhone,
             'Default Address City': order['Shipping City'] || order['Shipping Province'] || '',
-            'Total Orders': 0,
-            'Total Spent': 0,
             last_active: new Date(order['Created at'] || 0).getTime(),
             data_source: order.data_source || 'Shopify_Import',
-            hasAbandoned: false
+            'Calculated Orders': 0,
+            'Calculated Spent': 0,
+            hasAbandoned: false,
+            originalSegments: []
           });
         }
 
         const customer = customersMap.get(uniqueId);
 
-        // تحديث بيانات العميل بأحدث طلب (عشان لو غير عنوانه أو اسمه)
+        // تحديث بيانات العميل بأحدث نشاط واسم وعنوان
         const orderTime = new Date(order['Created at'] || 0).getTime();
-        if (orderTime > customer.last_active) {
+        if (!customer.last_active || orderTime > customer.last_active) {
           customer.last_active = orderTime;
           const fullName = order['Billing Name'] || '';
           if (fullName && fullName !== 'عميل محتمل') {
@@ -163,29 +183,50 @@ export default function CustomersPage() {
              customer['Last Name'] = nameParts.slice(1).join(' ') || customer['Last Name'];
           }
           if (order['Shipping City']) customer['Default Address City'] = order['Shipping City'];
+          // تحديث المنشأ لو عمل أوردر من WIND
+          if (order.data_source === 'WIND_Web') customer.data_source = 'WIND_Web';
         }
 
-        // 3. تجميع المبالغ والطلبات الحقيقية فقط
+        // حساب الأوردرات والمبالغ للطلبات الحقيقية فقط
         if (!isAbandoned) {
-          customer['Total Orders'] += 1;
-          customer['Total Spent'] += Number(order.Total || 0);
+          customer['Calculated Orders'] += 1;
+          customer['Calculated Spent'] += Number(order.Total || 0);
         } else {
           customer.hasAbandoned = true;
         }
       });
 
-      // 4. 🔥 تصنيف العملاء للشرائح بناءً على الأرقام الحقيقية اللي حسبناها
+      // 3. تصنيف العملاء للشرائح بدقة تامة
       let customersArray = Array.from(customersMap.values()).map(c => {
         const segments = ['all'];
         if (c.Email) segments.push('Email_Subscriber');
 
-        if (c['Total Orders'] === 0) {
-          segments.push('Potential_Customer');
-          if (c.hasAbandoned) segments.push('Abandoned_Checkout');
+        const realOrdersCount = c['Calculated Orders'] || 0;
+
+        if (realOrdersCount === 0) {
+          // لو معندوش أوردرات حقيقية في السيستم، نعتمد على أرشيف شوبيفاي لو كان مسجل إنه اشترى زمان
+          if (c.originalSegments.includes('Purchased_Once')) {
+             segments.push('Purchased_Once');
+             c['Total Orders'] = 1;
+          } else if (c.originalSegments.includes('VIP_Customer')) {
+             segments.push('VIP_Customer');
+             c['Total Orders'] = c['Total Orders'] || 2;
+          } else {
+             // لو مشترش قبل كده
+             segments.push('Potential_Customer');
+             // لو ساب سلة دلوقتي، أو كان سايب سلة زمان في شوبيفاي
+             if (c.hasAbandoned || c.originalSegments.includes('Abandoned_Checkout')) {
+                 segments.push('Abandoned_Checkout');
+             }
+             c['Total Orders'] = 0;
+          }
         } else {
-          if (c['Total Orders'] === 1) segments.push('Purchased_Once');
-          if (c['Total Orders'] > 1) segments.push('VIP_Customer');
-          // ممكن يكون اشترى قبل كده، بس حالياً سايب سلة جديدة متروكة
+          // لو عنده أوردرات في السيستم، نعتمد عليها 100% ونلغي الأرشيف الوهمي
+          c['Total Orders'] = realOrdersCount;
+          c['Total Spent'] = c['Calculated Spent'];
+
+          if (realOrdersCount === 1) segments.push('Purchased_Once');
+          if (realOrdersCount > 1) segments.push('VIP_Customer');
           if (c.hasAbandoned) segments.push('Abandoned_Checkout'); 
         }
 
@@ -193,7 +234,7 @@ export default function CustomersPage() {
         return c;
       });
 
-      // 5. فلترة الشاشة بناءً على الشريحة اللي الأدمن داس عليها
+      // 4. فلترة الشاشة
       if (activeSegment !== 'all') {
         customersArray = customersArray.filter(c => c.segments.includes(activeSegment));
       }
