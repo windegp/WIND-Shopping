@@ -197,31 +197,44 @@ export default function CustomersPage() {
       });
 
       // 3. تصنيف العملاء للشرائح بدقة تامة
-      let customersArray = Array.from(customersMap.values()).map(c => {
+      let customersArray = [];
+      
+      Array.from(customersMap.values()).forEach(c => {
         const segments = ['all'];
         if (c.Email) segments.push('Email_Subscriber');
 
         const realOrdersCount = c['Calculated Orders'] || 0;
 
         if (realOrdersCount === 0) {
-          // لو معندوش أوردرات حقيقية في السيستم، نعتمد على أرشيف شوبيفاي لو كان مسجل إنه اشترى زمان
-          if (c.originalSegments.includes('Purchased_Once')) {
-             segments.push('Purchased_Once');
-             c['Total Orders'] = 1;
-          } else if (c.originalSegments.includes('VIP_Customer')) {
-             segments.push('VIP_Customer');
-             c['Total Orders'] = c['Total Orders'] || 2;
+          // 🔥 فصل أرشيف شوبيفاي عن عملاء WIND بشكل قاطع
+          if (c.data_source === 'Shopify_Import' || !c.data_source) {
+            // شوبيفاي: نعتمد على الأرشيف القديم
+            if (c.originalSegments.includes('Purchased_Once')) {
+               segments.push('Purchased_Once');
+               c['Total Orders'] = 1;
+            } else if (c.originalSegments.includes('VIP_Customer')) {
+               segments.push('VIP_Customer');
+               c['Total Orders'] = c['Total Orders'] || 2;
+            } else {
+               segments.push('Potential_Customer');
+               if (c.hasAbandoned || c.originalSegments.includes('Abandoned_Checkout')) {
+                   segments.push('Abandoned_Checkout');
+               }
+               c['Total Orders'] = 0;
+            }
           } else {
-             // لو مشترش قبل كده
-             segments.push('Potential_Customer');
-             // لو ساب سلة دلوقتي، أو كان سايب سلة زمان في شوبيفاي
-             if (c.hasAbandoned || c.originalSegments.includes('Abandoned_Checkout')) {
-                 segments.push('Abandoned_Checkout');
-             }
-             c['Total Orders'] = 0;
+            // 🚀 عملاء WIND_Web: نعتمد على الحقيقة فقط من الطلبات!
+            // لو العميل معندوش أوردر ومعندوش سلة متروكة كمان (hasAbandoned = false)
+            // يبقى ده "شبح" نتج عن تغيير العميل لبياناته وهو بيكتب.. نتجاهله وميظهرش خالص!
+            if (!c.hasAbandoned) return; 
+
+            // لو داس كاشير (pending_payment) أو ساب سلة ومكملش (Draft)، هينزل هنا بشكل سليم
+            segments.push('Potential_Customer');
+            segments.push('Abandoned_Checkout');
+            c['Total Orders'] = 0;
           }
         } else {
-          // لو عنده أوردرات في السيستم، نعتمد عليها 100% ونلغي الأرشيف الوهمي
+          // لو عنده أوردرات حقيقية في السيستم (الدفع تم بنجاح أو دفع عند الاستلام)
           c['Total Orders'] = realOrdersCount;
           c['Total Spent'] = c['Calculated Spent'];
 
@@ -231,7 +244,7 @@ export default function CustomersPage() {
         }
 
         c.segments = segments;
-        return c;
+        customersArray.push(c);
       });
 
       // 4. فلترة الشاشة
