@@ -152,6 +152,8 @@ export default function CheckoutPage() {
     sessionIdRef.current = `SESS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
   }
   const sessionId = sessionIdRef.current;
+  // 🔥 متغير لتثبيت رقم الطلب الفعلي عشان لو العميل غير وسيلة الدفع ميكريتش أوردرين
+  const activeOrderIdRef = useRef(null);
 
  // ============================================================
   // 🚀 رادار السلة المتروكة المطور (يمنع التكرار ويسمع في العملاء)
@@ -256,8 +258,11 @@ export default function CheckoutPage() {
     if (!validate()) return window.scrollTo(0, 0);
     setLoading(true);
 
-    // 1. توليد رقم طلب موحد بمظهر احترافي (WIND-123456-ABC)
-    const orderId = `WIND-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+    // 1. 🔥 تثبيت رقم الطلب عشان لو العميل قفل الدفع بالكارت ورجع اختار "عند الاستلام" نحدث نفس الأوردر
+    if (!activeOrderIdRef.current) {
+      activeOrderIdRef.current = `WIND-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+    }
+    const orderId = activeOrderIdRef.current;
 
     // 2. تجهيز البيانات للتخزين المؤقت
     const pendingOrder = {
@@ -304,8 +309,8 @@ export default function CheckoutPage() {
 
       if (appliedPromo) orderData['Discount Code'] = appliedPromo;
 
-      // 1. إنشاء الأوردر
-      await setDoc(doc(db, "Orders", orderId), orderData);
+      // 1. إنشاء الأوردر أو تحديثه لو موجود
+      await setDoc(doc(db, "Orders", orderId), orderData, { merge: true });
 
       // 2. تحديث أو إنشاء ملف العميل (بجمع الأرقام صح)
       const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
