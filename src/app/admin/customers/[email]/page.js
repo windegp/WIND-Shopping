@@ -41,10 +41,29 @@ export default function CustomerDetailsPage() {
           q = query(collection(db, "Orders"), where("Billing Name", "==", `${cData['First Name']} ${cData['Last Name']}`));
         }
         
-        const oSnap = await getDocs(q);
-        const oList = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+       const oSnap = await getDocs(q);
+        let oList = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        const oWithImg = await Promise.all(oList.map(async (order) => {
+        // 🔥 1. إخفاء الطلبات اللي اتحذفت (لما السلة المتروكة اتحولت لطلب حقيقي)
+        oList = oList.filter(o => o['Financial Status'] !== 'deleted');
+
+        // 🔥 2. فلترة سحرية: لو العميل عنده 5 سلات متروكة قديمة مكررة بنفس السعر، هنعرض أحدث واحدة بس عشان ننظف الشاشة
+        const uniqueOrders = [];
+        const seenAbandoned = new Set();
+        
+        oList.sort((a, b) => new Date(b['Created at']) - new Date(a['Created at'])).forEach(order => {
+          if (order['Financial Status'] === 'abandoned') {
+            const key = `${order.Total}-${order.lineItems?.[0]?.name}`;
+            if (!seenAbandoned.has(key)) {
+              seenAbandoned.add(key);
+              uniqueOrders.push(order);
+            }
+          } else {
+            uniqueOrders.push(order);
+          }
+        });
+
+        const oWithImg = await Promise.all(uniqueOrders.map(async (order) => {
           // لو أوردر من WIND الصورة موجودة جاهزة
           if (order.data_source === 'WIND_Web') {
              return { ...order, productImage: order.lineItems?.[0]?.image || null };
@@ -128,7 +147,12 @@ export default function CustomerDetailsPage() {
                         <p className="text-sm font-black text-[#005bd3] group-hover:underline">#{orderLink}</p>
                         <p className="text-[11px] text-gray-500 mt-1 font-bold line-clamp-1">{displayProductName}</p>
                       </div>
-                      <div className="text-left shrink-0"><p className="text-md font-black">{o.Total} EGP</p><p className="text-[9px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700 mt-1 uppercase text-center">{o['Financial Status']}</p></div>
+                      <div className="text-left shrink-0">
+                        <p className="text-md font-black">{o.Total} EGP</p>
+                        <p className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 uppercase text-center ${o['Financial Status'] === 'abandoned' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          {o['Financial Status'] === 'abandoned' ? 'سلة متروكة' : o['Financial Status']}
+                        </p>
+                      </div>
                     </div>
                   )
                 }) : <div className="p-24 text-center text-gray-400 flex flex-col items-center gap-3"><Package size={40} className="opacity-20"/><p className="font-bold text-sm">لا توجد طلبات مرتبطة بهذا العميل</p></div>}

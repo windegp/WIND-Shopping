@@ -146,8 +146,8 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = useState({});
 
-  // ============================================================
-  // 🚀 رادار تتبع السلات المتروكة (يرمي في الطلبات كـ Abandoned)
+ // ============================================================
+  // 🚀 رادار السلة المتروكة المطور (يمنع التكرار ويسمع في العملاء)
   // ============================================================
   useEffect(() => {
     const hasContactInfo = formData.email || (formData.phone && formData.phone.length >= 11);
@@ -155,10 +155,13 @@ export default function CheckoutPage() {
     if (hasContactInfo && cartItems.length > 0) {
       const timeoutId = setTimeout(async () => {
         try {
+          // 1. تثبيت الـ ID لمنع التكرار
           const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
-          const draftOrderId = `DRAFT-${cleanPhone || Date.now()}`; 
-          const draftRef = doc(db, "Orders", draftOrderId);
+          const uniqueId = formData.email ? formData.email.toLowerCase().trim() : cleanPhone;
+          const draftOrderId = `DRAFT-${uniqueId}`; 
 
+          // 2. تحديث أو إنشاء الطلب المتروك (Draft Order)
+          const draftRef = doc(db, "Orders", draftOrderId);
           await setDoc(draftRef, {
             Name: draftOrderId,
             "Billing Name": `${formData.firstName} ${formData.lastName}`.trim() || 'عميل محتمل',
@@ -170,7 +173,7 @@ export default function CheckoutPage() {
             Shipping: shipping,
             Total: finalTotal,
             Currency: "EGP",
-            "Financial Status": "abandoned", // التصنيف كسلة متروكة
+            "Financial Status": "abandoned", 
             "Created at": new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }),
             data_source: "WIND_Web",
             lineItems: cartItems.map(item => ({
@@ -181,10 +184,30 @@ export default function CheckoutPage() {
             }))
           }, { merge: true });
 
+          // 3. تحديث ملف العميل بشريحة (تركوا السلة) عشان تسمع في الأدمن
+          const customerRef = doc(db, "Customers", uniqueId);
+          const customerSnap = await getDoc(customerRef);
+          
+          if (!customerSnap.exists() || (customerSnap.exists() && !customerSnap.data()['Total Orders'])) {
+            await setDoc(customerRef, {
+              "First Name": formData.firstName || "",
+              "Last Name": formData.lastName || "",
+              Email: formData.email ? formData.email.toLowerCase().trim() : "",
+              Phone: formData.phone || "",
+              "Default Address City": formData.city || "",
+              "Default Address Province": formData.governorate || "",
+              "Total Orders": 0,
+              "Total Spent": 0,
+              data_source: "WIND_Web",
+              segments: ["Abandoned_Checkout"], // 🔥 الشريحة المتروكة
+              last_active: new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' })
+            }, { merge: true });
+          }
+
         } catch (error) {
           console.error("Error saving abandoned cart:", error);
         }
-      }, 2500); 
+      }, 2000); 
 
       return () => clearTimeout(timeoutId); 
     }
@@ -304,6 +327,9 @@ export default function CheckoutPage() {
         });
       }
       // ============================================================
+      // 🔥 مسح السلة المتروكة (Draft) لأن العميل أكد الطلب بنجاح
+      const draftOrderIdToDelete = `DRAFT-${customerId}`;
+      await setDoc(doc(db, "Orders", draftOrderIdToDelete), { "Financial Status": "deleted" }, { merge: true });
 
       if (paymentMethod === 'card') {
         // حفظ الطلب في المتصفح قبل فتح بوابة كاشير

@@ -19,9 +19,9 @@ export default function OrderDetailsPage() {
     try {
       const decodedId = decodeURIComponent(id).trim();
       
-      // 🔥 الحل السحري: لو الأوردر WIND مش هنحط شباك، لو شوبيفاي هنحط الشباك
+      // 🔥 الحل السحري: لو الأوردر WIND أو سلة متروكة مش هنحط شباك، لو شوبيفاي هنحط الشباك
       let orderIdToFetch = decodedId;
-      if (!decodedId.startsWith('WIND') && !decodedId.startsWith('#')) {
+      if (!decodedId.startsWith('WIND') && !decodedId.startsWith('DRAFT') && !decodedId.startsWith('#')) {
         orderIdToFetch = `#${decodedId}`;
       }
 
@@ -66,9 +66,10 @@ export default function OrderDetailsPage() {
           <div className="flex items-center gap-4">
              <button onClick={()=>router.back()} className="p-2 bg-white border rounded-lg hover:bg-gray-50"><ArrowRight size={20}/></button>
              <div>
-               <h1 className="text-xl sm:text-2xl font-black text-[#202223] flex items-center gap-2">
+             <h1 className="text-xl sm:text-2xl font-black text-[#202223] flex items-center gap-2">
                  طلب رقم {order.Name}
-                 {order.data_source === 'WIND_Web' && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">WIND Web</span>}
+                 {order.data_source === 'WIND_Web' && !order.Name?.startsWith('DRAFT') && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">WIND Web</span>}
+                 {order.Name?.startsWith('DRAFT') && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">سلة متروكة</span>}
                </h1>
                <p className="text-xs text-gray-400 mt-1 font-bold">التاريخ: {order['Created at']}</p>
              </div>
