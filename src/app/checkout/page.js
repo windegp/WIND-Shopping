@@ -147,7 +147,7 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState({});
 
   // ============================================================
-  // 🚀 رادار تتبع السلات المتروكة (Abandoned Checkout Auto-Save)
+  // 🚀 رادار تتبع السلات المتروكة (يرمي في الطلبات كـ Abandoned)
   // ============================================================
   useEffect(() => {
     const hasContactInfo = formData.email || (formData.phone && formData.phone.length >= 11);
@@ -156,37 +156,39 @@ export default function CheckoutPage() {
       const timeoutId = setTimeout(async () => {
         try {
           const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
-          const customerId = formData.email ? formData.email.toLowerCase().trim() : cleanPhone;
-          
-          if (!customerId) return; 
+          const draftOrderId = `DRAFT-${cleanPhone || Date.now()}`; 
+          const draftRef = doc(db, "Orders", draftOrderId);
 
-          const customerRef = doc(db, "Customers", customerId);
-          const customerSnap = await getDoc(customerRef);
+          await setDoc(draftRef, {
+            Name: draftOrderId,
+            "Billing Name": `${formData.firstName} ${formData.lastName}`.trim() || 'عميل محتمل',
+            Email: formData.email ? formData.email.toLowerCase().trim() : '',
+            Phone: formData.phone,
+            "Shipping City": formData.city || "",
+            "Shipping Province": formData.governorate || "",
+            Subtotal: subtotal,
+            Shipping: shipping,
+            Total: finalTotal,
+            Currency: "EGP",
+            "Financial Status": "abandoned", // التصنيف كسلة متروكة
+            "Created at": new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }),
+            data_source: "WIND_Web",
+            lineItems: cartItems.map(item => ({
+              name: `${item.title} ${item.selectedSize ? '- ' + item.selectedSize : ''}`,
+              price: item.price,
+              quantity: item.qty,
+              image: item.image || item.images?.[0] || ''
+            }))
+          }, { merge: true });
 
-          if (!customerSnap.exists() || (customerSnap.exists() && !customerSnap.data()['Total Orders'])) {
-            await setDoc(customerRef, {
-              "First Name": formData.firstName || "",
-              "Last Name": formData.lastName || "",
-              Email: formData.email ? formData.email.toLowerCase().trim() : "",
-              Phone: formData.phone || "",
-              "Default Address City": formData.city || "",
-              "Default Address Province": formData.governorate || "",
-              "Total Orders": 0,
-              "Total Spent": 0,
-              data_source: "WIND_Web",
-              segments: ["Abandoned_Checkout"], 
-              abandoned_cart_value: total, 
-              last_active: new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' })
-            }, { merge: true });
-          }
         } catch (error) {
           console.error("Error saving abandoned cart:", error);
         }
-      }, 2000); 
+      }, 2500); 
 
       return () => clearTimeout(timeoutId); 
     }
-  }, [formData.email, formData.phone, formData.firstName, cartItems, total]);
+  }, [formData.email, formData.phone, formData.firstName, formData.lastName, formData.city, formData.governorate, cartItems, finalTotal, subtotal, shipping]);
   // ============================================================
 
   const validate = () => {
@@ -262,7 +264,7 @@ export default function CheckoutPage() {
       // 1. إنشاء الأوردر
       await setDoc(doc(db, "Orders", orderId), orderData);
 
-      // 2. تحديث أو إنشاء ملف العميل (النسخة المصححة)
+      // 2. تحديث أو إنشاء ملف العميل (بجمع الأرقام صح)
       const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
       const customerId = formData.email ? formData.email.toLowerCase().trim() : cleanPhone;
       const customerRef = doc(db, "Customers", customerId);
@@ -270,18 +272,20 @@ export default function CheckoutPage() {
 
       if (customerSnap.exists()) {
         const existingData = customerSnap.data();
-        const currentOrders = existingData['Total Orders'] || 0;
+        // استخدام Number لمنع مشكلة جمع النصوص
+        const currentOrders = Number(existingData['Total Orders'] || 0);
+        const currentSpent = Number(existingData['Total Spent'] || 0);
         const newSegment = currentOrders >= 1 ? "VIP_Customer" : "Purchased_Once";
 
         await setDoc(customerRef, {
           "Total Orders": currentOrders + 1,
-          "Total Spent": (existingData['Total Spent'] || 0) + finalTotal,
+          "Total Spent": currentSpent + Number(finalTotal),
           Last_Order_Status: "New",
           data_source: "WIND_Web",
           Phone: formData.phone,
           "Default Address City": formData.city,
           "Default Address Province": formData.governorate,
-          segments: [newSegment] // ترقية أو تعديل الشريحة
+          segments: [newSegment]
         }, { merge: true });
       } else {
         await setDoc(customerRef, {
@@ -293,10 +297,10 @@ export default function CheckoutPage() {
           "Default Address Province": formData.governorate,
           "Default Address Address1": formData.address,
           "Total Orders": 1,
-          "Total Spent": finalTotal,
+          "Total Spent": Number(finalTotal), // تأكيد إنها رقم
           Last_Order_Status: "New",
           data_source: "WIND_Web",
-          segments: ["Purchased_Once"] // الشريحة الصحيحة بدلاً من Potential
+          segments: ["Purchased_Once"] 
         });
       }
       // ============================================================
@@ -739,8 +743,8 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                      {/* ==========================================
-    أيقونات وسائل الدفع التفاعلية - النسخة الكاملة والمظبوطة بالملّي
-    ========================================== */}
+   أيقونات وسائل الدفع التفاعلية - النسخة الكاملة والمظبوطة بالملّي
+   ========================================== */}
 {(() => {
   // 1. مصفوفة الأيقونات (كاملة وبنفس روابطك)
   const paymentIcons = [

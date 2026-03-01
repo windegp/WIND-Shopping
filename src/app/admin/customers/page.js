@@ -24,7 +24,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   
   const [activeSegment, setActiveSegment] = useState('all');
-  const [activeTab, setActiveTab] = useState('wind'); // التبويب الافتراضي الجديد
+  const [activeTab, setActiveTab] = useState('wind'); // التبويب الافتراضي
   const [search, setSearch] = useState("");
   
   const router = useRouter();
@@ -37,10 +37,8 @@ export default function CustomersPage() {
 
     // 1. الفلترة حسب المنشأ (التبويبات)
     if (activeTab === 'shopify') {
-      // عملاء شوبيفاي القدام (أو اللي مفيش ليهم source)
       result = result.filter(c => c.data_source === 'Shopify_Import' || !c.data_source);
     } else if (activeTab === 'wind') {
-      // عملاء الموقع الجديد
       result = result.filter(c => c.data_source === 'WIND_Web'); 
     }
 
@@ -68,11 +66,10 @@ export default function CustomersPage() {
     finally { setLoading(false); }
   };
 
-  // 🔥 دالة التصدير للإعلانات (هتطبع الـ filteredCustomers بس)
+  // 🔥 دالة التصدير للإعلانات
   const exportToExcelForAds = () => {
     if(filteredCustomers.length === 0) return alert("لا توجد بيانات للتصدير");
 
-    // ضفنا عمود LastOrderStatus للموقع الجديد عشان تفلتر بيه المرتجعات
     const headers = ["Email,Phone,FirstName,LastName,City,State,Zip,Country,Value,Currency,OrderCount,LastOrderStatus,Source,Tags"];
 
     const rows = filteredCustomers.map(c => {
@@ -90,7 +87,6 @@ export default function CustomersPage() {
       const currency = "EGP";
       const orderCount = c['Total Orders'] || 0;
       
-      // الداتا الجديدة اللي هنبرمجها في الموقع
       const lastOrderStatus = c.Last_Order_Status || '---'; 
       const source = c.data_source || 'Shopify_Import';
       const tags = c.Tags ? c.Tags.toString().trim().replace(/"/g, '""') : '';
@@ -172,7 +168,7 @@ export default function CustomersPage() {
                       <tr><td colSpan="5" className="text-center py-20 text-gray-400 font-bold"><Archive size={40} className="mx-auto mb-3 opacity-20"/>لا يوجد عملاء في هذا القسم</td></tr>
                     ) : (
                     filteredCustomers.map((c) => {
-                      const safeId = c.Email || c.Phone || c.id; 
+                      const safeId = c.Email || c.Phone || c.id; // تم التعديل
                       const displayEmail = c.Email || c.email;
                       const displayPhone = c.Phone || c['Default Address Phone'];
                       

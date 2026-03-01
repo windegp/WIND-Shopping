@@ -14,7 +14,7 @@ export default function OrdersListPage() {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState('wind'); // الافتراضي بقى WIND عشان الشغل الجديد
+  const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20; 
   const router = useRouter();
@@ -23,10 +23,19 @@ export default function OrdersListPage() {
 
   useEffect(() => {
     let result = orders;
-    if (activeTab === 'shopify') {
-      result = result.filter(o => o.data_source === 'Shopify_Import' || !o.data_source);
-    } else if (activeTab === 'wind') {
-      result = result.filter(o => o.data_source === 'WIND_Web'); 
+    
+    // 🔥 فصلنا الأوردرات العادية عن السلات المتروكة تماماً
+    if (activeTab === 'abandoned') {
+      result = result.filter(o => o['Financial Status'] === 'abandoned');
+    } else {
+      // إخفاء السلات المتروكة من باقي التبويبات العادية
+      result = result.filter(o => o['Financial Status'] !== 'abandoned');
+      
+      if (activeTab === 'shopify') {
+        result = result.filter(o => o.data_source === 'Shopify_Import' || !o.data_source);
+      } else if (activeTab === 'wind') {
+        result = result.filter(o => o.data_source === 'WIND_Web'); 
+      }
     }
 
     if (search) {
@@ -60,6 +69,7 @@ export default function OrdersListPage() {
       case 'pending': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'pending_payment': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'refunded': return 'bg-red-100 text-red-700 border-red-200';
+      case 'abandoned': return 'bg-gray-100 text-gray-500 border-gray-200'; // لون المتروكة
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -87,6 +97,10 @@ export default function OrdersListPage() {
         <div className="flex gap-2 sm:gap-6 mb-6 border-b border-gray-200 overflow-x-auto scrollbar-hide">
           <button onClick={() => setActiveTab('wind')} className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'wind' ? 'border-b-2 border-[#008060] text-[#008060]' : 'text-gray-400 hover:text-gray-600'}`}>
             <Monitor size={16}/> طلبات موقع WIND
+          </button>
+          {/* التبويب الجديد للسلة المتروكة */}
+          <button onClick={() => setActiveTab('abandoned')} className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'abandoned' ? 'border-b-2 text-red-600 border-red-600' : 'text-gray-400 hover:text-gray-600'}`}>
+            <Archive size={16}/> سلات متروكة
           </button>
           <button onClick={() => setActiveTab('shopify')} className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'shopify' ? 'border-b-2 border-[#008060] text-[#008060]' : 'text-gray-400 hover:text-gray-600'}`}>
             <Archive size={16}/> أرشيف شوبيفاي
@@ -132,7 +146,6 @@ export default function OrdersListPage() {
                   </tr>
                 ) : (
                   currentOrders.map((order) => {
-                    // 🔥 هنا اللقطة: تحديد اسم وكمية المنتج بناءً على لغة الأوردر (WIND أو Shopify)
                     const isWind = order.data_source === 'WIND_Web';
                     const hasMultiple = order.lineItems && order.lineItems.length > 1;
                     
@@ -164,7 +177,9 @@ export default function OrdersListPage() {
                            </p>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order['Financial Status'])}`}>{order['Financial Status']}</span>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order['Financial Status'])}`}>
+                            {order['Financial Status'] === 'abandoned' ? 'متروكة' : order['Financial Status']}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-sm font-black text-gray-900">{order.Total} EGP</p>
