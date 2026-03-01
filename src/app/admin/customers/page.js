@@ -73,36 +73,32 @@ export default function CustomersPage() {
     setIsDeleting(true);
     try {
       for (const uniqueId of selectedCustomers) {
-        // بما إن uniqueId هو إما الإيميل أو التليفون، هنبحث في الطلبات ونمسح أي حاجة تخصه
+        // 1. مسح الطلبات المرتبطة بالإيميل لو موجودة
         const qEmail = query(collection(db, "Orders"), where("Email", "==", uniqueId));
         const snapEmail = await getDocs(qEmail);
-        snapEmail.forEach(async (d) => await deleteDoc(doc(db, "Orders", d.id)));
+        for (const d of snapEmail.docs) {
+          await deleteDoc(doc(db, "Orders", d.id));
+        }
 
+        // 2. مسح الطلبات المرتبطة برقم الهاتف لو موجودة
         const qPhone = query(collection(db, "Orders"), where("Phone", "==", uniqueId));
         const snapPhone = await getDocs(qPhone);
-        snapPhone.forEach(async (d) => await deleteDoc(doc(db, "Orders", d.id)));
+        for (const d of snapPhone.docs) {
+          await deleteDoc(doc(db, "Orders", d.id));
+        }
         
-        // نمسح ملفه القديم من قاعدة العملاء (للنظافة)
+        // 3. مسح ملف العميل القديم من قاعدة العملاء (للنظافة التامة)
         await deleteDoc(doc(db, "Customers", uniqueId));
       }
       
-      // تحديث الشاشة فوراً
+      // 4. تحديث الشاشة فوراً وتنظيف التحديد
       setCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
       setSelectedCustomers([]);
       setShowDeleteModal(false);
+      
     } catch (error) {
       console.error("Error deleting customers:", error);
-      alert("حدث خطأ أثناء الحذف");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-      setCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
-      setSelectedCustomers([]);
-      setShowDeleteModal(false);
-    } catch (error) {
-      console.error("Error deleting customers:", error);
-      alert("حدث خطأ أثناء الحذف");
+      alert("حدث خطأ أثناء الحذف، يرجى المحاولة مرة أخرى");
     } finally {
       setIsDeleting(false);
     }
