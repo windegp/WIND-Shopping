@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, Search, Filter, Monitor, Archive, Layers,
-  ChevronLeft, ChevronRight 
+  ChevronLeft, ChevronRight, Trash2, AlertTriangle, X
 } from "lucide-react";
 
 export default function OrdersListPage() {
@@ -14,21 +14,51 @@ export default function OrdersListPage() {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
+ const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20; 
+  
+  // 🔥 متغيرات ميزة الحذف للطلبات
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => { fetchOrders(); }, []);
 
+  // تفريغ التحديد لو غيرنا التبويب أو بحثنا
   useEffect(() => {
-    let result = orders;
+    setSelectedOrders([]);
+  }, [activeTab, search]);
+
+  // 🔥 دالة الحذف النهائي للطلبات
+  const handleDeleteSelected = async () => {
+    setIsDeleting(true);
+    try {
+      for (const id of selectedOrders) {
+        await deleteDoc(doc(db, "Orders", id));
+      }
+      setOrders(prev => prev.filter(o => !selectedOrders.includes(o.id)));
+      setSelectedOrders([]);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Error deleting orders:", error);
+      alert("حدث خطأ أثناء الحذف");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  useEffect(() => {
+    // 1. 🔥 تنظيف أولي: استبعاد أي طلب حالته deleted تماماً من كل التبويبات
+    let result = orders.filter(o => o['Financial Status'] !== 'deleted');
     
-    // 🔥 فصلنا الأوردرات العادية عن السلات المتروكة تماماً
+    // 2. فصل الأوردرات العادية عن السلات المتروكة
     if (activeTab === 'abandoned') {
       result = result.filter(o => o['Financial Status'] === 'abandoned');
     } else {
-      // إخفاء السلات المتروكة من باقي التبويبات العادية
+      // إخفاء السلات المتروكة من التبويبات العادية
       result = result.filter(o => o['Financial Status'] !== 'abandoned');
       
       if (activeTab === 'shopify') {
@@ -45,6 +75,14 @@ export default function OrdersListPage() {
         o.Phone?.includes(search)
       );
     }
+
+    // 3. 🔥 ترتيب صارم: الأحدث يظهر فوق دائماً (بناءً على التاريخ أو الـ ID لو مفيش تاريخ)
+    result.sort((a, b) => {
+      const dateA = new Date(a['Created at'] || 0).getTime();
+      const dateB = new Date(b['Created at'] || 0).getTime();
+      return dateB - dateA; // ترتيب تنازلي (الأحدث أولاً)
+    });
+
     setFilteredOrders(result);
     setCurrentPage(1); 
   }, [search, activeTab, orders]);
@@ -52,7 +90,8 @@ export default function OrdersListPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, "Orders"), orderBy("Created at", "desc"));
+      // هنجيب كل الطلبات، والـ useEffect اللي فوق هيتولى مهمة الترتيب الدقيق والفلترة
+      const q = query(collection(db, "Orders"));
       const querySnapshot = await getDocs(q);
       const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOrders(docs);
@@ -112,20 +151,43 @@ export default function OrdersListPage() {
 
         <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
           
-          <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 bg-gray-50/50">
+        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 bg-gray-50/50">
             <div className="relative flex-1">
               <Search className="absolute right-4 top-3.5 text-gray-400" size={18} />
               <input type="text" placeholder="ابحث برقم الطلب، أو الهاتف..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pr-12 pl-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-[#008060] transition-all shadow-sm" />
             </div>
-            <button className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm">
-              <Filter size={16} /> فلاتر
-            </button>
+            <div className="flex items-center gap-2">
+              {/* 🔥 زر الحذف يظهر فقط عند تحديد طلبات */}
+              {selectedOrders.length > 0 && (
+                <button 
+                  onClick={() => setShowDeleteModal(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-all shadow-sm slide-down"
+                >
+                  <Trash2 size={16} /> حذف ({selectedOrders.length})
+                </button>
+              )}
+              <button className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm">
+                <Filter size={16} /> فلاتر
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-right border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-white border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  {/* 🔥 Checkbox بتاع تحديد الكل */}
+                  <th className="px-6 py-5 w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 accent-[#008060] rounded cursor-pointer"
+                      checked={currentOrders.length > 0 && selectedOrders.length === currentOrders.length}
+                      onChange={(e) => {
+                        if(e.target.checked) setSelectedOrders(currentOrders.map(o => o.id));
+                        else setSelectedOrders([]);
+                      }}
+                    />
+                  </th>
                   <th className="px-6 py-5">الطلب والتاريخ</th>
                   <th className="px-6 py-5">العميل</th>
                   <th className="px-6 py-5">المنتج والكمية</th>
@@ -136,10 +198,10 @@ export default function OrdersListPage() {
               </thead>
               <tbody className="divide-y divide-gray-50 font-sans">
                 {loading ? (
-                  <tr><td colSpan="6" className="text-center py-24 text-[#008060] font-black animate-pulse">جاري تحميل السجلات...</td></tr>
+                  <tr><td colSpan="7" className="text-center py-24 text-[#008060] font-black animate-pulse">جاري تحميل السجلات...</td></tr>
                 ) : currentOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-24 text-gray-400">
+                    <td colSpan="7" className="text-center py-24 text-gray-400">
                       <Archive size={40} className="mx-auto mb-3 opacity-20"/>
                       <p className="font-bold">لا توجد طلبات في هذا القسم</p>
                     </td>
@@ -161,6 +223,18 @@ export default function OrdersListPage() {
 
                     return (
                       <tr key={order.id} className="hover:bg-gray-50/80 transition-all cursor-pointer group" onClick={() => router.push(`/admin/orders/${encodeURIComponent(orderLink)}`)}>
+                        {/* 🔥 Checkbox بتاع كل طلب */}
+                        <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 accent-[#008060] rounded cursor-pointer"
+                            checked={selectedOrders.includes(order.id)}
+                            onChange={(e) => {
+                              if(e.target.checked) setSelectedOrders(prev => [...prev, order.id]);
+                              else setSelectedOrders(prev => prev.filter(id => id !== order.id));
+                            }}
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <p className="text-sm font-black text-[#005bd3] group-hover:underline">{isWind ? order.Name : `#${orderLink}`}</p>
                           <p className="text-[10px] text-gray-400 font-bold mt-1">{order['Created at']?.split(' ')[0] || order['Created at']}</p>
@@ -172,8 +246,8 @@ export default function OrdersListPage() {
                         <td className="px-6 py-4">
                            <p className="text-xs font-bold text-gray-700 line-clamp-1 max-w-[220px]">{displayProductName}</p>
                            <p className="text-[10px] text-gray-500 font-bold mt-1.5 flex items-center gap-2">
-                              <span>الكمية: <span className="text-[#008060] font-black">{displayQuantity}</span></span>
-                              {hasMultiple && <span className="bg-gray-100 text-gray-600 px-1.5 rounded-sm text-[9px]">+ منتجات أخرى</span>}
+                             <span>الكمية: <span className="text-[#008060] font-black">{displayQuantity}</span></span>
+                             {hasMultiple && <span className="bg-gray-100 text-gray-600 px-1.5 rounded-sm text-[9px]">+ منتجات أخرى</span>}
                            </p>
                         </td>
                         <td className="px-6 py-4 text-center">
@@ -193,6 +267,41 @@ export default function OrdersListPage() {
                 )}
               </tbody>
             </table>
+
+            {/* 🔥 نافذة التأكيد قبل حذف الطلبات (Modal) */}
+            {showDeleteModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm slide-down">
+                <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+                  <button onClick={() => setShowDeleteModal(false)} className="absolute top-4 left-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500"><X size={16} /></button>
+                  
+                  <div className="w-14 h-14 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-5 mx-auto">
+                    <AlertTriangle size={28} />
+                  </div>
+                  
+                  <h3 className="text-xl font-black text-center text-gray-900 mb-2">تأكيد الحذف</h3>
+                  <p className="text-sm text-gray-500 text-center mb-6">
+                    هل أنت متأكد من رغبتك في حذف <span className="font-bold text-red-600">({selectedOrders.length})</span> طلب؟ لا يمكن التراجع عن هذا الإجراء وسيتم مسحهم نهائياً.
+                  </p>
+                  
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowDeleteModal(false)}
+                      disabled={isDeleting}
+                      className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-all"
+                    >
+                      إلغاء
+                    </button>
+                    <button 
+                      onClick={handleDeleteSelected}
+                      disabled={isDeleting}
+                      className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      {isDeleting ? <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span> : 'نعم، احذف'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {!loading && filteredOrders.length > 0 && (

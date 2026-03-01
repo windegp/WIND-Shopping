@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from "next/link";
 // 🔥 استدعاء الفايربيس
 import { db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { ChevronDown, Info, CheckCircle2, Phone, ShoppingBag, Shield, Tag, ChevronLeft, Truck, CreditCard, Banknote, Smartphone, X, Lock } from 'lucide-react';
 
 const governorates = [
@@ -146,27 +146,36 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = useState({});
 
+  // 🔥 توليد مُعرف جلسة ثابت (Session ID) لمنع استنساخ الطلبات مع كل حرف يكتبه العميل
+  const sessionIdRef = useRef(null);
+  if (!sessionIdRef.current && typeof window !== 'undefined') {
+    sessionIdRef.current = `SESS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  }
+  const sessionId = sessionIdRef.current;
+
  // ============================================================
   // 🚀 رادار السلة المتروكة المطور (يمنع التكرار ويسمع في العملاء)
   // ============================================================
   useEffect(() => {
-    const hasContactInfo = formData.email || (formData.phone && formData.phone.length >= 11);
+    // 🔥 شرط صارم: مش هنسجل العميل كـ "ترك السلة" غير لو كتب إيميل بصيغة صحيحة أو تليفون كامل عشان نمنع أشباح العملاء (islam@g)
+    const isValidEmail = formData.email && formData.email.includes('@') && formData.email.includes('.');
+    const isValidPhone = formData.phone && formData.phone.length >= 11;
+    const hasContactInfo = isValidEmail || isValidPhone;
     
     if (hasContactInfo && cartItems.length > 0) {
       const timeoutId = setTimeout(async () => {
         try {
-          // 1. تثبيت الـ ID لمنع التكرار
-          const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
-          const uniqueId = formData.email ? formData.email.toLowerCase().trim() : cleanPhone;
-          const draftOrderId = `DRAFT-${uniqueId}`; 
+          // 1. استخدام الـ Session ID كمعرف ثابت للسلة عشان ميستنسخش أوردرات
+          const draftOrderId = `DRAFT-${sessionId}`; 
 
-          // 2. تحديث أو إنشاء الطلب المتروك (Draft Order)
+          // 2. تحديث الطلب المتروك (Draft Order) وتضمين العنوان وكود الخصم
           const draftRef = doc(db, "Orders", draftOrderId);
-          await setDoc(draftRef, {
+          const draftData = {
             Name: draftOrderId,
             "Billing Name": `${formData.firstName} ${formData.lastName}`.trim() || 'عميل محتمل',
             Email: formData.email ? formData.email.toLowerCase().trim() : '',
             Phone: formData.phone,
+            "Shipping Address1": `${formData.address} ${formData.landmark ? '- ' + formData.landmark : ''}`, // ✅ العنوان
             "Shipping City": formData.city || "",
             "Shipping Province": formData.governorate || "",
             Subtotal: subtotal,
@@ -182,26 +191,37 @@ export default function CheckoutPage() {
               quantity: item.qty,
               image: item.image || item.images?.[0] || ''
             }))
-          }, { merge: true });
+          };
 
-          // 3. تحديث ملف العميل بشريحة (تركوا السلة) عشان تسمع في الأدمن
-          const customerRef = doc(db, "Customers", uniqueId);
-          const customerSnap = await getDoc(customerRef);
+          // ✅ تسجيل كود الخصم لو العميل مستخدمه
+          if (appliedPromo) draftData['Discount Code'] = appliedPromo;
+
+          await setDoc(draftRef, draftData, { merge: true });
+
+          // 3. تحديث ملف العميل (بناءً على التليفون النظيف أو الإيميل المكتمل فقط)
+          const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+          const uniqueId = isValidEmail ? formData.email.toLowerCase().trim() : cleanPhone;
           
-          if (!customerSnap.exists() || (customerSnap.exists() && !customerSnap.data()['Total Orders'])) {
-            await setDoc(customerRef, {
-              "First Name": formData.firstName || "",
-              "Last Name": formData.lastName || "",
-              Email: formData.email ? formData.email.toLowerCase().trim() : "",
-              Phone: formData.phone || "",
-              "Default Address City": formData.city || "",
-              "Default Address Province": formData.governorate || "",
-              "Total Orders": 0,
-              "Total Spent": 0,
-              data_source: "WIND_Web",
-              segments: ["Abandoned_Checkout"], // 🔥 الشريحة المتروكة
-              last_active: new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' })
-            }, { merge: true });
+          if (uniqueId) {
+            const customerRef = doc(db, "Customers", uniqueId);
+            const customerSnap = await getDoc(customerRef);
+            
+            if (!customerSnap.exists() || (customerSnap.exists() && !customerSnap.data()['Total Orders'])) {
+              await setDoc(customerRef, {
+                "First Name": formData.firstName || "",
+                "Last Name": formData.lastName || "",
+                Email: formData.email ? formData.email.toLowerCase().trim() : "",
+                Phone: formData.phone || "",
+                "Default Address Address1": formData.address || "", // ✅ العنوان التفصيلي للعميل
+                "Default Address City": formData.city || "",
+                "Default Address Province": formData.governorate || "",
+                "Total Orders": 0,
+                "Total Spent": 0,
+                data_source: "WIND_Web",
+                segments: ["Abandoned_Checkout"],
+                last_active: new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' })
+              }, { merge: true });
+            }
           }
 
         } catch (error) {
@@ -211,7 +231,7 @@ export default function CheckoutPage() {
 
       return () => clearTimeout(timeoutId); 
     }
-  }, [formData.email, formData.phone, formData.firstName, formData.lastName, formData.city, formData.governorate, cartItems, finalTotal, subtotal, shipping]);
+  }, [formData, cartItems, finalTotal, subtotal, shipping, appliedPromo, sessionId]);
   // ============================================================
 
   const validate = () => {
@@ -327,9 +347,9 @@ export default function CheckoutPage() {
         });
       }
       // ============================================================
-      // 🔥 مسح السلة المتروكة (Draft) لأن العميل أكد الطلب بنجاح
-      const draftOrderIdToDelete = `DRAFT-${customerId}`;
-      await setDoc(doc(db, "Orders", draftOrderIdToDelete), { "Financial Status": "deleted" }, { merge: true });
+      // 🔥 مسح السلة المتروكة نهائياً من قاعدة البيانات لأن العميل أكد الطلب بنجاح
+      const draftOrderIdToDelete = `DRAFT-${sessionId}`;
+      await deleteDoc(doc(db, "Orders", draftOrderIdToDelete));
 
       if (paymentMethod === 'card') {
         // حفظ الطلب في المتصفح قبل فتح بوابة كاشير

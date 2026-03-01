@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { 
   Users, Target, Mail, ShoppingCart, Download, Crown, 
-  UserMinus, Search, Monitor, Archive, Layers 
+  UserMinus, Search, Monitor, Archive, Layers, Trash2, AlertTriangle, X 
 } from "lucide-react";
 
 const segmentsList = [
@@ -24,18 +24,26 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   
   const [activeSegment, setActiveSegment] = useState('all');
-  const [activeTab, setActiveTab] = useState('wind'); // التبويب الافتراضي
+  const [activeTab, setActiveTab] = useState('wind'); 
   const [search, setSearch] = useState("");
+  
+  // 🔥 متغيرات ميزة الحذف الجديدة
+  const [selectedCustomers, setSelectedCustomers] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const router = useRouter();
 
-  useEffect(() => { fetchCustomers(); }, [activeSegment]);
+  useEffect(() => { 
+    fetchCustomers(); 
+    setSelectedCustomers([]); // تصفية التحديد عند تغيير الشريحة
+  }, [activeSegment]);
 
-  // فلترة متقدمة (بحث + تبويبات المنشأ)
+  // فلترة متقدمة (بحث + تبويبات المنشأ + ترتيب زمني)
   useEffect(() => {
     let result = customers;
 
-    // 1. الفلترة حسب المنشأ (التبويبات)
+    // 1. الفلترة حسب المنشأ
     if (activeTab === 'shopify') {
       result = result.filter(c => c.data_source === 'Shopify_Import' || !c.data_source);
     } else if (activeTab === 'wind') {
@@ -50,8 +58,34 @@ export default function CustomersPage() {
       );
     }
 
+    // 3. 🔥 ترتيب صارم: الأحدث فوق دايماً بناءً على أخر نشاط (last_active)
+    result.sort((a, b) => {
+      const dateA = a.last_active ? new Date(a.last_active).getTime() : 0;
+      const dateB = b.last_active ? new Date(b.last_active).getTime() : 0;
+      return dateB - dateA; // تنازلي
+    });
+
     setFilteredCustomers(result);
   }, [search, activeTab, customers]);
+
+  // 🔥 دالة الحذف النهائي للعملاء المحددين
+  const handleDeleteSelected = async () => {
+    setIsDeleting(true);
+    try {
+      for (const id of selectedCustomers) {
+        await deleteDoc(doc(db, "Customers", id));
+      }
+      // تنظيف الشاشة من العملاء اللي اتمسحوا فوراً
+      setCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
+      setSelectedCustomers([]);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Error deleting customers:", error);
+      alert("حدث خطأ أثناء الحذف");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -108,12 +142,24 @@ export default function CustomersPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-black flex items-center gap-2"><Users className="text-[#008060]" /> إدارة العملاء</h1>
           
-          <button 
-            onClick={exportToExcelForAds} 
-            className="bg-[#008060] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-[#006e52] transition-all"
-          >
-            <Download size={16} /> تصدير الشريحة المعروضة
-          </button>
+        <div className="flex items-center gap-3">
+            {/* 🔥 زر الحذف يظهر فقط لو في حد متحدد */}
+            {selectedCustomers.length > 0 && (
+              <button 
+                onClick={() => setShowDeleteModal(true)} 
+                className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-red-600 transition-all slide-down"
+              >
+                <Trash2 size={16} /> حذف المحددين ({selectedCustomers.length})
+              </button>
+            )}
+            
+            <button 
+              onClick={exportToExcelForAds} 
+              className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-gray-50 transition-all"
+            >
+              <Download size={16} /> تصدير
+            </button>
+          </div>
         </div>
 
         {/* التبويبات (Tabs) لفصل القديم عن الجديد */}
@@ -155,6 +201,18 @@ export default function CustomersPage() {
               <table className="w-full text-right">
                 <thead className="bg-white border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   <tr>
+                    {/* 🔥 Checkbox بتاع تحديد الكل */}
+                    <th className="px-6 py-5 w-12 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 accent-[#008060] rounded cursor-pointer"
+                        checked={filteredCustomers.length > 0 && selectedCustomers.length === filteredCustomers.length}
+                        onChange={(e) => {
+                          if(e.target.checked) setSelectedCustomers(filteredCustomers.map(c => c.id));
+                          else setSelectedCustomers([]);
+                        }}
+                      />
+                    </th>
                     <th className="px-6 py-5">العميل</th>
                     <th className="px-6 py-5">الإيميل / الهاتف</th>
                     <th className="px-6 py-5">الموقع</th>
@@ -163,20 +221,31 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {loading ? <tr><td colSpan="5" className="text-center py-20 text-[#008060] font-black animate-pulse">جاري سحب الداتا...</td></tr> : 
+                  {loading ? <tr><td colSpan="6" className="text-center py-20 text-[#008060] font-black animate-pulse">جاري سحب الداتا...</td></tr> : 
                     filteredCustomers.length === 0 ? (
-                      <tr><td colSpan="5" className="text-center py-20 text-gray-400 font-bold"><Archive size={40} className="mx-auto mb-3 opacity-20"/>لا يوجد عملاء في هذا القسم</td></tr>
+                      <tr><td colSpan="6" className="text-center py-20 text-gray-400 font-bold"><Archive size={40} className="mx-auto mb-3 opacity-20"/>لا يوجد عملاء في هذا القسم</td></tr>
                     ) : (
                     filteredCustomers.map((c) => {
-                      const safeId = c.Email || c.Phone || c.id; // تم التعديل
+                      const safeId = c.Email || c.Phone || c.id; 
                       const displayEmail = c.Email || c.email;
                       const displayPhone = c.Phone || c['Default Address Phone'];
                       
                       return (
                         <tr key={c.id} className="hover:bg-gray-50/80 cursor-pointer group transition-all" onClick={() => router.push(`/admin/customers/${encodeURIComponent(safeId)}`)}>
+                          {/* 🔥 Checkbox بتاع كل عميل */}
+                          <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 accent-[#008060] rounded cursor-pointer"
+                              checked={selectedCustomers.includes(c.id)}
+                              onChange={(e) => {
+                                if(e.target.checked) setSelectedCustomers(prev => [...prev, c.id]);
+                                else setSelectedCustomers(prev => prev.filter(id => id !== c.id));
+                              }}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <p className="text-sm font-black text-[#005bd3] group-hover:underline">{c['First Name']} {c['Last Name']}</p>
-                            {/* لو العميل جديد هنحطله بادج مميز */}
                             {c.data_source === 'WIND_Web' && <span className="inline-block mt-1 bg-green-100 text-green-700 text-[9px] px-1.5 py-0.5 rounded font-bold">WIND Customer</span>}
                           </td>
                           <td className="px-6 py-4">
@@ -192,6 +261,41 @@ export default function CustomersPage() {
                   )}
                 </tbody>
               </table>
+
+              {/* 🔥 نافذة التأكيد قبل الحذف (Modal) */}
+              {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm slide-down">
+                  <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+                    <button onClick={() => setShowDeleteModal(false)} className="absolute top-4 left-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500"><X size={16} /></button>
+                    
+                    <div className="w-14 h-14 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-5 mx-auto">
+                      <AlertTriangle size={28} />
+                    </div>
+                    
+                    <h3 className="text-xl font-black text-center text-gray-900 mb-2">تأكيد الحذف</h3>
+                    <p className="text-sm text-gray-500 text-center mb-6">
+                      هل أنت متأكد من رغبتك في حذف <span className="font-bold text-red-600">({selectedCustomers.length})</span> عميل؟ لا يمكن التراجع عن هذا الإجراء.
+                    </p>
+                    
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => setShowDeleteModal(false)}
+                        disabled={isDeleting}
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-all"
+                      >
+                        إلغاء
+                      </button>
+                      <button 
+                        onClick={handleDeleteSelected}
+                        disabled={isDeleting}
+                        className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                      >
+                        {isDeleting ? <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span> : 'نعم، احذف'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
