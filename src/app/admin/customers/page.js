@@ -72,10 +72,31 @@ export default function CustomersPage() {
   const handleDeleteSelected = async () => {
     setIsDeleting(true);
     try {
-      for (const id of selectedCustomers) {
-        await deleteDoc(doc(db, "Customers", id));
+      for (const uniqueId of selectedCustomers) {
+        // بما إن uniqueId هو إما الإيميل أو التليفون، هنبحث في الطلبات ونمسح أي حاجة تخصه
+        const qEmail = query(collection(db, "Orders"), where("Email", "==", uniqueId));
+        const snapEmail = await getDocs(qEmail);
+        snapEmail.forEach(async (d) => await deleteDoc(doc(db, "Orders", d.id)));
+
+        const qPhone = query(collection(db, "Orders"), where("Phone", "==", uniqueId));
+        const snapPhone = await getDocs(qPhone);
+        snapPhone.forEach(async (d) => await deleteDoc(doc(db, "Orders", d.id)));
+        
+        // نمسح ملفه القديم من قاعدة العملاء (للنظافة)
+        await deleteDoc(doc(db, "Customers", uniqueId));
       }
-      // تنظيف الشاشة من العملاء اللي اتمسحوا فوراً
+      
+      // تحديث الشاشة فوراً
+      setCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
+      setSelectedCustomers([]);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Error deleting customers:", error);
+      alert("حدث خطأ أثناء الحذف");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
       setCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
       setSelectedCustomers([]);
       setShowDeleteModal(false);
@@ -90,14 +111,104 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      let q = collection(db, "Customers");
-      if (activeSegment !== 'all') {
-        q = query(q, where("segments", "array-contains", activeSegment));
-      }
+      // 1. 🔥 هنجيب البيانات من "الطلبات" مش العملاء، عشان نضمن الدقة 100%
+      const q = query(collection(db, "Orders"));
       const querySnapshot = await getDocs(q);
-      setCustomers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+      const allOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const customersMap = new Map();
+
+      // 2. تجميع الطلبات وحساب إجماليات كل عميل
+      allOrders.forEach(order => {
+        if (order['Financial Status'] === 'deleted') return;
+
+        // هل الطلب ده سلة متروكة ولا حقيقي؟
+        const isAbandoned = order['Financial Status'] === 'abandoned' || 
+                            order['Financial Status'] === 'pending_payment' || 
+                            order.Name?.startsWith('DRAFT-');
+
+        const rawPhone = order.Phone || order['Shipping Phone'] || '';
+        const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+        const email = (order.Email || '').toLowerCase().trim();
+
+        // المعرف الأساسي للعميل: الإيميل (لو مفيش إيميل نستخدم التليفون)
+        const uniqueId = email || cleanPhone;
+        if (!uniqueId) return; 
+
+        if (!customersMap.has(uniqueId)) {
+          const fullName = order['Billing Name'] || order['Shipping Name'] || '';
+          const nameParts = fullName.split(' ');
+          
+          customersMap.set(uniqueId, {
+            id: uniqueId, 
+            'First Name': nameParts[0] || 'عميل',
+            'Last Name': nameParts.slice(1).join(' ') || 'مجهول',
+            Email: email,
+            Phone: rawPhone,
+            'Default Address City': order['Shipping City'] || order['Shipping Province'] || '',
+            'Total Orders': 0,
+            'Total Spent': 0,
+            last_active: new Date(order['Created at'] || 0).getTime(),
+            data_source: order.data_source || 'Shopify_Import',
+            hasAbandoned: false
+          });
+        }
+
+        const customer = customersMap.get(uniqueId);
+
+        // تحديث بيانات العميل بأحدث طلب (عشان لو غير عنوانه أو اسمه)
+        const orderTime = new Date(order['Created at'] || 0).getTime();
+        if (orderTime > customer.last_active) {
+          customer.last_active = orderTime;
+          const fullName = order['Billing Name'] || '';
+          if (fullName && fullName !== 'عميل محتمل') {
+             const nameParts = fullName.split(' ');
+             customer['First Name'] = nameParts[0] || customer['First Name'];
+             customer['Last Name'] = nameParts.slice(1).join(' ') || customer['Last Name'];
+          }
+          if (order['Shipping City']) customer['Default Address City'] = order['Shipping City'];
+        }
+
+        // 3. تجميع المبالغ والطلبات الحقيقية فقط
+        if (!isAbandoned) {
+          customer['Total Orders'] += 1;
+          customer['Total Spent'] += Number(order.Total || 0);
+        } else {
+          customer.hasAbandoned = true;
+        }
+      });
+
+      // 4. 🔥 تصنيف العملاء للشرائح بناءً على الأرقام الحقيقية اللي حسبناها
+      let customersArray = Array.from(customersMap.values()).map(c => {
+        const segments = ['all'];
+        if (c.Email) segments.push('Email_Subscriber');
+
+        if (c['Total Orders'] === 0) {
+          segments.push('Potential_Customer');
+          if (c.hasAbandoned) segments.push('Abandoned_Checkout');
+        } else {
+          if (c['Total Orders'] === 1) segments.push('Purchased_Once');
+          if (c['Total Orders'] > 1) segments.push('VIP_Customer');
+          // ممكن يكون اشترى قبل كده، بس حالياً سايب سلة جديدة متروكة
+          if (c.hasAbandoned) segments.push('Abandoned_Checkout'); 
+        }
+
+        c.segments = segments;
+        return c;
+      });
+
+      // 5. فلترة الشاشة بناءً على الشريحة اللي الأدمن داس عليها
+      if (activeSegment !== 'all') {
+        customersArray = customersArray.filter(c => c.segments.includes(activeSegment));
+      }
+
+      setCustomers(customersArray);
+
+    } catch (err) {
+      console.error("Error generating customers from orders:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 🔥 دالة التصدير للإعلانات
