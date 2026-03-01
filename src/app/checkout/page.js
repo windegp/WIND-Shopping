@@ -146,6 +146,49 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = useState({});
 
+  // ============================================================
+  // 🚀 رادار تتبع السلات المتروكة (Abandoned Checkout Auto-Save)
+  // ============================================================
+  useEffect(() => {
+    const hasContactInfo = formData.email || (formData.phone && formData.phone.length >= 11);
+    
+    if (hasContactInfo && cartItems.length > 0) {
+      const timeoutId = setTimeout(async () => {
+        try {
+          const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+          const customerId = formData.email ? formData.email.toLowerCase().trim() : cleanPhone;
+          
+          if (!customerId) return; 
+
+          const customerRef = doc(db, "Customers", customerId);
+          const customerSnap = await getDoc(customerRef);
+
+          if (!customerSnap.exists() || (customerSnap.exists() && !customerSnap.data()['Total Orders'])) {
+            await setDoc(customerRef, {
+              "First Name": formData.firstName || "",
+              "Last Name": formData.lastName || "",
+              Email: formData.email ? formData.email.toLowerCase().trim() : "",
+              Phone: formData.phone || "",
+              "Default Address City": formData.city || "",
+              "Default Address Province": formData.governorate || "",
+              "Total Orders": 0,
+              "Total Spent": 0,
+              data_source: "WIND_Web",
+              segments: ["Abandoned_Checkout"], 
+              abandoned_cart_value: total, 
+              last_active: new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' })
+            }, { merge: true });
+          }
+        } catch (error) {
+          console.error("Error saving abandoned cart:", error);
+        }
+      }, 2000); 
+
+      return () => clearTimeout(timeoutId); 
+    }
+  }, [formData.email, formData.phone, formData.firstName, cartItems, total]);
+  // ============================================================
+
   const validate = () => {
     let tempErrors = {};
     if (!formData.email) tempErrors.email = true;
@@ -219,27 +262,32 @@ export default function CheckoutPage() {
       // 1. إنشاء الأوردر
       await setDoc(doc(db, "Orders", orderId), orderData);
 
-      // 2. تحديث أو إنشاء ملف العميل
-      const customerId = formData.email ? formData.email.toLowerCase() : formData.phone;
+      // 2. تحديث أو إنشاء ملف العميل (النسخة المصححة)
+      const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+      const customerId = formData.email ? formData.email.toLowerCase().trim() : cleanPhone;
       const customerRef = doc(db, "Customers", customerId);
       const customerSnap = await getDoc(customerRef);
 
       if (customerSnap.exists()) {
         const existingData = customerSnap.data();
+        const currentOrders = existingData['Total Orders'] || 0;
+        const newSegment = currentOrders >= 1 ? "VIP_Customer" : "Purchased_Once";
+
         await setDoc(customerRef, {
-          "Total Orders": (existingData['Total Orders'] || 0) + 1,
+          "Total Orders": currentOrders + 1,
           "Total Spent": (existingData['Total Spent'] || 0) + finalTotal,
           Last_Order_Status: "New",
           data_source: "WIND_Web",
           Phone: formData.phone,
           "Default Address City": formData.city,
-          "Default Address Province": formData.governorate
+          "Default Address Province": formData.governorate,
+          segments: [newSegment] // ترقية أو تعديل الشريحة
         }, { merge: true });
       } else {
         await setDoc(customerRef, {
           "First Name": formData.firstName,
           "Last Name": formData.lastName,
-          Email: formData.email ? formData.email.toLowerCase() : '',
+          Email: formData.email ? formData.email.toLowerCase().trim() : '',
           Phone: formData.phone,
           "Default Address City": formData.city,
           "Default Address Province": formData.governorate,
@@ -248,7 +296,7 @@ export default function CheckoutPage() {
           "Total Spent": finalTotal,
           Last_Order_Status: "New",
           data_source: "WIND_Web",
-          segments: ["Potential_Customer"]
+          segments: ["Purchased_Once"] // الشريحة الصحيحة بدلاً من Potential
         });
       }
       // ============================================================

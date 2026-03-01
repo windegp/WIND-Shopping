@@ -24,7 +24,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   
   const [activeSegment, setActiveSegment] = useState('all');
-  const [activeTab, setActiveTab] = useState('all'); // 'wind', 'shopify', 'all'
+  const [activeTab, setActiveTab] = useState('wind'); // التبويب الافتراضي الجديد
   const [search, setSearch] = useState("");
   
   const router = useRouter();
@@ -172,7 +172,7 @@ export default function CustomersPage() {
                       <tr><td colSpan="5" className="text-center py-20 text-gray-400 font-bold"><Archive size={40} className="mx-auto mb-3 opacity-20"/>لا يوجد عملاء في هذا القسم</td></tr>
                     ) : (
                     filteredCustomers.map((c) => {
-                      const safeId = c.Email || c.id; 
+                      const safeId = c.Email || c.Phone || c.id; 
                       const displayEmail = c.Email || c.email;
                       const displayPhone = c.Phone || c['Default Address Phone'];
                       
