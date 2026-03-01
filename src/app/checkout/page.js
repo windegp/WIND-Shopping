@@ -159,7 +159,6 @@ export default function CheckoutPage() {
   // 🚀 رادار السلة المتروكة المطور (يمنع التكرار ويسمع في العملاء)
   // ============================================================
   useEffect(() => {
-    // 🔥 شرط صارم: مش هنسجل العميل كـ "ترك السلة" غير لو كتب إيميل بصيغة صحيحة أو تليفون كامل عشان نمنع أشباح العملاء (islam@g)
     const isValidEmail = formData.email && formData.email.includes('@') && formData.email.includes('.');
     const isValidPhone = formData.phone && formData.phone.length >= 11;
     const hasContactInfo = isValidEmail || isValidPhone;
@@ -167,24 +166,24 @@ export default function CheckoutPage() {
     if (hasContactInfo && cartItems.length > 0) {
       const timeoutId = setTimeout(async () => {
         try {
-          // 1. استخدام الـ Session ID كمعرف ثابت للسلة عشان ميستنسخش أوردرات
-          const draftOrderId = `DRAFT-${sessionId}`; 
+          // 🔥 العبقرية هنا: لو العميل داس تأكيد وولدنا رقم WIND، الرادار هيحدث ملف الـ WIND ومش هيكريت DRAFT جديد أبداً
+          const targetOrderId = activeOrderIdRef.current ? activeOrderIdRef.current : `DRAFT-${sessionId}`; 
 
-          // 2. تحديث الطلب المتروك (Draft Order) وتضمين العنوان وكود الخصم
-          const draftRef = doc(db, "Orders", draftOrderId);
+          const draftRef = doc(db, "Orders", targetOrderId);
           const draftData = {
-            Name: draftOrderId,
+            Name: targetOrderId,
             "Billing Name": `${formData.firstName} ${formData.lastName}`.trim() || 'عميل محتمل',
             Email: formData.email ? formData.email.toLowerCase().trim() : '',
             Phone: formData.phone,
-            "Shipping Address1": `${formData.address} ${formData.landmark ? '- ' + formData.landmark : ''}`, // ✅ العنوان
+            "Shipping Address1": `${formData.address} ${formData.landmark ? '- ' + formData.landmark : ''}`,
             "Shipping City": formData.city || "",
             "Shipping Province": formData.governorate || "",
             Subtotal: subtotal,
             Shipping: shipping,
             Total: finalTotal,
             Currency: "EGP",
-            "Financial Status": "abandoned", 
+            // لو ده DRAFT خليه abandoned، لو ده WIND سيبه زي ما هو عشان منبوظش حالة الدفع
+            ...(!activeOrderIdRef.current && { "Financial Status": "abandoned" }),
             "Created at": new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }),
             data_source: "WIND_Web",
             lineItems: cartItems.map(item => ({
@@ -195,12 +194,11 @@ export default function CheckoutPage() {
             }))
           };
 
-          // ✅ تسجيل كود الخصم لو العميل مستخدمه
           if (appliedPromo) draftData['Discount Code'] = appliedPromo;
 
           await setDoc(draftRef, draftData, { merge: true });
 
-          // 3. تحديث ملف العميل (بناءً على التليفون النظيف أو الإيميل المكتمل فقط)
+          // تحديث أو إنشاء ملف العميل
           const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
           const uniqueId = isValidEmail ? formData.email.toLowerCase().trim() : cleanPhone;
           
@@ -214,7 +212,7 @@ export default function CheckoutPage() {
                 "Last Name": formData.lastName || "",
                 Email: formData.email ? formData.email.toLowerCase().trim() : "",
                 Phone: formData.phone || "",
-                "Default Address Address1": formData.address || "", // ✅ العنوان التفصيلي للعميل
+                "Default Address Address1": formData.address || "",
                 "Default Address City": formData.city || "",
                 "Default Address Province": formData.governorate || "",
                 "Total Orders": 0,

@@ -51,15 +51,24 @@ export default function OrdersListPage() {
   };
 
   useEffect(() => {
-    // 1. 🔥 تنظيف أولي: استبعاد أي طلب حالته deleted تماماً من كل التبويبات
+    // 1. استبعاد الأوردرات المحذوفة
     let result = orders.filter(o => o['Financial Status'] !== 'deleted');
     
-    // 2. فصل الأوردرات العادية عن السلات المتروكة
+    // 🔥 2. فلترة صارمة: نعتبر الطلب "سلة متروكة" وميظهرش في الأوردرات الأساسية في الحالات دي فقط:
+    // - حالته abandoned (سلة عادية)
+    // - حالته pending_payment (معناه إنه فتح بوابة الدفع ومكملش/مراحش لصفحة شكراً)
+    // - اسمه بيبدأ بـ DRAFT-
+    const isAbandonedDraft = (o) => {
+      return o['Financial Status'] === 'abandoned' || 
+             o['Financial Status'] === 'pending_payment' || 
+             o.Name?.startsWith('DRAFT-');
+    };
+
     if (activeTab === 'abandoned') {
-      result = result.filter(o => o['Financial Status'] === 'abandoned');
+      result = result.filter(isAbandonedDraft);
     } else {
-      // إخفاء السلات المتروكة من التبويبات العادية
-      result = result.filter(o => o['Financial Status'] !== 'abandoned');
+      // إخفاء أي سلة متروكة أو طلب غير مكتمل الدفع من التبويبات الرئيسية
+      result = result.filter(o => !isAbandonedDraft(o));
       
       if (activeTab === 'shopify') {
         result = result.filter(o => o.data_source === 'Shopify_Import' || !o.data_source);
@@ -76,11 +85,11 @@ export default function OrdersListPage() {
       );
     }
 
-    // 3. 🔥 ترتيب صارم: الأحدث يظهر فوق دائماً (بناءً على التاريخ أو الـ ID لو مفيش تاريخ)
+    // 3. ترتيب صارم: الأحدث يظهر فوق
     result.sort((a, b) => {
       const dateA = new Date(a['Created at'] || 0).getTime();
       const dateB = new Date(b['Created at'] || 0).getTime();
-      return dateB - dateA; // ترتيب تنازلي (الأحدث أولاً)
+      return dateB - dateA; 
     });
 
     setFilteredOrders(result);

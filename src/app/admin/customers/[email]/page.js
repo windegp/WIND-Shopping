@@ -44,16 +44,26 @@ export default function CustomerDetailsPage() {
        const oSnap = await getDocs(q);
         let oList = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // 🔥 1. إخفاء الطلبات اللي اتحذفت (لما السلة المتروكة اتحولت لطلب حقيقي)
+        // 🔥 1. إخفاء الطلبات اللي اتحذفت
         oList = oList.filter(o => o['Financial Status'] !== 'deleted');
 
-        // 🔥 2. فلترة سحرية: لو العميل عنده 5 سلات متروكة قديمة مكررة بنفس السعر، هنعرض أحدث واحدة بس عشان ننظف الشاشة
+        // 🔥 2. توحيد مفهوم "السلة المتروكة" زي ما عملنا في صفحة الطلبات بالظبط
+        const isAbandonedDraft = (o) => {
+          return o['Financial Status'] === 'abandoned' || 
+                 o['Financial Status'] === 'pending_payment' || 
+                 o.Name?.startsWith('DRAFT-');
+        };
+
+        // 🔥 3. فلترة سحرية: لو العميل عنده 5 سلات متروكة مكررة بنفس المنتج والسعر، هنعرض أحدث واحدة بس عشان ننظف الشاشة
         const uniqueOrders = [];
         const seenAbandoned = new Set();
         
         oList.sort((a, b) => new Date(b['Created at']) - new Date(a['Created at'])).forEach(order => {
-          if (order['Financial Status'] === 'abandoned') {
-            const key = `${order.Total}-${order.lineItems?.[0]?.name}`;
+          if (isAbandonedDraft(order)) {
+            // توحيد اسم المنتج سواء من شوبيفاي أو WIND عشان الفلترة تشتغل صح
+            const productName = order.data_source === 'WIND_Web' ? order.lineItems?.[0]?.name : order['Lineitem name'];
+            const key = `${order.Total}-${productName}`;
+            
             if (!seenAbandoned.has(key)) {
               seenAbandoned.add(key);
               uniqueOrders.push(order);
@@ -134,10 +144,12 @@ export default function CustomerDetailsPage() {
              <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center"><h3 className="font-black flex items-center gap-2"><ShoppingBag size={20} className="text-[#008060]"/> سجل المشتريات</h3><span className="text-xs font-bold text-gray-400">({orders.length}) طلب</span></div>
              <div className="divide-y divide-gray-50">
                 {orders.length > 0 ? orders.map((o) => {
-                  // 🔥 تحديد المتغيرات بناءً على منشأ الطلب عشان تظهر صح في الجدول
                   const isWind = o.data_source === 'WIND_Web';
                   const orderLink = isWind ? o.Name : o.Name.replace('#', '');
                   const displayProductName = isWind ? (o.lineItems?.[0]?.name || 'منتج WIND') : o['Lineitem name'];
+                  
+                  // 🔥 تطبيق نفس القاعدة هنا لتلوين الكارت
+                  const isAbandoned = o['Financial Status'] === 'abandoned' || o['Financial Status'] === 'pending_payment' || o.Name?.startsWith('DRAFT-');
 
                   return (
                     <div key={o.id} className="p-5 flex items-center gap-5 hover:bg-gray-50 cursor-pointer group transition-all" 
@@ -149,12 +161,13 @@ export default function CustomerDetailsPage() {
                       </div>
                       <div className="text-left shrink-0">
                         <p className="text-md font-black">{o.Total} EGP</p>
-                        <p className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 uppercase text-center ${o['Financial Status'] === 'abandoned' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                          {o['Financial Status'] === 'abandoned' ? 'سلة متروكة' : o['Financial Status']}
+                        <p className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 uppercase text-center ${isAbandoned ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          {isAbandoned ? 'سلة متروكة' : o['Financial Status']}
                         </p>
                       </div>
                     </div>
                   )
+                  
                 }) : <div className="p-24 text-center text-gray-400 flex flex-col items-center gap-3"><Package size={40} className="opacity-20"/><p className="font-bold text-sm">لا توجد طلبات مرتبطة بهذا العميل</p></div>}
              </div>
           </div>
