@@ -28,18 +28,18 @@ export default function AdminLayout({ children }) {
     return () => unsubscribe();
   }, []);
 
- // قائمة المنيو - المحدثة ببيانات WIND Shopping
+  // قائمة المنيو - المحدثة ببيانات WIND Shopping
   const menu = [
     { name: 'الرئيسية', path: '/admin', icon: <LayoutDashboard size={20}/> },
-    { name: 'الطلبات', path: '/admin/orders', icon: <Package size={20}/> }, 
-    { name: 'العملاء', path: '/admin/customers', icon: <Users size={20}/> }, 
+    { name: 'الطلبات', path: '/admin/orders', icon: <Package size={20}/> }, // 📦 قسم الأوردرات الجديد
+    { name: 'العملاء', path: '/admin/customers', icon: <Users size={20}/> }, // 👥 قسم العملاء والشرائح
     { name: 'المنتجات', path: '/admin/products', icon: <ShoppingBag size={20}/> },
     { name: 'إضافة منتج', path: '/admin/products/create', icon: <PlusCircle size={20}/> },
     { name: 'الأقسام', path: '/admin/collections', icon: <FolderTree size={20}/> },
     { name: 'إدارة الواجهة', path: '/admin/home-manager', icon: <Palette size={20}/> },
     { name: 'المنيو', path: '/admin/menu', icon: <Menu size={20}/> },
     { name: 'الصفحات', path: '/admin/pages', icon: <FileText size={20}/> },
-    { name: 'التقييمات', path: '/admin/reviews', icon: <MessageSquare size={20}/> }, // 🔥 الزر الجديد هنا
+    { name: 'التقييمات', path: '/admin/reviews', icon: <MessageSquare size={20}/> },
   ];
 
   // 1. حالة التحميل
