@@ -1,11 +1,3 @@
-// ده مش كود برمجي بيظهر للعميل، ده "رسالة" لجوجل
-useEffect(() => {
-  document.title = "سياسة الشحن والتوصيل | WIND Shopping";
-  const metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) {
-    metaDesc.setAttribute("content", "تعرف على سياسة الشحن السريع من WIND لجميع محافظات مصر. شحن مجاني للطلبات فوق 1999 ج.م وتوصيل خلال 48 ساعة.");
-  }
-}, []);
 "use client";
 
 import React, { useState, useEffect } from 'react';
