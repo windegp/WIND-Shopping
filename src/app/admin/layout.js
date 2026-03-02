@@ -39,6 +39,7 @@ export default function AdminLayout({ children }) {
     { name: 'إدارة الواجهة', path: '/admin/home-manager', icon: <Palette size={20}/> },
     { name: 'المنيو', path: '/admin/menu', icon: <Menu size={20}/> },
     { name: 'الصفحات', path: '/admin/pages', icon: <FileText size={20}/> },
+    { name: 'الإعدادات', path: '/admin/settings', icon: <Settings size={20}/> }, // ← زر الإعدادات الجديد
   ];
 
   // 1. حالة التحميل
