@@ -25,6 +25,7 @@ export default function HomeManagerPage() {
   // --- 4. حالة واجهة المستخدم (الأكورديون) ---
   const [expandedSections, setExpandedSections] = useState({});
   const [allStoreProducts, setAllStoreProducts] = useState([]); // لحفظ منتجات المتجر
+  const [allStoreCollections, setAllStoreCollections] = useState([]); // لحفظ أقسام المتجر (collections)
 
   // حالات التحميل والحفظ
   const [loading, setLoading] = useState(true);
@@ -35,14 +36,20 @@ export default function HomeManagerPage() {
     const fetchCurrentData = async () => {
       try {
         const layoutRef = doc(db, "homepage", "layout_config");
-        // جلب منتجات المتجر لعرضها في القوائم المنسدلة
+        
+        // جلب منتجات وأقسام المتجر لعرضها في القوائم
         try {
-          const productsRef = collection(db, "products"); // تأكد أن اسم مجموعة المنتجات عندك في فايربيز هو products
+          const productsRef = collection(db, "products");
           const productsSnap = await getDocs(productsRef);
           setAllStoreProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+          const collectionsRef = collection(db, "collections"); // تم التعديل لجلب مجموعات فايربيز
+          const collectionsSnap = await getDocs(collectionsRef);
+          setAllStoreCollections(collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (err) {
-          console.error("خطأ في جلب المنتجات:", err);
+          console.error("خطأ في جلب المنتجات أو المجموعات:", err);
         }
+
         const layoutSnap = await getDoc(layoutRef);
         let currentLayout = [];
         if (layoutSnap.exists()) {
@@ -483,28 +490,16 @@ export default function HomeManagerPage() {
                             <label className="block text-xs font-bold text-gray-600 mb-1.5">رابط زر "عرض الكل" (صفحة المجموعة)</label>
                             <input 
                               type="text" 
-                              value={section.data?.linkUrl || ""} 
-                              onChange={(e) => handleLayoutDataChange(sectionIndex, 'linkUrl', e.target.value)} 
+                              value={section.data?.linkUrl || section.data?.viewAllLink || ""} 
+                              onChange={(e) => {
+                                handleLayoutDataChange(sectionIndex, 'linkUrl', e.target.value);
+                                handleLayoutDataChange(sectionIndex, 'viewAllLink', e.target.value);
+                              }} 
                               placeholder="مثال: /collections/shoes"
                               className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono"
                               dir="ltr"
                             />
                           </div>
-
-                          {/* رابط "عرض الكل" - خاص بـ TOP_TEN_SECTION فقط */}
-                          {section.category === 'TOP_TEN_SECTION' && (
-                            <div className="mt-4">
-                              <label className="block text-xs font-bold text-gray-600 mb-1.5">رابط زرار "عرض الكل" (TOP 10)</label>
-                              <input
-                                type="text"
-                                value={section.data?.viewAllLink || ""}
-                                onChange={(e) => handleLayoutDataChange(sectionIndex, 'viewAllLink', e.target.value)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono"
-                                dir="ltr"
-                                placeholder="مثال: /collections/top-ten"
-                              />
-                            </div>
-                          )}
                         </div>
                       )}
 
@@ -565,14 +560,6 @@ export default function HomeManagerPage() {
                                       <input type="text" value={card.linkText} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkText', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
                                     </div>
                                   )}
-
-                                  {/* رابط التوجيه - مشترك (هو رابط المنتج لزرار "عرض التفاصيل" في TOP_TEN) */}
-                                  <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">
-                                      {section.category === 'TOP_TEN_SECTION' ? 'رابط المنتج (زرار "عرض التفاصيل")' : 'رابط التوجيه (URL)'}
-                                    </label>
-                                    <input type="text" value={card.linkUrl} onChange={(e) => updateArrayItem(sectionIndex, 'cards', cardIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" placeholder="اكتب الرابط أو ألصقه هنا" />
-                                  </div>
 
                                   {/* ✅ خانات خاصة بـ TOP_TEN_SECTION */}
                                   {section.category === 'TOP_TEN_SECTION' && (
@@ -650,7 +637,7 @@ export default function HomeManagerPage() {
                         </div>
                       )}
 
-                      {/* 3. محرر المنتجات (قائمة اختيار سريعة بالـ Checkboxes) */}
+                      {/* 3. محرر المنتجات (قائمة اختيار سريعة بالـ Checkboxes و الأقسام) */}
                       {config?.hasProducts && (
                         <div className="mt-6 border-t border-gray-100 pt-5">
                           <div className="flex items-center justify-between mb-4">
@@ -660,17 +647,23 @@ export default function HomeManagerPage() {
                             </span>
                           </div>
 
-                          {/* خيار 1: إضافة منتجات قسم بالكامل */}
+                          {/* خيار 1: إضافة منتجات قسم بالكامل وربط زر عرض الكل تلقائياً */}
                           <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة منتجات قسم (Collection) بالكامل:</label>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة منتجات قسم (Collection) بالكامل وربط الرابط:</label>
                             <select 
                               onChange={(e) => {
-                                const catName = e.target.value;
-                                if (!catName) return;
+                                const colId = e.target.value;
+                                if (!colId) return;
+                                
+                                const selectedCol = allStoreCollections.find(c => c.id === colId);
+                                const colName = selectedCol?.title || selectedCol?.name || colId;
+                                
                                 const updated = [...layoutSections];
                                 let currentProds = updated[sectionIndex].data.products || [];
                                 
-                                const categoryProducts = allStoreProducts.filter(p => p.category === catName);
+                                // فلترة المنتجات اللي تابعة للقسم ده
+                                const categoryProducts = allStoreProducts.filter(p => p.category === colName || p.categoryId === colId || p.collectionId === colId);
+                                
                                 categoryProducts.forEach(prod => {
                                   if (!currentProds.some(p => p.productId === prod.id)) {
                                     currentProds.push({
@@ -685,30 +678,36 @@ export default function HomeManagerPage() {
                                   }
                                 });
                                 updated[sectionIndex].data.products = currentProds;
+                                
+                                // تحديث رابط عرض الكل تلقائياً للقسم المختار
+                                updated[sectionIndex].data.linkUrl = `/collections/${colId}`;
+                                if(updated[sectionIndex].data.viewAllLink !== undefined) {
+                                   updated[sectionIndex].data.viewAllLink = `/collections/${colId}`;
+                                }
+
                                 setLayoutSections(updated);
-                                e.target.value = ""; // تفريغ القائمة بعد الإضافة
-                                alert(`تم إضافة جميع منتجات قسم "${catName}" بنجاح!`);
+                                e.target.value = ""; 
+                                alert(`تم إضافة جميع منتجات قسم "${colName}" وتحديث رابط العرض بنجاح!`);
                               }}
                               className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
                             >
-                              <option value="">-- اختر القسم للإضافة السريعة --</option>
-                              {Array.from(new Set(allStoreProducts.map(p => p.category).filter(Boolean))).map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
+                              <option value="">-- اختر القسم للإضافة السريعة وتغيير الرابط --</option>
+                              {allStoreCollections.map(col => (
+                                <option key={col.id} value={col.id}>{col.title || col.name || col.id}</option>
                               ))}
                             </select>
+                            <p className="text-[10px] text-gray-500 mt-2 font-medium">ملاحظة: اختيار القسم من هنا سيقوم بإضافة منتجاته، وسيقوم تلقائياً بتغيير رابط زر "عرض الكل" ليوجه الزائر إلى صفحة هذا القسم.</p>
                           </div>
 
                           {/* خيار 2: قائمة كل المنتجات مع Checkbox */}
                           <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
                             {allStoreProducts.map((product) => {
-                              // التحقق هل المنتج ده متحدد ولا لأ
                               const isSelected = (section.data?.products || []).some(p => p.productId === product.id);
                               const selectedProductData = (section.data?.products || []).find(p => p.productId === product.id);
 
                               return (
                                 <div key={product.id} className={`p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${isSelected ? 'bg-[#f4fae5]' : 'hover:bg-gray-50'}`}>
                                   
-                                  {/* بيانات المنتج مع الـ Checkbox */}
                                   <div className="flex items-center gap-3 flex-1">
                                     <input 
                                       type="checkbox" 
@@ -744,7 +743,6 @@ export default function HomeManagerPage() {
                                     </div>
                                   </div>
 
-                                  {/* خانة الشارة تظهر فقط لو المنتج متحدد */}
                                   {isSelected && (
                                     <div className="sm:w-1/3 mt-2 sm:mt-0">
                                       <input 
