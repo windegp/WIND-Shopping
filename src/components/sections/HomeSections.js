@@ -495,3 +495,91 @@ export const BestSellersSection = ({ data }) => {
     </section>
   );
 };
+// --- 7. قسم العروض الحصرية (Premium Showcase) المبتكر ---
+export const ExclusiveOffers = ({ data }) => {
+  if (!data || !data.products || data.products.length === 0) return null;
+
+  // هنكتفي بأول 4 منتجات بس عشان نحافظ على فخامة وحجم الكروت
+  const premiumProducts = data.products.slice(0, 4);
+
+  return (
+    <section className="bg-gradient-to-b from-[#0a0a0a] to-[#121212] py-14 border-y border-[#222] relative overflow-hidden">
+      
+      {/* تأثير إضاءة خفيف في الخلفية للمسة السينمائية */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#F5C518] opacity-[0.03] blur-[100px] pointer-events-none"></div>
+
+      <div className="max-w-[1400px] mx-auto px-4 relative z-10" dir="rtl">
+        
+        {/* الهيدر: متمركز في المنتصف لكسر الروتين */}
+        <div className="text-center mb-10 flex flex-col items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#F5C518] mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase">
+            {data.title || "عروض حصرية"}
+          </h2>
+          {data.subTitle && (
+            <p className="text-gray-400 text-sm mt-2 max-w-lg mx-auto">{data.subTitle}</p>
+          )}
+        </div>
+
+        {/* شبكة الكروت الفاخرة */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {premiumProducts.map((p, index) => (
+            <Link key={index} href={p.linkUrl || "#"} className="group relative block aspect-[4/5] overflow-hidden rounded-2xl bg-[#1a1a1a] border border-[#333] hover:border-[#F5C518]/60 hover:shadow-[0_0_20px_rgba(245,197,24,0.15)] transition-all duration-500">
+              
+              {/* صورة المنتج مع تأثير زووم بطيء */}
+              <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+              
+              {/* تدرج لوني أسود من تحت لفوق عشان الكلام يقرأ بوضوح */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
+
+              {/* بادج خصم شيك لو فيه سعر قديم */}
+              {p.compareAtPrice && (
+                <div className="absolute top-4 right-4 bg-red-600/90 backdrop-blur-sm text-white text-xs font-black px-3 py-1.5 rounded-full border border-red-400/30">
+                  عرض خاص
+                </div>
+              )}
+
+              {/* تفاصيل المنتج متمركزة في الأسفل */}
+              <div className="absolute bottom-0 inset-x-0 p-5 flex flex-col justify-end translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 mb-2">{p.name}</h3>
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-[#F5C518] font-black text-xl">{p.price} LE</span>
+                  {p.compareAtPrice && (
+                    <span className="text-gray-400 line-through text-sm">{p.compareAtPrice} LE</span>
+                  )}
+                </div>
+
+                {/* زرار تسوق بيظهر بالـ Hover */}
+                <div className="overflow-hidden">
+                  <span className="inline-flex items-center gap-2 text-white text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                    تسوق الآن 
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+            </Link>
+          ))}
+        </div>
+
+        {/* زر عرض الكل (يظهر فقط إذا كان هناك رابط مخصص) */}
+        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
+          <div className="mt-10 flex justify-center">
+             <Link href={data.linkUrl || data.viewAllLink} className="group relative inline-flex items-center gap-2 bg-transparent text-white font-bold py-3 px-8 rounded-full transition-all duration-300 border border-[#F5C518]/50 hover:border-[#F5C518] hover:bg-[#F5C518]/10 overflow-hidden">
+               <span className="relative z-10 text-sm md:text-base">اكتشف كل العروض</span>
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 relative z-10 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+               </svg>
+             </Link>
+          </div>
+        ) : null}
+
+      </div>
+    </section>
+  );
+};

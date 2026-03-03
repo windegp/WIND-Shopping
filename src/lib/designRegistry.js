@@ -11,6 +11,9 @@ const MarqueeProducts = dynamic(() => import("@/components/sections/HomeSections
 // ✅ الإضافة الجديدة: سحب مكون الأكثر مبيعاً
 const BestSellersSection = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.BestSellersSection));
 
+// 🔥 الإضافة الجديدة: سحب مكون العروض الحصرية (القسم المبتكر)
+const ExclusiveOffers = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.ExclusiveOffers));
+
 export const DESIGN_REGISTRY = {
   "HERO_SECTION": {
     "MODERN_SLIDER": HeroSection, // قسم الهيرو الرئيسي
@@ -27,5 +30,9 @@ export const DESIGN_REGISTRY = {
   // ✅ الإضافة الجديدة: تسجيل قسم الأكثر مبيعاً
   "BEST_SELLERS_SECTION": {
     "BEST_SELLERS_GRID": BestSellersSection 
+  },
+  // 🔥 تسجيل القسم المبتكر الجديد: العروض الحصرية
+  "EXCLUSIVE_OFFERS_SECTION": {
+    "PREMIUM_CARDS": ExclusiveOffers 
   }
 };

@@ -17,6 +17,15 @@ const SECTION_TYPES = {
     hasTitle: true, 
     hasSubTitle: true, 
     hasProducts: true // دي اللي بتفتحلك أداة سحب الكولكشنات والمنتجات
+  },
+
+  // 🔥 القسم الجديد المبتكر: العروض الحصرية
+  EXCLUSIVE_OFFERS_SECTION: { 
+    label: "العروض الحصرية (كروت فاخرة)", 
+    designId: "PREMIUM_CARDS", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true 
   }
 };
 
