@@ -319,52 +319,59 @@ export const TopTenProducts = ({ data }) => {
 };
 // --- 5. قسم شريط المنتجات المتحرك (Marquee Products Slider) ---
 export const MarqueeProducts = ({ data }) => {
-  // تجنب الأخطاء لو مفيش منتجات
   if (!data || !data.products || data.products.length === 0) return null;
 
-  // تكرار المصفوفة عشان نعمل تأثير الحركة اللانهائية بدون تقطيع
   const duplicatedProducts = [...data.products, ...data.products, ...data.products];
 
   return (
-    <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
+    <section className="py-2 bg-[#161616] border-y border-[#222] overflow-hidden">
       
-      {/* عنوان القسم */}
-      <div className="flex items-center justify-between mb-8 px-4 max-w-[1400px] mx-auto" dir="rtl">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-8 bg-[#F5C518] rounded-sm"></div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
-              {data.title || "تسوق التشكيلة الجديدة"}
-            </h2>
-            {data.subTitle && (
-              <p className="text-gray-400 text-[10px] md:text-xs mt-1 font-normal">
-                {data.subTitle}
-              </p>
-            )}
-          </div>
-        </div>
+      {/* 1. استخدام مكون SectionHeader لتوحيد الشكل وإظهار زر عرض الكل */}
+      <div className="max-w-[1400px] mx-auto">
+        <SectionHeader 
+          title={data.title || "تسوق التشكيلة الجديدة"} 
+          subTitle={data.subTitle} 
+          link={data.linkUrl || data.viewAllLink || "#"} 
+        />
       </div>
 
       {/* شريط المنتجات المتحرك */}
-      <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
-        <div className="flex gap-4 md:gap-6 animate-marquee-infinite pause-on-hover">
+      <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing pb-10 pt-2" dir="ltr">
+        <div className="flex gap-4 md:gap-6 animate-marquee-infinite pause-on-hover px-4">
           {duplicatedProducts.map((product, index) => (
             <Link key={index} href={product.linkUrl || "#"} className="min-w-[180px] md:min-w-[240px] opacity-80 hover:opacity-100 transition-opacity block group">
               
               <div className="relative aspect-[3/4] bg-[#222] rounded-lg overflow-hidden mb-3 border border-[#333] group-hover:border-[#F5C518]/50 transition-colors">
                 <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 
-                {/* بادج (مثال: نفد، جديد) لو الأدمن دخله */}
                 {product.badge && (
-                  <span className="absolute top-2 right-2 bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 rounded-sm uppercase">
+                  <span className="absolute top-2 right-2 bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md">
                     {product.badge}
+                  </span>
+                )}
+
+                {/* بادج خصم يظهر أوتوماتيك لو فيه سعر قديم */}
+                {product.compareAtPrice && (
+                  <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md">
+                    تخفيض
                   </span>
                 )}
               </div>
               
               <div className="text-right px-1" dir="rtl">
                 <h3 className="text-white font-bold text-sm line-clamp-1">{product.name}</h3>
-                <p className="text-[#5799ef] font-bold text-sm mt-1">{product.price}</p>
+                
+                {/* 2. تنسيق السعر الجديد والقديم وإضافة LE */}
+                <div className="flex items-center justify-end gap-2 mt-1.5">
+                  {product.compareAtPrice && (
+                    <span className="text-gray-500 line-through text-[11px] md:text-xs font-semibold">
+                      {product.compareAtPrice} LE
+                    </span>
+                  )}
+                  <span className="text-[#5799ef] font-black text-sm md:text-base">
+                    {product.price} LE
+                  </span>
+                </div>
               </div>
 
             </Link>

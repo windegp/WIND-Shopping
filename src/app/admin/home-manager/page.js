@@ -682,7 +682,8 @@ export default function HomeManagerPage() {
                                             name: selectedProduct.title || selectedProduct.name || "بدون اسم",
                                             image: (selectedProduct.images && selectedProduct.images[0]) || selectedProduct.image || "",
                                             price: selectedProduct.price || "",
-                                            linkUrl: `/product/${selectedId}` // مسار المنتج الافتراضي
+                                          compareAtPrice: selectedProduct.compareAtPrice || selectedProduct.oldPrice || "", // بيلقط السعر قبل الخصم
+                                          linkUrl: `/product/${selectedId}` // مسار المنتج الافتراضي
                                           };
                                           setLayoutSections(updated);
                                         }
