@@ -74,7 +74,7 @@ export default function Footer() {
       {/* 7. شعار الشركة (بديل أمازون) */}
       <div className="mb-6 flex items-center gap-2">
         <span className="font-normal text-[15px]">إحدى شركات</span>
-        <span className="font-black text-xl italic tracking-wider">Sل</span>
+        <span className="font-black text-xl italic tracking-wider">لS</span>
       </div>
 
       {/* 8. حقوق النشر والتاريخ */}
