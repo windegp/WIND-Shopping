@@ -324,19 +324,23 @@ export const MarqueeProducts = ({ data }) => {
   const duplicatedProducts = [...data.products, ...data.products, ...data.products];
 
   return (
-    <section className="py-2 bg-[#161616] border-y border-[#222] overflow-hidden">
+    <section className="bg-[#161616] pt-6 pb-2 mt-0 border-y border-[#333] overflow-hidden">
       
-      {/* 1. استخدام مكون SectionHeader لتوحيد الشكل وإظهار زر عرض الكل */}
-      <div className="max-w-[1400px] mx-auto">
-        <SectionHeader 
-          title={data.title || "تسوق التشكيلة الجديدة"} 
-          subTitle={data.subTitle} 
-          link={data.linkUrl || data.viewAllLink || "#"} 
-        />
+      {/* 1. العنوان بنفس استايل "أفضل 10 منتجات" وزرار السهم */}
+      <div className="max-w-[1400px] mx-auto relative px-4 text-right" dir="rtl">
+        <Link href={data.linkUrl || data.viewAllLink || "/"} className="flex items-center gap-2 mb-6 cursor-pointer group w-max">
+          <div className="w-1.5 h-6 bg-[#F5C518] rounded-sm"></div>
+          <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-1 transition-colors group-hover:text-[#F5C518]">
+            {data.title || "تسوق التشكيلة الجديدة"}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mt-1 text-white group-hover:text-[#F5C518] transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+            </svg>
+          </h2>
+        </Link>
       </div>
 
       {/* شريط المنتجات المتحرك */}
-      <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing pb-10 pt-2" dir="ltr">
+      <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing pb-8 pt-2" dir="ltr">
         <div className="flex gap-4 md:gap-6 animate-marquee-infinite pause-on-hover px-4">
           {duplicatedProducts.map((product, index) => (
             <Link key={index} href={product.linkUrl || "#"} className="min-w-[180px] md:min-w-[240px] opacity-80 hover:opacity-100 transition-opacity block group">
@@ -344,33 +348,37 @@ export const MarqueeProducts = ({ data }) => {
               <div className="relative aspect-[3/4] bg-[#222] rounded-lg overflow-hidden mb-3 border border-[#333] group-hover:border-[#F5C518]/50 transition-colors">
                 <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 
+                {/* الشارة اليدوية (Badge) */}
                 {product.badge && (
-                  <span className="absolute top-2 right-2 bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md">
+                  <span className="absolute top-2 right-2 bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md z-10">
                     {product.badge}
                   </span>
                 )}
 
-                {/* بادج خصم يظهر أوتوماتيك لو فيه سعر قديم */}
+                {/* بادج الخصم التلقائي (لو فيه سعر قديم) */}
                 {product.compareAtPrice && (
-                  <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md">
+                  <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md z-10">
                     تخفيض
                   </span>
                 )}
               </div>
               
               <div className="text-right px-1" dir="rtl">
-                <h3 className="text-white font-bold text-sm line-clamp-1">{product.name}</h3>
+                <h3 className="text-white font-bold text-sm md:text-base line-clamp-1">{product.name}</h3>
                 
-                {/* 2. تنسيق السعر الجديد والقديم وإضافة LE */}
-                <div className="flex items-center justify-end gap-2 mt-1.5">
-                  {product.compareAtPrice && (
-                    <span className="text-gray-500 line-through text-[11px] md:text-xs font-semibold">
-                      {product.compareAtPrice} LE
-                    </span>
-                  )}
+                {/* 2. تنسيق السعر الجديد والقديم متقابلين */}
+                <div className="flex items-center justify-between mt-1.5">
+                  {/* السعر الحالي تحت الاسم */}
                   <span className="text-[#5799ef] font-black text-sm md:text-base">
                     {product.price} LE
                   </span>
+                  
+                  {/* السعر القديم المشطوب الناحية التانية */}
+                  {product.compareAtPrice && (
+                    <span className="text-gray-500 line-through text-[11px] md:text-sm font-semibold">
+                      {product.compareAtPrice} LE
+                    </span>
+                  )}
                 </div>
               </div>
 
