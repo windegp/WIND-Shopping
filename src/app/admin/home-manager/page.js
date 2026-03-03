@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 // --- خريطة الأقسام الأساسية فقط ---
@@ -24,6 +24,7 @@ export default function HomeManagerPage() {
 
   // --- 4. حالة واجهة المستخدم (الأكورديون) ---
   const [expandedSections, setExpandedSections] = useState({});
+  const [allStoreProducts, setAllStoreProducts] = useState([]); // لحفظ منتجات المتجر
 
   // حالات التحميل والحفظ
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,14 @@ export default function HomeManagerPage() {
     const fetchCurrentData = async () => {
       try {
         const layoutRef = doc(db, "homepage", "layout_config");
+        // جلب منتجات المتجر لعرضها في القوائم المنسدلة
+        try {
+          const productsRef = collection(db, "products"); // تأكد أن اسم مجموعة المنتجات عندك في فايربيز هو products
+          const productsSnap = await getDocs(productsRef);
+          setAllStoreProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (err) {
+          console.error("خطأ في جلب المنتجات:", err);
+        }
         const layoutSnap = await getDoc(layoutRef);
         let currentLayout = [];
         if (layoutSnap.exists()) {
@@ -654,26 +663,64 @@ export default function HomeManagerPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  
+                                  {/* قائمة اختيار المنتج من الداتا بيز */}
                                   <div className="col-span-1 md:col-span-2">
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط الصورة</label>
-                                    <input type="text" value={product.image || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'image', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" />
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">اختر المنتج من المتجر</label>
+                                    <select
+                                      value={product.productId || ""}
+                                      onChange={(e) => {
+                                        const selectedId = e.target.value;
+                                        const selectedProduct = allStoreProducts.find(p => p.id === selectedId);
+                                        
+                                        if (selectedProduct) {
+                                          const updated = [...layoutSections];
+                                          updated[sectionIndex].data.products[prodIndex] = {
+                                            ...updated[sectionIndex].data.products[prodIndex],
+                                            productId: selectedId,
+                                            // بنحفظ الداتا في الخلفية عشان الواجهة تعرضها علطول
+                                            name: selectedProduct.title || selectedProduct.name || "بدون اسم",
+                                            image: (selectedProduct.images && selectedProduct.images[0]) || selectedProduct.image || "",
+                                            price: selectedProduct.price || "",
+                                            linkUrl: `/product/${selectedId}` // مسار المنتج الافتراضي
+                                          };
+                                          setLayoutSections(updated);
+                                        }
+                                      }}
+                                      className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
+                                    >
+                                      <option value="">-- اختر منتجاً للعرْض --</option>
+                                      {allStoreProducts.map(p => (
+                                        <option key={p.id} value={p.id}>
+                                          {p.title || p.name || "منتج بدون اسم"} - ({p.price || 0} ج.م)
+                                        </option>
+                                      ))}
+                                    </select>
                                   </div>
-                                  <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">اسم المنتج</label>
-                                    <input type="text" value={product.name || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'name', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">السعر</label>
-                                    <input type="text" value={product.price || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'price', e.target.value)} placeholder="مثال: 1200 ج.م" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط المنتج (URL)</label>
-                                    <input type="text" value={product.linkUrl || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" />
-                                  </div>
-                                  <div>
+
+                                  {/* إدخال الشارة (المتبقي الوحيد لليدوي) */}
+                                  <div className="col-span-1 md:col-span-2">
                                     <label className="block text-[11px] font-bold text-gray-600 mb-1.5">شارة مميزة (Badge) - اختياري</label>
-                                    <input type="text" value={product.badge || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'badge', e.target.value)} placeholder="مثال: جديد، الأخير" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                    <input 
+                                      type="text" 
+                                      value={product.badge || ""} 
+                                      onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'badge', e.target.value)} 
+                                      placeholder="مثال: جديد، نفدت الكمية، حصري" 
+                                      className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" 
+                                    />
                                   </div>
+
+                                  {/* عرض مصغر للمنتج المختار للتأكيد (UI شيك للأدمن) */}
+                                  {product.image && (
+                                    <div className="col-span-1 md:col-span-2 mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-4">
+                                      <img src={product.image} alt="Preview" className="w-12 h-12 object-cover rounded bg-white border border-gray-200" />
+                                      <div>
+                                        <p className="text-xs font-bold text-[#202223]">{product.name}</p>
+                                        <p className="text-[10px] text-gray-500 mt-1">السعر المربوط: {product.price}</p>
+                                      </div>
+                                    </div>
+                                  )}
+
                                 </div>
                               </div>
                             ))}
