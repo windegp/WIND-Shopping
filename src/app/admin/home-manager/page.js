@@ -650,89 +650,124 @@ export default function HomeManagerPage() {
                         </div>
                       )}
 
-                      {/* 3. محرر المنتجات (خاص بشريط المنتجات المتحرك) */}
+                      {/* 3. محرر المنتجات (قائمة اختيار سريعة بالـ Checkboxes) */}
                       {config?.hasProducts && (
-                        <div>
-                          <h4 className="text-sm font-bold text-[#202223] mb-3 mt-4 border-t border-gray-100 pt-4">المنتجات المعروضة في الشريط:</h4>
-                          <div className="space-y-4">
-                            {(section.data?.products || []).map((product, prodIndex) => (
-                              <div key={prodIndex} className="p-4 sm:p-5 border border-gray-200 rounded-xl bg-white shadow-sm relative">
-                                <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                                  <span className="font-bold text-[#202223] text-sm">منتج #{prodIndex + 1}</span>
-                                  <button onClick={() => removeArrayItem(sectionIndex, 'products', prodIndex)} className="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2 py-1 rounded border border-red-100">حذف المنتج</button>
-                                </div>
+                        <div className="mt-6 border-t border-gray-100 pt-5">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-bold text-[#202223]">تحديد المنتجات المعروضة:</h4>
+                            <span className="bg-[#008060] text-white px-2.5 py-1 rounded text-xs font-bold shadow-sm">
+                              {(section.data?.products || []).length} منتج محدد
+                            </span>
+                          </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* خيار 1: إضافة منتجات قسم بالكامل */}
+                          <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة منتجات قسم (Collection) بالكامل:</label>
+                            <select 
+                              onChange={(e) => {
+                                const catName = e.target.value;
+                                if (!catName) return;
+                                const updated = [...layoutSections];
+                                let currentProds = updated[sectionIndex].data.products || [];
+                                
+                                const categoryProducts = allStoreProducts.filter(p => p.category === catName);
+                                categoryProducts.forEach(prod => {
+                                  if (!currentProds.some(p => p.productId === prod.id)) {
+                                    currentProds.push({
+                                      productId: prod.id,
+                                      name: prod.title || prod.name || "بدون اسم",
+                                      image: (prod.images && prod.images[0]) || prod.image || "",
+                                      price: prod.price || "",
+                                      compareAtPrice: prod.compareAtPrice || prod.oldPrice || "",
+                                      linkUrl: `/product/${prod.id}`,
+                                      badge: ""
+                                    });
+                                  }
+                                });
+                                updated[sectionIndex].data.products = currentProds;
+                                setLayoutSections(updated);
+                                e.target.value = ""; // تفريغ القائمة بعد الإضافة
+                                alert(`تم إضافة جميع منتجات قسم "${catName}" بنجاح!`);
+                              }}
+                              className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
+                            >
+                              <option value="">-- اختر القسم للإضافة السريعة --</option>
+                              {Array.from(new Set(allStoreProducts.map(p => p.category).filter(Boolean))).map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* خيار 2: قائمة كل المنتجات مع Checkbox */}
+                          <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
+                            {allStoreProducts.map((product) => {
+                              // التحقق هل المنتج ده متحدد ولا لأ
+                              const isSelected = (section.data?.products || []).some(p => p.productId === product.id);
+                              const selectedProductData = (section.data?.products || []).find(p => p.productId === product.id);
+
+                              return (
+                                <div key={product.id} className={`p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${isSelected ? 'bg-[#f4fae5]' : 'hover:bg-gray-50'}`}>
                                   
-                                  {/* قائمة اختيار المنتج من الداتا بيز */}
-                                  <div className="col-span-1 md:col-span-2">
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">اختر المنتج من المتجر</label>
-                                    <select
-                                      value={product.productId || ""}
-                                      onChange={(e) => {
-                                        const selectedId = e.target.value;
-                                        const selectedProduct = allStoreProducts.find(p => p.id === selectedId);
-                                        
-                                        if (selectedProduct) {
-                                          const updated = [...layoutSections];
-                                          updated[sectionIndex].data.products[prodIndex] = {
-                                            ...updated[sectionIndex].data.products[prodIndex],
-                                            productId: selectedId,
-                                            // بنحفظ الداتا في الخلفية عشان الواجهة تعرضها علطول
-                                            name: selectedProduct.title || selectedProduct.name || "بدون اسم",
-                                            image: (selectedProduct.images && selectedProduct.images[0]) || selectedProduct.image || "",
-                                            price: selectedProduct.price || "",
-                                          compareAtPrice: selectedProduct.compareAtPrice || selectedProduct.oldPrice || "", // بيلقط السعر قبل الخصم
-                                          linkUrl: `/product/${selectedId}` // مسار المنتج الافتراضي
-                                          };
-                                          setLayoutSections(updated);
-                                        }
-                                      }}
-                                      className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
-                                    >
-                                      <option value="">-- اختر منتجاً للعرْض --</option>
-                                      {allStoreProducts.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                          {p.title || p.name || "منتج بدون اسم"} - ({p.price || 0} ج.م)
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-
-                                  {/* إدخال الشارة (المتبقي الوحيد لليدوي) */}
-                                  <div className="col-span-1 md:col-span-2">
-                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">شارة مميزة (Badge) - اختياري</label>
+                                  {/* بيانات المنتج مع الـ Checkbox */}
+                                  <div className="flex items-center gap-3 flex-1">
                                     <input 
-                                      type="text" 
-                                      value={product.badge || ""} 
-                                      onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'badge', e.target.value)} 
-                                      placeholder="مثال: جديد، نفدت الكمية، حصري" 
-                                      className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" 
+                                      type="checkbox" 
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const isChecked = e.target.checked;
+                                        const updated = [...layoutSections];
+                                        let currentProds = updated[sectionIndex].data.products || [];
+                                        
+                                        if (isChecked) {
+                                          currentProds.push({
+                                            productId: product.id,
+                                            name: product.title || product.name || "بدون اسم",
+                                            image: (product.images && product.images[0]) || product.image || "",
+                                            price: product.price || "",
+                                            compareAtPrice: product.compareAtPrice || product.oldPrice || "",
+                                            linkUrl: `/product/${product.id}`,
+                                            badge: ""
+                                          });
+                                        } else {
+                                          currentProds = currentProds.filter(p => p.productId !== product.id);
+                                        }
+                                        
+                                        updated[sectionIndex].data.products = currentProds;
+                                        setLayoutSections(updated);
+                                      }}
+                                      className="w-4 h-4 text-[#008060] rounded border-gray-300 focus:ring-[#008060] cursor-pointer"
                                     />
+                                    <img src={(product.images && product.images[0]) || product.image || "/placeholder.jpg"} className="w-10 h-10 rounded border border-gray-200 object-cover" />
+                                    <div>
+                                      <p className="text-sm font-bold text-[#202223] line-clamp-1">{product.title || product.name}</p>
+                                      <p className="text-[11px] text-gray-500">{product.price} LE {product.category && `- ${product.category}`}</p>
+                                    </div>
                                   </div>
 
-                                  {/* عرض مصغر للمنتج المختار للتأكيد (UI شيك للأدمن) */}
-                                  {product.image && (
-                                    <div className="col-span-1 md:col-span-2 mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-4">
-                                      <img src={product.image} alt="Preview" className="w-12 h-12 object-cover rounded bg-white border border-gray-200" />
-                                      <div>
-                                        <p className="text-xs font-bold text-[#202223]">{product.name}</p>
-                                        <p className="text-[10px] text-gray-500 mt-1">السعر المربوط: {product.price}</p>
-                                      </div>
+                                  {/* خانة الشارة تظهر فقط لو المنتج متحدد */}
+                                  {isSelected && (
+                                    <div className="sm:w-1/3 mt-2 sm:mt-0">
+                                      <input 
+                                        type="text" 
+                                        placeholder="شارة (مثال: جديد)" 
+                                        value={selectedProductData?.badge || ""}
+                                        onChange={(e) => {
+                                          const updated = [...layoutSections];
+                                          const pIndex = updated[sectionIndex].data.products.findIndex(p => p.productId === product.id);
+                                          if(pIndex > -1) {
+                                            updated[sectionIndex].data.products[pIndex].badge = e.target.value;
+                                            setLayoutSections(updated);
+                                          }
+                                        }}
+                                        className="w-full p-2 text-xs border border-[#008060]/30 rounded bg-white focus:border-[#008060] outline-none"
+                                      />
                                     </div>
                                   )}
-
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           
-                          <button
-                            onClick={() => addArrayItem(sectionIndex, 'products', { image: "", name: "", price: "", linkUrl: "", badge: "" })}
-                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
-                          >
-                            + إضافة منتج للشريط
-                          </button>
                         </div>
                       )}
 
