@@ -773,7 +773,7 @@ export default function HomeManagerPage() {
                                 <option key={col.id} value={col.id}>{col.name || col.title || col.id}</option>
                               ))}
                             </select>
-                            <p className="text-[10px] text-gray-500 mt-2 font-medium">ملاحظة: الرابط التلقائي سيصبح <code>/category/slug</code> ويمكنك تعديله يدوياً من خانة (رابط زر عرض الكل) بالأعلى.</p>
+                            <p className="text-[10px] text-gray-500 mt-2 font-medium">ملاحظة: الرابط التلقائي سيصبح <code>/collections/slug</code> ويمكنك تعديله يدوياً من خانة (رابط زر عرض الكل) بالأعلى.</p>
                           </div>
 
                           {/* خيار 2: قائمة كل المنتجات مع Checkbox */}
