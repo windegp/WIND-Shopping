@@ -317,3 +317,60 @@ export const TopTenProducts = ({ data }) => {
     </section>
   );
 };
+// --- 5. قسم شريط المنتجات المتحرك (Marquee Products Slider) ---
+export const MarqueeProducts = ({ data }) => {
+  // تجنب الأخطاء لو مفيش منتجات
+  if (!data || !data.products || data.products.length === 0) return null;
+
+  // تكرار المصفوفة عشان نعمل تأثير الحركة اللانهائية بدون تقطيع
+  const duplicatedProducts = [...data.products, ...data.products, ...data.products];
+
+  return (
+    <section className="py-10 bg-[#161616] border-y border-[#222] overflow-hidden">
+      
+      {/* عنوان القسم */}
+      <div className="flex items-center justify-between mb-8 px-4 max-w-[1400px] mx-auto" dir="rtl">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-8 bg-[#F5C518] rounded-sm"></div>
+          <div>
+            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+              {data.title || "تسوق التشكيلة الجديدة"}
+            </h2>
+            {data.subTitle && (
+              <p className="text-gray-400 text-[10px] md:text-xs mt-1 font-normal">
+                {data.subTitle}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* شريط المنتجات المتحرك */}
+      <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing" dir="ltr">
+        <div className="flex gap-4 md:gap-6 animate-marquee-infinite pause-on-hover">
+          {duplicatedProducts.map((product, index) => (
+            <Link key={index} href={product.linkUrl || "#"} className="min-w-[180px] md:min-w-[240px] opacity-80 hover:opacity-100 transition-opacity block group">
+              
+              <div className="relative aspect-[3/4] bg-[#222] rounded-lg overflow-hidden mb-3 border border-[#333] group-hover:border-[#F5C518]/50 transition-colors">
+                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                
+                {/* بادج (مثال: نفد، جديد) لو الأدمن دخله */}
+                {product.badge && (
+                  <span className="absolute top-2 right-2 bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 rounded-sm uppercase">
+                    {product.badge}
+                  </span>
+                )}
+              </div>
+              
+              <div className="text-right px-1" dir="rtl">
+                <h3 className="text-white font-bold text-sm line-clamp-1">{product.name}</h3>
+                <p className="text-[#5799ef] font-bold text-sm mt-1">{product.price}</p>
+              </div>
+
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};

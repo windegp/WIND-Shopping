@@ -6,6 +6,7 @@ const HeroSection = dynamic(() => import("@/components/sections/HeroSection"));
 // هنا بنسحب المكونات من داخل ملف HomeSections بشكل منفصل عند الحاجة فقط
 const FeaturedToday = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.FeaturedToday));
 const TopTenProducts = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.TopTenProducts));
+const MarqueeProducts = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.MarqueeProducts));
 
 export const DESIGN_REGISTRY = {
   "HERO_SECTION": {
@@ -14,8 +15,11 @@ export const DESIGN_REGISTRY = {
   "FEATURED_SECTION": {
     "IMDB_STYLE": FeaturedToday, // قسم المميز اليوم
   },
-  // ✅ القسم الجديد "أفضل 10 منتجات" - جاهز للعمل فوراً
   "TOP_TEN_SECTION": {
     "TOP_TEN_LIST": TopTenProducts 
+  },
+  // ✅ القسم الجديد "شريط المنتجات"
+  "MARQUEE_SECTION": {
+    "PRODUCTS_SLIDER": MarqueeProducts 
   }
 };

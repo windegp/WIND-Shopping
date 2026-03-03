@@ -7,7 +7,8 @@ import { db } from "@/lib/firebase";
 const SECTION_TYPES = {
   HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
   FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
-  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true }
+  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true },
+  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true }
 };
 
 export default function HomeManagerPage() {
@@ -84,6 +85,7 @@ export default function HomeManagerPage() {
     if (config.hasSubTitle) initialData.subTitle = "";
     if (config.hasFeaturedCards) initialData.cards = [];
     if (config.hasViewAllLink) initialData.viewAllLink = "";
+    if (config.hasProducts) initialData.products = [];
 
     updated[index].data = initialData;
     setLayoutSections(updated);
@@ -635,6 +637,53 @@ export default function HomeManagerPage() {
                             className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
                           >
                             + إضافة بطاقة جديدة
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 3. محرر المنتجات (خاص بشريط المنتجات المتحرك) */}
+                      {config?.hasProducts && (
+                        <div>
+                          <h4 className="text-sm font-bold text-[#202223] mb-3 mt-4 border-t border-gray-100 pt-4">المنتجات المعروضة في الشريط:</h4>
+                          <div className="space-y-4">
+                            {(section.data?.products || []).map((product, prodIndex) => (
+                              <div key={prodIndex} className="p-4 sm:p-5 border border-gray-200 rounded-xl bg-white shadow-sm relative">
+                                <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                                  <span className="font-bold text-[#202223] text-sm">منتج #{prodIndex + 1}</span>
+                                  <button onClick={() => removeArrayItem(sectionIndex, 'products', prodIndex)} className="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2 py-1 rounded border border-red-100">حذف المنتج</button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط الصورة</label>
+                                    <input type="text" value={product.image || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'image', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">اسم المنتج</label>
+                                    <input type="text" value={product.name || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'name', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">السعر</label>
+                                    <input type="text" value={product.price || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'price', e.target.value)} placeholder="مثال: 1200 ج.م" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">رابط المنتج (URL)</label>
+                                    <input type="text" value={product.linkUrl || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'linkUrl', e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono" dir="ltr" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 mb-1.5">شارة مميزة (Badge) - اختياري</label>
+                                    <input type="text" value={product.badge || ""} onChange={(e) => updateArrayItem(sectionIndex, 'products', prodIndex, 'badge', e.target.value)} placeholder="مثال: جديد، الأخير" className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none" />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => addArrayItem(sectionIndex, 'products', { image: "", name: "", price: "", linkUrl: "", badge: "" })}
+                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
+                          >
+                            + إضافة منتج للشريط
                           </button>
                         </div>
                       )}
