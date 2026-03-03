@@ -77,11 +77,7 @@ export default function Footer() {
         <span className="font-black text-xl italic tracking-wider">لS</span>
       </div>
 
-      {/* 8. حقوق النشر والتاريخ */}
+            {/* 8. حقوق النشر والتاريخ */}
       <div className="text-[#a3a3a3] text-[13px] tracking-wide font-sans text-center">
-        © 2019-{new Date().getFullYear()} by WIND Shopping, Inc.
+        جميع الحقوق محفوظة © 2019-{new Date().getFullYear()} لشركة WIND Shopping
       </div>
-
-    </footer>
-  );
-}
