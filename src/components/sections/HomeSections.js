@@ -512,9 +512,7 @@ export const ExclusiveOffers = ({ data }) => {
         
         {/* الهيدر: متمركز في المنتصف لكسر الروتين */}
         <div className="text-center mb-10 flex flex-col items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#F5C518] mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-          </svg>
+
           <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase">
             {data.title || "عروض حصرية"}
           </h2>
@@ -571,7 +569,7 @@ export const ExclusiveOffers = ({ data }) => {
         {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
           <div className="mt-10 flex justify-center">
              <Link href={data.linkUrl || data.viewAllLink} className="group relative inline-flex items-center gap-2 bg-transparent text-white font-bold py-3 px-8 rounded-full transition-all duration-300 border border-[#F5C518]/50 hover:border-[#F5C518] hover:bg-[#F5C518]/10 overflow-hidden">
-               <span className="relative z-10 text-sm md:text-base">اكتشف كل العروض</span>
+               <span className="relative z-10 text-sm md:text-base">عرض الكل</span>
                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 relative z-10 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                </svg>
