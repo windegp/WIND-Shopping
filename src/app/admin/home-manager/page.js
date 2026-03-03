@@ -8,7 +8,16 @@ const SECTION_TYPES = {
   HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
   FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
   TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true },
-  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true }
+  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true },
+  
+  // ✅ القسم الجديد: الأكثر مبيعاً
+  BEST_SELLERS_SECTION: { 
+    label: "الأكثر مبيعاً (شبكة منتجات)", 
+    designId: "BEST_SELLERS_GRID", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true // دي اللي بتفتحلك أداة سحب الكولكشنات والمنتجات
+  }
 };
 
 export default function HomeManagerPage() {

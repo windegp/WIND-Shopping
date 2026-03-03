@@ -8,6 +8,9 @@ const FeaturedToday = dynamic(() => import("@/components/sections/HomeSections")
 const TopTenProducts = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.TopTenProducts));
 const MarqueeProducts = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.MarqueeProducts));
 
+// ✅ الإضافة الجديدة: سحب مكون الأكثر مبيعاً
+const BestSellersSection = dynamic(() => import("@/components/sections/HomeSections").then(mod => mod.BestSellersSection));
+
 export const DESIGN_REGISTRY = {
   "HERO_SECTION": {
     "MODERN_SLIDER": HeroSection, // قسم الهيرو الرئيسي
@@ -18,8 +21,11 @@ export const DESIGN_REGISTRY = {
   "TOP_TEN_SECTION": {
     "TOP_TEN_LIST": TopTenProducts 
   },
-  // ✅ القسم الجديد "شريط المنتجات"
   "MARQUEE_SECTION": {
     "PRODUCTS_SLIDER": MarqueeProducts 
+  },
+  // ✅ الإضافة الجديدة: تسجيل قسم الأكثر مبيعاً
+  "BEST_SELLERS_SECTION": {
+    "BEST_SELLERS_GRID": BestSellersSection 
   }
 };

@@ -403,3 +403,95 @@ export const MarqueeProducts = ({ data }) => {
     </section>
   );
 };
+// --- 6. قسم الأكثر مبيعاً (Best Sellers Grid) ---
+export const BestSellersSection = ({ data }) => {
+  // التحقق من وجود المنتجات، وإلا يتم إخفاء القسم
+  if (!data || !data.products || data.products.length === 0) return null;
+
+  // فصل المنتج الأول ليكون "البطل"، وباقي المنتجات (حتى 4) في الشبكة المصغرة
+  const heroProduct = data.products[0];
+  const gridProducts = data.products.slice(1, 5);
+
+  return (
+    <section className="bg-[#181818] py-8 mt-0 border-y border-[#333]">
+      
+      {/* 1. الهيدر (العنوان وزر عرض الكل الديناميكي) */}
+      <div className="flex items-end justify-between px-4 mb-6 max-w-[1400px] mx-auto" dir="rtl">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-6 bg-[#F5C518] rounded-sm"></div>
+            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+              {data.title || "الأكثر مبيعاً"}
+            </h2>
+          </div>
+          {data.subTitle && (
+            <p className="text-gray-400 text-[11px] md:text-sm mt-1.5 font-medium pr-3.5">
+              {data.subTitle}
+            </p>
+          )}
+        </div>
+
+        {/* زر عرض الكل (يظهر فقط إذا كان هناك رابط مخصص) */}
+        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
+          <Link href={data.linkUrl || data.viewAllLink} className="text-[#5799ef] hover:text-white text-sm md:text-base font-bold flex items-center gap-1 transition-colors pb-1 shrink-0">
+            عرض الكل
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+        ) : null}
+      </div>
+
+      {/* 2. شبكة المنتجات */}
+      <div className="flex flex-col md:flex-row gap-4 px-4 max-w-[1400px] mx-auto" dir="rtl">
+        
+        {/* المنتج البطل (#1) */}
+        {heroProduct && (
+          <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group hover:border-[#F5C518]/40 transition-colors rounded-xl flex flex-col">
+            <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-[10px] md:text-xs px-2 py-1 z-10 rounded-sm shadow-md uppercase">
+              الأكثر طلباً #1
+            </div>
+            
+            <Link href={heroProduct.linkUrl || "#"} className="flex flex-col h-full w-full">
+              <div className="relative aspect-[3/4] w-full mb-4 overflow-hidden rounded-lg bg-[#222]">
+                <img src={heroProduct.image} alt={heroProduct.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              </div>
+              <div className="flex-1 flex flex-col justify-end">
+                <h3 className="text-white font-bold text-base md:text-lg line-clamp-2">{heroProduct.name}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[#5799ef] font-black text-lg">{heroProduct.price} LE</span>
+                  {heroProduct.compareAtPrice && (
+                    <span className="text-gray-500 line-through text-sm font-semibold">{heroProduct.compareAtPrice} LE</span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
+
+        {/* باقي المنتجات (2 إلى 5) */}
+        <div className="md:w-2/3 w-full grid grid-cols-2 gap-3 md:gap-4">
+          {gridProducts.map((p, index) => (
+            <div key={index} className="bg-[#121212] border border-[#333] p-3 rounded-xl hover:border-[#F5C518]/30 transition-colors group">
+              <Link href={p.linkUrl || "#"} className="flex flex-col h-full w-full">
+                <div className="relative aspect-[3/4] w-full mb-3 overflow-hidden rounded-lg bg-[#222]">
+                   <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <h3 className="text-white font-bold text-[13px] md:text-sm line-clamp-2">{p.name}</h3>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-[#5799ef] font-bold text-[14px] md:text-base">{p.price} LE</span>
+                    {p.compareAtPrice && (
+                      <span className="text-gray-500 line-through text-[11px] md:text-xs">{p.compareAtPrice} LE</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </section>
+  );
+};
