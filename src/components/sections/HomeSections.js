@@ -307,12 +307,14 @@ export const TopTenProducts = ({ data }) => {
           ))}
         </div>
         
-        {/* زر عرض الكل السفلي (مربوط بـ linkUrl القسم) */}
-        <div className="mt-6 flex justify-center pb-2">
-           <Link href={data.linkUrl || "/"} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base border border-[#333]">
-             عرض الكل
-           </Link>
-        </div>
+        {/* زر عرض الكل السفلي (يظهر فقط إذا كان هناك رابط مخصص) */}
+        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) && (
+          <div className="mt-6 flex justify-center pb-2">
+             <Link href={data.linkUrl || data.viewAllLink} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base border border-[#333]">
+               عرض الكل
+             </Link>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -343,12 +345,15 @@ export const MarqueeProducts = ({ data }) => {
             )}
           </div>
 
-          <Link href={data.linkUrl || data.viewAllLink || "/"} className="text-[#5799ef] hover:text-white text-sm md:text-base font-bold flex items-center gap-1 transition-colors pb-1 shrink-0">
-            عرض الكل
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          {/* زر عرض الكل (يظهر فقط إذا كان هناك رابط مخصص) */}
+          {(data.linkUrl?.trim() || data.viewAllLink?.trim()) && (
+            <Link href={data.linkUrl || data.viewAllLink} className="text-[#5799ef] hover:text-white text-sm md:text-base font-bold flex items-center gap-1 transition-colors pb-1 shrink-0">
+              عرض الكل
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+          )}
           
         </div>
 
