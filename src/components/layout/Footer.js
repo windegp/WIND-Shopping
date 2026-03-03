@@ -70,14 +70,17 @@ export default function Footer() {
         </div>
         <span className="text-[15px] font-medium">تفضيلات الخصوصية للإعلانات</span>
       </div>
-
       {/* 7. شعار الشركة (بديل أمازون) */}
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-6 flex justify-center items-center gap-2">
         <span className="font-normal text-[15px]">إحدى شركات</span>
-        <span className="font-black text-xl italic tracking-wider">لS</span>
+        <span className="font-black text-xl italic tracking-wider">S</span>
       </div>
 
-            {/* 8. حقوق النشر والتاريخ */}
+      {/* 8. حقوق النشر والتاريخ */}
       <div className="text-[#a3a3a3] text-[13px] tracking-wide font-sans text-center">
-        جميع الحقوق محفوظة © 2019-{new Date().getFullYear()} لشركة WIND Shopping
+        {"جميع الحقوق محفوظة "}
+        &copy;
+        {" 2019-"}
+        {new Date().getFullYear()}
+        {" لشركة WIND Shopping"}
       </div>
