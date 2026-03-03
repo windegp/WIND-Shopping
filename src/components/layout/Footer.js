@@ -79,7 +79,7 @@ export default function Footer() {
 
       {/* 8. حقوق النشر والتاريخ */}
       <div className="text-[#a3a3a3] text-[13px] tracking-wide font-sans text-center">
-        {"جميع الحقوق محفوظة "}
+        {""}
         &copy;
         {" 2019-"}
         {new Date().getFullYear()}
