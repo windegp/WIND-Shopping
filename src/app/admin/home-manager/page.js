@@ -755,8 +755,8 @@ export default function HomeManagerPage() {
                                 // حفظ اسم القسم للرؤية
                                 updated[sectionIndex].data.linkedCollectionName = colName;
 
-                                // تحديث رابط عرض الكل تلقائياً للقسم المختار بصيغة category باستخدام الـ slug
-                                const autoLink = `/category/${colSlug}`;
+                                // تحديث رابط عرض الكل تلقائياً للقسم المختار بصيغة collections باستخدام الـ slug
+                                const autoLink = `/collections/${colSlug}`;
                                 updated[sectionIndex].data.linkUrl = autoLink;
                                 if(updated[sectionIndex].data.viewAllLink !== undefined) {
                                    updated[sectionIndex].data.viewAllLink = autoLink;
@@ -764,7 +764,7 @@ export default function HomeManagerPage() {
 
                                 setLayoutSections(updated);
                                 e.target.value = ""; 
-                                alert(`تم بنجاح! تم إضافة ${categoryProducts.length} منتج من قسم "${colName}" وتم تحديث رابط عرض الكل إلى /category/${colSlug}.`);
+                                alert(`تم بنجاح! تم إضافة ${categoryProducts.length} منتج من قسم "${colName}" وتم تحديث رابط عرض الكل إلى /collections/${colSlug}.`);
                               }}
                               className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
                             >
