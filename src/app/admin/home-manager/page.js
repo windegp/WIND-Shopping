@@ -37,19 +37,20 @@ export default function HomeManagerPage() {
       try {
         const layoutRef = doc(db, "homepage", "layout_config");
         
-        // جلب منتجات وأقسام المتجر لعرضها في القوائم
+        // جلب منتجات وأقسام المتجر لعرضها في القوائم المنسدلة
         try {
-          const productsRef = collection(db, "products");
+          const productsRef = collection(db, "products"); // تأكد أن اسم مجموعة المنتجات عندك في فايربيز هو products
           const productsSnap = await getDocs(productsRef);
           setAllStoreProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-          const collectionsRef = collection(db, "collections"); // تم التعديل لجلب مجموعات فايربيز
+          // جلب الأقسام من collections
+          const collectionsRef = collection(db, "collections"); 
           const collectionsSnap = await getDocs(collectionsRef);
           setAllStoreCollections(collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (err) {
-          console.error("خطأ في جلب المنتجات أو المجموعات:", err);
+          console.error("خطأ في جلب المنتجات أو الأقسام:", err);
         }
-
+        
         const layoutSnap = await getDoc(layoutRef);
         let currentLayout = [];
         if (layoutSnap.exists()) {
