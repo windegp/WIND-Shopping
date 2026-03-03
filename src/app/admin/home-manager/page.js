@@ -682,39 +682,57 @@ export default function HomeManagerPage() {
                                 if (!colId) return;
                                 
                                 const selectedCol = allStoreCollections.find(c => c.id === colId);
-                                // خلينا الأولوية لـ name الأول زي ما في فايربيز عندك
                                 const colName = selectedCol?.name || selectedCol?.title || colId;
-                                // السحب من حقل slug لعمل الرابط
                                 const colSlug = selectedCol?.slug || colId; 
                                 
                                 const updated = [...layoutSections];
                                 let currentProds = updated[sectionIndex].data.products || [];
                                 
-                                // دالة ذكية لتوحيد النصوص العربية (بتحذف التنوين والهمزات والتاء المربوطة عشان التطابق ينجح 100%)
+                                // توحيد النص (حروف صغيرة، بدون همزات أو تنوين)
                                 const normalizeText = (text) => {
                                   if (!text) return "";
-                                  return text.toString().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim();
+                                  return text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim();
                                 };
-                                const normColName = normalizeText(colName);
                                 
-                                // فلترة قوية جداً: بتدور وتطابق مع تجاهل التشكيل والهمزات
+                                const normColId = normalizeText(colId);
+                                const normColName = normalizeText(colName);
+                                const normColSlug = normalizeText(colSlug);
+                                
+                                // فلترة كاسحة بتدور في كل حتة في المنتج (خصوصاً Organization و Product Type و Tags)
                                 const categoryProducts = allStoreProducts.filter(p => {
-                                  // لو المنتج مربوط بحقل نصي مفرد
-                                  const pCat = p.category || p.categoryId || p.collectionId || p.collection || "";
-                                  const normPCat = normalizeText(pCat);
+                                  let pCats = [];
+                                  
+                                  // الحقول الأساسية
+                                  if (p.category) pCats.push(p.category);
+                                  if (p.categoryId) pCats.push(p.categoryId);
+                                  if (p.collection) pCats.push(p.collection);
+                                  if (p.collectionId) pCats.push(p.collectionId);
+                                  if (p.productType) pCats.push(p.productType);
+                                  if (p.type) pCats.push(p.type);
+                                  
+                                  // حقول التنظيم (Organization) زي ما طلبت
+                                  if (p.organization) {
+                                    if (p.organization.productType) pCats.push(p.organization.productType);
+                                    if (p.organization.type) pCats.push(p.organization.type);
+                                    if (p.organization.category) pCats.push(p.organization.category);
+                                  }
+                                  
+                                  // المصفوفات (Arrays)
+                                  if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
+                                  if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
+                                  if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags); // احياناً "الأكثر مبيعاً" بتبقى في التاجز
 
-                                  // التطابق بالـ ID أو بالاسم المتنضف
-                                  if (normPCat === colId || normPCat === normColName) return true;
+                                  // تنظيف كل القيم اللي سحبناها من المنتج
+                                  const normalizedPCats = pCats.map(normalizeText);
 
-                                  // لو المنتج مربوط بـ Array من الأقسام (بعض هياكل المنتجات بتستخدم Arrays)
-                                  if (Array.isArray(p.categories) && (p.categories.includes(colId) || p.categories.map(normalizeText).includes(normColName))) return true;
-                                  if (Array.isArray(p.collections) && (p.collections.includes(colId) || p.collections.map(normalizeText).includes(normColName))) return true;
-
-                                  return false;
+                                  // لو أي حقل في المنتج طابق الـ ID أو الاسم أو الـ Slug بتاع القسم، يبقى المنتج ده معانا
+                                  return normalizedPCats.includes(normColId) || 
+                                         normalizedPCats.includes(normColName) || 
+                                         normalizedPCats.includes(normColSlug);
                                 });
 
                                 if(categoryProducts.length === 0) {
-                                  alert(`تنبيه: لم يتم العثور على أي منتجات مرتبطة بقسم "${colName}". تأكد أن المنتجات مسجل بها اسم القسم بشكل صحيح أو أنك ربطت المنتجات بهذا القسم.`);
+                                  alert(`تنبيه: لم يتم العثور على أي منتجات مرتبطة بقسم "${colName}". تأكد من إعدادات (التنظيم / Product type) داخل المنتجات.`);
                                   e.target.value = "";
                                   return;
                                 }
@@ -752,7 +770,6 @@ export default function HomeManagerPage() {
                             >
                               <option value="">-- اختر القسم للإضافة السريعة وتغيير الرابط --</option>
                               {allStoreCollections.map(col => (
-                                // برضه هنا الأولوية بقت لـ name عشان تظهر صح في القائمة المنسدلة
                                 <option key={col.id} value={col.id}>{col.name || col.title || col.id}</option>
                               ))}
                             </select>
