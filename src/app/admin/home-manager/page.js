@@ -484,7 +484,7 @@ export default function HomeManagerPage() {
                             </div>
                           )}
 
-                          {/* إضافة رابط عرض الكل للقسم بالكامل */}
+                        {/* إضافة رابط عرض الكل للقسم بالكامل */}
                           <div className="mt-4 pt-4 border-t border-gray-100">
                             <label className="block text-xs font-bold text-gray-600 mb-1.5">رابط زر "عرض الكل" (صفحة المجموعة)</label>
                             <input 
@@ -492,9 +492,16 @@ export default function HomeManagerPage() {
                               value={section.data?.linkUrl || ""} 
                               onChange={(e) => handleLayoutDataChange(sectionIndex, 'linkUrl', e.target.value)} 
                               placeholder="مثال: /collections/shoes"
-                              className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono"
+                              className={`w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none font-mono transition-colors ${
+                                ((section.data?.linkedCollections || []).length > 1 && !(section.data?.linkUrl)) 
+                                ? 'border-red-500 focus:border-red-600 bg-red-50 text-red-700' 
+                                : 'border-gray-300 text-[#202223] focus:border-[#008060]'
+                              }`}
                               dir="ltr"
                             />
+                            {((section.data?.linkedCollections || []).length > 1 && !(section.data?.linkUrl)) && (
+                              <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ تم اختيار أكثر من قسم، يرجى كتابة رابط مخصص لزر عرض الكل، وإلا لن يظهر الزر في الموقع.</p>
+                            )}
                           </div>
 
                           {/* رابط "عرض الكل" - خاص بـ TOP_TEN_SECTION فقط */}
@@ -505,10 +512,17 @@ export default function HomeManagerPage() {
                                 type="text"
                                 value={section.data?.viewAllLink || ""}
                                 onChange={(e) => handleLayoutDataChange(sectionIndex, 'viewAllLink', e.target.value)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none font-mono"
+                                className={`w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none font-mono transition-colors ${
+                                  ((section.data?.linkedCollections || []).length > 1 && !(section.data?.viewAllLink)) 
+                                  ? 'border-red-500 focus:border-red-600 bg-red-50 text-red-700' 
+                                  : 'border-gray-300 text-[#202223] focus:border-[#008060]'
+                                }`}
                                 dir="ltr"
                                 placeholder="مثال: /collections/top-ten"
                               />
+                               {((section.data?.linkedCollections || []).length > 1 && !(section.data?.viewAllLink)) && (
+                                <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ تم اختيار أكثر من قسم، يرجى كتابة رابط مخصص لزر عرض الكل.</p>
+                              )}
                             </div>
                           )}
                         </div>
@@ -656,26 +670,87 @@ export default function HomeManagerPage() {
                         </div>
                       )}
 
-                      {/* 3. محرر المنتجات (القائمة الذكية مع بادج الرؤية وتصحيح الروابط) */}
-                      {config?.hasProducts && (
-                        <div className="mt-6 border-t border-gray-100 pt-5">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <h4 className="text-sm font-bold text-[#202223]">تحديد المنتجات المعروضة:</h4>
-                              {section.data?.linkedCollectionName && (
-                                <span className="bg-[#eaf4ff] text-[#0066cc] px-2 py-1 rounded text-[11px] font-bold border border-[#0066cc]/20">
-                                  🔗 القسم المربوط: {section.data.linkedCollectionName}
-                                </span>
-                              )}
-                            </div>
-                            <span className="bg-[#008060] text-white px-2.5 py-1 rounded text-xs font-bold shadow-sm">
-                              {(section.data?.products || []).length} منتج محدد
-                            </span>
-                          </div>
+                      {/* 3. محرر المنتجات (دعم اختيار أقسام متعددة بـ Checkboxes) */}
+                      {config?.hasProducts && (
+                        <div className="mt-6 border-t border-gray-100 pt-5">
+                          <div className="flex flex-col gap-3 mb-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-bold text-[#202223]">تحديد المنتجات المعروضة:</h4>
+                              <span className="bg-[#008060] text-white px-2.5 py-1 rounded text-xs font-bold shadow-sm whitespace-nowrap">
+                                {(section.data?.products || []).length} منتج محدد
+                              </span>
+                            </div>
 
-                          {/* خيار 1: إضافة منتجات قسم بالكامل */}
+                            {/* عرض الأقسام المربوطة كـ Checkboxes للحذف السريع */}
+                            {(section.data?.linkedCollections || []).length > 0 && (
+                              <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                <span className="text-[11px] font-bold text-gray-600">🔗 الأقسام المربوطة:</span>
+                                {(section.data.linkedCollections).map((c, i) => (
+                                  <label key={i} className="flex items-center gap-1.5 bg-white text-[#0066cc] px-2 py-1.5 rounded text-[11px] font-bold border border-[#0066cc]/30 cursor-pointer hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors shadow-sm">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={true}
+                                      onChange={() => {
+                                          const updated = [...layoutSections];
+                                          let currentLinked = updated[sectionIndex].data.linkedCollections || [];
+                                          let currentProds = updated[sectionIndex].data.products || [];
+                                          
+                                          currentLinked = currentLinked.filter(item => item.id !== c.id);
+                                          
+                                          const normalizeText = (text) => text ? text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim() : "";
+                                          const normColId = normalizeText(c.id);
+                                          const normColName = normalizeText(c.name);
+                                          const normColSlug = normalizeText(c.slug);
+
+                                          const idsToRemove = allStoreProducts.filter(p => {
+                                            let pCats = [];
+                                            if (p.category) pCats.push(p.category);
+                                            if (p.categoryId) pCats.push(p.categoryId);
+                                            if (p.collection) pCats.push(p.collection);
+                                            if (p.collectionId) pCats.push(p.collectionId);
+                                            if (p.productType) pCats.push(p.productType);
+                                            if (p.type) pCats.push(p.type);
+                                            if (p.organization) {
+                                              if (p.organization.productType) pCats.push(p.organization.productType);
+                                              if (p.organization.type) pCats.push(p.organization.type);
+                                              if (p.organization.category) pCats.push(p.organization.category);
+                                            }
+                                            if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
+                                            if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
+                                            if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags);
+                                            const normalizedPCats = pCats.map(normalizeText);
+                                            
+                                            return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
+                                          }).map(p => p.id);
+
+                                          currentProds = currentProds.filter(p => !idsToRemove.includes(p.productId));
+
+                                          updated[sectionIndex].data.linkedCollections = currentLinked;
+                                          updated[sectionIndex].data.products = currentProds;
+
+                                          if (currentLinked.length === 1) {
+                                              const autoLink = `/collections/${currentLinked[0].slug}`;
+                                              updated[sectionIndex].data.linkUrl = autoLink;
+                                              if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
+                                          } else {
+                                              updated[sectionIndex].data.linkUrl = "";
+                                              if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
+                                          }
+
+                                          setLayoutSections(updated);
+                                      }}
+                                      className="w-3.5 h-3.5 text-red-500 rounded border-gray-300 focus:ring-0 cursor-pointer"
+                                    />
+                                    <span>{c.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* خيار 1: القائمة المنسدلة لإضافة قسم جديد */}
                           <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة منتجات قسم (Collection) بالكامل وربط الرابط:</label>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة منتجات قسم (Collection) بالكامل:</label>
                             <select 
                               onChange={(e) => {
                                 const colId = e.target.value;
@@ -686,9 +761,16 @@ export default function HomeManagerPage() {
                                 const colSlug = selectedCol?.slug || colId; 
                                 
                                 const updated = [...layoutSections];
+                                let currentLinked = updated[sectionIndex].data.linkedCollections || [];
+                                
+                                if (currentLinked.some(c => c.id === colId)) {
+                                    alert("تم إضافة هذا القسم مسبقاً!");
+                                    e.target.value = "";
+                                    return;
+                                }
+
                                 let currentProds = updated[sectionIndex].data.products || [];
                                 
-                                // توحيد النص (حروف صغيرة، بدون همزات أو تنوين)
                                 const normalizeText = (text) => {
                                   if (!text) return "";
                                   return text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim();
@@ -698,41 +780,29 @@ export default function HomeManagerPage() {
                                 const normColName = normalizeText(colName);
                                 const normColSlug = normalizeText(colSlug);
                                 
-                                // فلترة كاسحة بتدور في كل حتة في المنتج (خصوصاً Organization و Product Type و Tags)
                                 const categoryProducts = allStoreProducts.filter(p => {
                                   let pCats = [];
-                                  
-                                  // الحقول الأساسية
                                   if (p.category) pCats.push(p.category);
                                   if (p.categoryId) pCats.push(p.categoryId);
                                   if (p.collection) pCats.push(p.collection);
                                   if (p.collectionId) pCats.push(p.collectionId);
                                   if (p.productType) pCats.push(p.productType);
                                   if (p.type) pCats.push(p.type);
-                                  
-                                  // حقول التنظيم (Organization) زي ما طلبت
                                   if (p.organization) {
                                     if (p.organization.productType) pCats.push(p.organization.productType);
                                     if (p.organization.type) pCats.push(p.organization.type);
                                     if (p.organization.category) pCats.push(p.organization.category);
                                   }
-                                  
-                                  // المصفوفات (Arrays)
                                   if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
                                   if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
-                                  if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags); // احياناً "الأكثر مبيعاً" بتبقى في التاجز
-
-                                  // تنظيف كل القيم اللي سحبناها من المنتج
+                                  if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags);
+                                  
                                   const normalizedPCats = pCats.map(normalizeText);
-
-                                  // لو أي حقل في المنتج طابق الـ ID أو الاسم أو الـ Slug بتاع القسم، يبقى المنتج ده معانا
-                                  return normalizedPCats.includes(normColId) || 
-                                         normalizedPCats.includes(normColName) || 
-                                         normalizedPCats.includes(normColSlug);
+                                  return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
                                 });
 
                                 if(categoryProducts.length === 0) {
-                                  alert(`تنبيه: لم يتم العثور على أي منتجات مرتبطة بقسم "${colName}". تأكد من إعدادات (التنظيم / Product type) داخل المنتجات.`);
+                                  alert(`تنبيه: لم يتم العثور على أي منتجات مرتبطة بقسم "${colName}".`);
                                   e.target.value = "";
                                   return;
                                 }
@@ -750,30 +820,35 @@ export default function HomeManagerPage() {
                                     });
                                   }
                                 });
-                                updated[sectionIndex].data.products = currentProds;
-                                
-                                // حفظ اسم القسم للرؤية
-                                updated[sectionIndex].data.linkedCollectionName = colName;
 
-                                // تحديث رابط عرض الكل تلقائياً للقسم المختار بصيغة collections باستخدام الـ slug
-                                const autoLink = `/collections/${colSlug}`;
-                                updated[sectionIndex].data.linkUrl = autoLink;
-                                if(updated[sectionIndex].data.viewAllLink !== undefined) {
-                                   updated[sectionIndex].data.viewAllLink = autoLink;
+                                currentLinked.push({ id: colId, name: colName, slug: colSlug });
+                                updated[sectionIndex].data.linkedCollections = currentLinked;
+                                updated[sectionIndex].data.products = currentProds;
+
+                                if (currentLinked.length === 1) {
+                                    const autoLink = `/collections/${colSlug}`;
+                                    updated[sectionIndex].data.linkUrl = autoLink;
+                                    if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
+                                    alert(`تم إضافة القسم. وتم تعيين رابط عرض الكل التلقائي.`);
+                                } else {
+                                    updated[sectionIndex].data.linkUrl = "";
+                                    if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
+                                    alert(`تنبيه: تم اختيار أكثر من قسم معاً، سيتم مسح رابط (عرض الكل) التلقائي، برجاء وضع رابط مخصص إن أردت.`);
                                 }
 
                                 setLayoutSections(updated);
                                 e.target.value = ""; 
-                                alert(`تم بنجاح! تم إضافة ${categoryProducts.length} منتج من قسم "${colName}" وتم تحديث رابط عرض الكل إلى /collections/${colSlug}.`);
                               }}
                               className="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-[#202223] text-sm focus:border-[#008060] outline-none"
                             >
-                              <option value="">-- اختر القسم للإضافة السريعة وتغيير الرابط --</option>
+                              <option value="">-- اختر القسم للإضافة السريعة --</option>
                               {allStoreCollections.map(col => (
                                 <option key={col.id} value={col.id}>{col.name || col.title || col.id}</option>
                               ))}
                             </select>
-                            <p className="text-[10px] text-gray-500 mt-2 font-medium">ملاحظة: الرابط التلقائي سيصبح <code>/collections/slug</code> ويمكنك تعديله يدوياً من خانة (رابط زر عرض الكل) بالأعلى.</p>
+                            <p className="text-[10px] text-gray-500 mt-2 font-medium leading-relaxed">
+                              ملاحظة: عند اختيار <strong className="text-black">قسم واحد</strong> سيتم وضع الرابط تلقائياً. عند اختيار <strong className="text-red-500">أكثر من قسم</strong> سيتم مسح الرابط ويجب كتابته يدوياً بالأعلى (وإلا سيختفي زر عرض الكل).
+                            </p>
                           </div>
 
                           {/* خيار 2: قائمة كل المنتجات مع Checkbox */}
