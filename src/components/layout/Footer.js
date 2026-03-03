@@ -62,7 +62,7 @@ export default function Footer() {
         <Link href="/policies/privacy" className="hover:underline">سياسة الخصوصية</Link>
       </div>
 
-      {/* 6. تفضيلات الخصوصية (أيقونة زرقاء زي الصورة بالظبط) */}
+      {/* 6. تفضيلات الخصوصية */}
       <div className="flex items-center gap-2 mb-8 cursor-pointer hover:underline group">
         <div className="flex items-center bg-[#1A73E8] rounded-full px-1.5 py-0.5">
           <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
@@ -70,10 +70,11 @@ export default function Footer() {
         </div>
         <span className="text-[15px] font-medium">تفضيلات الخصوصية للإعلانات</span>
       </div>
-      {/* 7. شعار الشركة (بديل أمازون) */}
+
+      {/* 7. شعار الشركة */}
       <div className="mb-6 flex justify-center items-center gap-2">
         <span className="font-normal text-[15px]">إحدى شركات</span>
-        <span className="font-black text-xl italic tracking-wider">S</span>
+        <span className="font-black text-xl italic tracking-wider">لs</span>
       </div>
 
       {/* 8. حقوق النشر والتاريخ */}
@@ -84,3 +85,7 @@ export default function Footer() {
         {new Date().getFullYear()}
         {" لشركة WIND Shopping"}
       </div>
+
+    </footer>
+  );
+}
