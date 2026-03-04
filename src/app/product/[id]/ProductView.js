@@ -5,389 +5,598 @@ import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import SizeChartModal from "@/components/SizeChartModal";
-import { Plus, Star, Info, Share2, Heart, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import SizeChartModal from '@/components/SizeChartModal';
+// استدعاء الأيقونات مع إضافة Minus و ShoppingBag للعداد وزر السلة
+import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag } from "lucide-react";
 
 export default function ProductPage() {
   const { id } = useParams();
-  const [product, setProduct]               = useState(null);
-  const [loading, setLoading]               = useState(true);
-  const { addToCart }                       = useCart();
-  const [activeImage, setActiveImage]       = useState("");
-  const [activeIdx, setActiveIdx]           = useState(0);
-  const [selectedSize, setSelectedSize]     = useState("");
-  const [selectedColor, setSelectedColor]   = useState("");
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+
+  const [activeImage, setActiveImage] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [quantity, setQuantity] = useState(1); // ✅ حالة جديدة لعداد الكمية
   const [isSizeGuideOpen, setSizeGuideOpen] = useState(false);
-  const [isWishlisted, setIsWishlisted]     = useState(false);
-  const [isGalleryOpen, setGalleryOpen]     = useState(false);
-  const [galleryIdx, setGalleryIdx]         = useState(0);
-  const touchStartX = useRef(null);
-  const colorsRef   = useRef(null);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isDescModalOpen, setDescModalOpen] = useState(false); 
+  const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); 
+  
+  const colorsScrollRef = useRef(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
-      const sp = staticProducts.find(p => p.id.toString() === id.toString());
-      if (sp) {
-        setProduct(sp);
-        setActiveImage(sp.mainImage);
-        if (sp.sizes?.length  > 0) setSelectedSize(sp.sizes[0]);
-        if (sp.colors?.length > 0) setSelectedColor(sp.colors[0].name || sp.colors[0]);
+      const staticProduct = staticProducts.find((p) => p.id.toString() === id.toString());
+      
+      if (staticProduct) {
+        setProduct(staticProduct);
+        setActiveImage(staticProduct.mainImage);
+        if (staticProduct.sizes?.length > 0) setSelectedSize(staticProduct.sizes[0]);
+        if (staticProduct.colors?.length > 0) setSelectedColor(staticProduct.colors[0].name || staticProduct.colors[0]);
         setLoading(false);
-        return;
-      }
-      try {
-        const snap = await getDoc(doc(db, "products", id));
-        if (snap.exists()) {
-          const fb = { id: snap.id, ...snap.data() };
-          setProduct(fb);
-          setActiveImage(fb.images?.[0] || fb.mainImageUrl || fb.image);
-          let iS = "", iC = "";
-          if (fb.options && Array.isArray(fb.options)) {
-            fb.options.forEach(opt => {
-              const n = (opt.name || "").toLowerCase();
-              if ((n.includes("size") || n === "المقاس" || n === "مقاس") && opt.values) iS = opt.values.split(",")[0].trim();
-              if ((n.includes("color")|| n === "اللون"  || n === "لون")   && opt.values) iC = opt.values.split(",")[0].trim();
-            });
+      } else {
+        try {
+          const docRef = doc(db, "products", id);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const fbProduct = { id: docSnap.id, ...data };
+            setProduct(fbProduct);
+            
+            const firstImg = fbProduct.images?.[0] || fbProduct.mainImageUrl || fbProduct.image;
+            setActiveImage(firstImg);
+
+            let initialSize = "";
+            let initialColor = "";
+            
+            if (fbProduct.options && Array.isArray(fbProduct.options)) {
+              fbProduct.options.forEach(opt => {
+                const optName = (opt.name || "").toLowerCase();
+                if ((optName.includes("size") || optName === "المقاس" || optName === "مقاس") && opt.values) {
+                   initialSize = opt.values.split(',')[0].trim();
+                }
+                if ((optName.includes("color") || optName === "اللون" || optName === "لون") && opt.values) {
+                   initialColor = opt.values.split(',')[0].trim();
+                }
+              });
+            }
+            
+            if (initialSize) {
+              setSelectedSize(initialSize);
+            } else {
+              const sizesArray = fbProduct.options?.sizes || fbProduct.sizes;
+              if (Array.isArray(sizesArray) && sizesArray.length > 0) setSelectedSize(sizesArray[0]);
+            }
+
+            if (initialColor) {
+              setSelectedColor(initialColor);
+            } else {
+              const colorsArray = fbProduct.options?.colors;
+              if (Array.isArray(colorsArray) && colorsArray.length > 0) {
+                setSelectedColor(colorsArray[0].name || colorsArray[0]);
+              }
+            }
           }
-          if (iS) setSelectedSize(iS);
-          else { const a = fb.options?.sizes || fb.sizes; if (Array.isArray(a) && a.length) setSelectedSize(a[0]); }
-          if (iC) setSelectedColor(iC);
-          else { const a = fb.options?.colors; if (Array.isArray(a) && a.length) setSelectedColor(a[0].name || a[0]); }
+        } catch (error) {
+          console.error("Error fetching product:", error);
         }
-      } catch(e) { console.error(e); }
-      setLoading(false);
+        setLoading(false);
+      }
     };
+
     fetchProduct();
   }, [id]);
 
   if (loading) return (
-    <div className="h-screen bg-[#0D0D0D] flex flex-col items-center justify-center gap-4">
-      <div className="w-8 h-8 border-2 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
-      <span className="text-[#F5C518] text-[10px] tracking-[0.35em] uppercase" style={{fontFamily:"Cairo,sans-serif",fontWeight:700}}>WIND ORIGINALS</span>
+    <div className="h-screen bg-[#121212] flex flex-col items-center justify-center text-[#F5C518]">
+      <div className="w-12 h-12 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin mb-4"></div>
+      <span className="font-bold tracking-widest animate-pulse">WIND ORIGINALS...</span>
     </div>
   );
-  if (!product) return (
-    <div className="bg-[#0D0D0D] min-h-screen flex items-center justify-center text-gray-500" style={{fontFamily:"Cairo,sans-serif"}}>المنتج غير موجود</div>
-  );
+  
+  if (!product) return <div className="text-white text-center py-20 bg-[#121212] min-h-screen">المنتج غير موجود</div>;
 
-  const getUrl = img => {
-    if (!img) return "";
-    if (img.startsWith("http")) return img;
-    return `/images/products/${product.folderName}/${img}`;
+  const getImageUrl = (imgName) => {
+    if (!imgName) return "";
+    if (imgName.startsWith("http")) return imgName;
+    return `/images/products/${product.folderName}/${imgName}`;
   };
 
-  const gallery = product.images || [product.mainImage, ...Array.from({length: product.imagesCount || 0}, (_, i) => `${i+1}.webp`)];
-
-  const goTo = idx => {
-    const s = (idx + gallery.length) % gallery.length;
-    setActiveImage(gallery[s]);
-    setActiveIdx(s);
+  const gallery = product.images || [product.mainImage, ...Array.from({ length: product.imagesCount || 0 }, (_, i) => `${i + 1}.webp`)];
+  
+  const handleNextImage = () => {
+    const currentIndex = gallery.indexOf(activeImage);
+    const nextIndex = (currentIndex + 1) % gallery.length;
+    setActiveImage(gallery[nextIndex]);
   };
+  
+  let safeSizes = [];
+  let safeColors = [];
 
-  const openGallery = idx => { setGalleryIdx(idx); setGalleryOpen(true); };
-  const galleryNext = () => setGalleryIdx(i => (i + 1) % gallery.length);
-  const galleryPrev = () => setGalleryIdx(i => (i - 1 + gallery.length) % gallery.length);
-  const onTouchStart = e => { touchStartX.current = e.touches[0].clientX; };
-  const onTouchEnd   = e => {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(dx) > 50) dx > 0 ? galleryPrev() : galleryNext();
-    touchStartX.current = null;
-  };
-
-  let safeSizes = [], safeColors = [];
   if (product.options && Array.isArray(product.options)) {
     product.options.forEach(opt => {
-      const n = (opt.name || "").toLowerCase();
-      if (n.includes("size") || n === "المقاس" || n === "مقاس") safeSizes  = opt.values.split(",").map(s => s.trim()).filter(Boolean);
-      if (n.includes("color")|| n === "اللون"  || n === "لون")  safeColors = opt.values.split(",").map(c => c.trim()).filter(Boolean);
+      const optName = (opt.name || "").toLowerCase();
+      if (optName.includes("size") || optName === "المقاس" || optName === "مقاس") {
+        safeSizes = opt.values.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      if (optName.includes("color") || optName === "اللون" || optName === "لون") {
+        safeColors = opt.values.split(',').map(c => c.trim()).filter(Boolean);
+      }
     });
   }
-  if (!safeSizes.length)  safeSizes  = Array.isArray(product.options?.sizes)  ? product.options.sizes  : (Array.isArray(product.sizes)  ? product.sizes  : []);
-  if (!safeColors.length) safeColors = Array.isArray(product.options?.colors) ? product.options.colors : [];
+
+  if (safeSizes.length === 0) {
+    safeSizes = Array.isArray(product.options?.sizes) ? product.options.sizes : (Array.isArray(product.sizes) ? product.sizes : []);
+  }
+  if (safeColors.length === 0) {
+    safeColors = Array.isArray(product.options?.colors) ? product.options.colors : [];
+  }
 
   const currentColorImage = () => {
-    if (!selectedColor) return gallery[0];
-    const hi = product.colorSwatches?.[selectedColor];
-    if (hi && (hi.startsWith("http") || hi.includes("/"))) return hi;
-    return gallery[0];
+    if (!selectedColor) return gallery[1] || activeImage;
+    const hexOrImage = product.colorSwatches?.[selectedColor];
+    if (hexOrImage && (hexOrImage.startsWith('http') || hexOrImage.includes('/'))) {
+      return hexOrImage;
+    }
+    return gallery[1] || activeImage;
+  };
+  
+  const stripHtml = (html) => {
+    if (!html) return "";
+    let clean = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
+    const doc = new DOMParser().parseFromString(clean, 'text/html');
+    let text = doc.body.textContent || "";
+    const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
+    keywordsToRemove.forEach(regex => {
+      text = text.replace(regex, "");
+    });
+    return text.trim();
+  };
+  
+  const shortDescription = stripHtml(product.description).substring(0, 110) + "... ";
+
+  // ✅ دالة لإزالة فتح التابات الافتراضي (لجعل كل الخانات مقفولة)
+  const getClosedDescriptionHTML = () => {
+    if (!product.description) return "";
+    return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
   };
 
-  const isInStock   = product?.quantity > 0 || product?.sellOutOfStock === "Yes";
-  const discountPct = product.compareAtPrice ? Math.round((1 - parseFloat(product.price) / parseFloat(product.compareAtPrice)) * 100) : null;
-
   return (
-    <div className="wp bg-[#0D0D0D] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
-
-      {/* 1. HERO */}
-      <div className="relative w-full h-[72vh] md:h-[82vh] bg-black overflow-hidden group">
-        <img src={getUrl(activeImage)} alt={product.title} className="w-full h-full object-cover object-top opacity-88 transition-opacity duration-700" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/15 to-transparent pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/25 to-transparent pointer-events-none" />
-
-        {/* كل الصورة قابلة للضغط لفتح الجاليري */}
-        <button onClick={() => openGallery(activeIdx)} className="absolute inset-0 z-10 cursor-zoom-in" aria-label="فتح معرض الصور" />
-
-        {/* أيقونات التفاعل */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-5 z-20">
-          <button className="flex flex-col items-center gap-1.5 text-white hover:text-[#F5C518] transition-colors group/b">
-            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/12 group-hover/b:border-[#F5C518]/40 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" strokeWidth="1.5" /><rect x="14" y="3" width="7" height="7" strokeWidth="1.5" /><rect x="3" y="14" width="7" height="7" strokeWidth="1.5" /><rect x="14" y="14" width="7" height="7" strokeWidth="1.5" /></svg>
+    <div className="bg-[#121212] min-h-screen text-white pb-32 font-sans selection:bg-[#F5C518] selection:text-black">
+      
+      {/* 1. القسم السينمائي (Hero Section) */}
+      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group">
+        <img 
+          src={getImageUrl(activeImage)} 
+          alt={product.title} 
+          className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
+        
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10">
+          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <ImageIcon size={20} />
             </div>
-            <span className="text-[9px] font-bold tracking-wider drop-shadow-lg" style={{fontFamily:"Cairo,sans-serif"}}>{gallery.length} صور</span>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
           </button>
-          <button onClick={e => { e.stopPropagation(); setIsWishlisted(!isWishlisted); }} className="flex flex-col items-center gap-1.5 text-white hover:text-[#F5C518] transition-colors group/b z-20">
-            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/12 group-hover/b:border-[#F5C518]/40 transition-colors">
-              <Heart size={18} fill={isWishlisted?"#F5C518":"none"} color={isWishlisted?"#F5C518":"white"} />
+          
+          <button 
+            onClick={() => setIsWishlisted(!isWishlisted)} 
+            className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md"
+          >
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
             </div>
-            <span className="text-[9px] font-bold tracking-wider drop-shadow-lg" style={{fontFamily:"Cairo,sans-serif"}}>{product.likes||"1.2K"}</span>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
           </button>
-          <button onClick={e => e.stopPropagation()} className="flex flex-col items-center gap-1.5 text-white hover:text-[#F5C518] transition-colors group/b z-20">
-            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/12 group-hover/b:border-[#F5C518]/40 transition-colors">
-              <Share2 size={18} />
+          
+          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <Share2 size={20} />
             </div>
-            <span className="text-[9px] font-bold tracking-wider drop-shadow-lg" style={{fontFamily:"Cairo,sans-serif"}}>مشاركة</span>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
           </button>
         </div>
 
-        {/* سهم تقليب */}
-        <button onClick={e => { e.stopPropagation(); goTo(activeIdx + 1); }} className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 p-2.5 rounded-full backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] opacity-0 group-hover:opacity-100 transition-all">
-          <ChevronLeft size={30} strokeWidth={1.5} />
+        <button 
+          onClick={handleNextImage}
+          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
+        >
+          <ChevronLeft size={40} strokeWidth={1.5} />
         </button>
+      </div>
 
-        {discountPct && (
-          <div className="absolute top-5 left-5 z-20 bg-[#F5C518] text-black text-[10px] font-black px-3 py-1" style={{fontFamily:"Cairo,sans-serif"}}>-{discountPct}%</div>
-        )}
+      {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
+      <div className="px-4 py-6 max-w-4xl mx-auto" dir="rtl">
+        <div className="mb-4 pt-2">
+          <h1 className="text-[26px] leading-tight font-black text-white mb-1.5 tracking-tight">{product.title}</h1>
+          
+          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium mb-3">
+            <span className="text-[#F5C518]">WIND Series</span>
+            <span>•</span>
+            <span>{product.category || product.type || "أزياء"}</span>
+            <span>•</span>
+            <span className="border border-gray-500 px-1.5 rounded text-xs bg-[#1a1a1a]">WIND-24</span>
+          </div>
 
-        {/* dots */}
-        <div className="absolute bottom-[88px] left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none">
-          {gallery.slice(0,8).map((_,i) => (
-            <span key={i} className={`rounded-full transition-all duration-300 ${activeIdx===i ? "w-5 h-1.5 bg-[#F5C518]" : "w-1.5 h-1.5 bg-white/30"}`} />
+          <div className="relative text-sm leading-relaxed pr-2 border-r-2 border-[#333]">
+            <span className="bg-gradient-to-l from-gray-400 via-gray-400 to-[#121212] bg-clip-text text-transparent">
+              {shortDescription}
+            </span>
+            <button 
+              onClick={() => setDescModalOpen(true)}
+              className="inline-flex items-center gap-1 text-[#F5C518] font-bold mr-1 hover:underline decoration-1 underline-offset-4 whitespace-nowrap align-bottom"
+            >
+              المزيد عن المنتج <span className="w-3.5 h-3.5 rounded-full border border-[#F5C518] flex items-center justify-center text-[9px] font-black">!</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-4 items-start border-t border-[#333]/50 pt-6">
+          
+          <div className="w-32 h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative group">
+            <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
+            <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
+              <Plus size={16} className="text-white" />
+            </div>
+            
+            <button 
+              onClick={() => setImageZoomModalOpen(true)}
+              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+            >
+              <div className="bg-black/60 p-3 rounded-full border border-[#F5C518]/50 text-white hover:text-[#F5C518] hover:scale-110 transition-all shadow-lg">
+                <Search size={24} />
+              </div>
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col justify-between min-h-[192px]">
+            <div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Premium</span>
+                <span className="border border-[#444] rounded-full px-2.5 py-0.5 text-[10px] font-bold text-gray-400 bg-[#1a1a1a]">Oversized</span>
+              </div>
+              
+              <div className="flex items-end gap-2 mt-2">
+                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '0.5px' }} className="text-4xl font-normal text-white">{product.price}</span>
+                <span className="text-sm font-normal text-[#F5C518] mb-1.5">ج.م</span>
+                {product.compareAtPrice && (
+                  <span className="text-sm text-gray-500 line-through mb-1.5 mr-2">{product.compareAtPrice} ج.م</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 mt-1">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span className="text-xs font-bold text-green-400">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
+              </div>
+
+              <div className="text-[10px] text-gray-500 mt-1.5">
+                يتم احتساب مصاريف الشحن عند الدفع
+              </div>
+
+              <div className="flex items-center justify-between gap-1 mt-4 w-full bg-[#1a1a1a] p-2.5 rounded border border-[#333]">
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><Truck size={14} className="text-[#F5C518]" /> شحن سريع</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><Eye size={14} className="text-[#F5C518]" /> معاينة المنتجات</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-300 font-bold"><ShieldCheck size={14} className="text-[#F5C518]" /> دفع آمن</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
+          {safeColors.length > 0 && (
+            <div>
+              <div className="flex items-center mb-3">
+                <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  اختر اللون: 
+                  {selectedColor && <span className="text-[#F5C518] text-xs bg-[#222] border border-[#444] px-2 py-0.5 rounded-md">{selectedColor}</span>}
+                </h3>
+              </div>
+              
+              <div className="relative w-full">
+                <div 
+                  ref={colorsScrollRef}
+                  className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory hide-scrollbar-horizontal pr-2"
+                >
+                  {safeColors.map((colorItem, idx) => {
+                    const colorName = typeof colorItem === 'string' ? colorItem : colorItem.name;
+                    const hexOrImage = product.colorSwatches?.[colorName] || (typeof colorItem === 'object' ? colorItem.swatch : '#333333');
+                    const isImage = hexOrImage.startsWith('http') || hexOrImage.includes('/');
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedColor(colorName);
+                          if (isImage) {
+                            setActiveImage(hexOrImage);
+                          }
+                        }}
+                        className="flex flex-col items-center gap-2 group shrink-0 snap-start cursor-pointer"
+                      >
+                        {/* ✅ إزالة جميع مؤثرات الـ hover والـ scale ليكون الاختيار جامد وبسيط */}
+                        <div className={`w-14 h-14 rounded-full p-1 ${selectedColor === colorName ? "border-2 border-[#F5C518] bg-[#F5C518]/10" : "border border-[#333]"}`}>
+                          {isImage ? (
+                            <img src={hexOrImage} className="w-full h-full rounded-full object-cover shadow-inner" alt={colorName} />
+                          ) : (
+                            <div style={{ backgroundColor: hexOrImage }} className="w-full h-full rounded-full shadow-inner border border-[#222]"></div>
+                          )}
+                        </div>
+                        <span className={`text-xs font-bold uppercase ${selectedColor === colorName ? "text-white" : "text-gray-500"}`}>{colorName}</span>
+                      </button>
+                    );
+                  })}
+                  
+                  {safeColors.length > 4 && <div className="w-4 shrink-0"></div>}
+                </div>
+                
+                {safeColors.length > 4 && (
+                  <div className="absolute left-0 top-0 bottom-6 w-8 bg-gradient-to-r from-[#121212] via-[#121212]/90 to-transparent flex items-center justify-start pointer-events-none border-l-2 border-[#333]">
+                    <ChevronLeft size={16} className="text-gray-500 mr-1 animate-pulse" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {safeSizes.length > 0 && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  اختر المقاس:
+                  {selectedSize && <span className="text-[#F5C518] text-xs bg-[#222] border border-[#444] px-2 py-0.5 rounded-md">{selectedSize}</span>}
+                </h3>
+                
+                <button 
+                  onClick={() => setSizeGuideOpen(true)}
+                  className="text-xs text-[#F5C518] flex items-center gap-1.5 hover:bg-[#F5C518]/10 transition-all px-3 py-1.5 rounded-full border border-[#F5C518]/30"
+                >
+                  <Info size={14} /> دليل القياسات
+                </button>
+              </div>
+
+              {safeSizes.length > 1 && (
+                <div className="flex flex-wrap gap-3">
+                  {safeSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`min-w-[60px] h-12 flex items-center justify-center text-sm font-black rounded-md border transition-all ${
+                        selectedSize === size ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-gray-500"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 space-y-3 border-t border-[#333]/50 pt-4">
+          <div className="flex items-center gap-3">
+            <Star className="text-[#F5C518]" fill="#F5C518" size={20} />
+            <span className="font-black text-lg">{product.rating || "4.9"}<span className="text-gray-500 text-sm font-normal">/5</span></span>
+            <span className="text-gray-500 text-sm">{product.reviewsCount || "490K"} تقييم</span>
+          </div>
+          
+          <div className="text-sm">
+            <span className="text-gray-400">الخامة الأساسية: </span>
+            <span className="text-white">{product.metafields?.fabric || "قطن 100% معالج ضد الانكماش"}</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-gray-400">القصّة (Fit): </span>
+            <span className="text-white">{product.metafields?.fit || "مريح (Relaxed Fit) - مناسب للجنسين"}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. معرض اللقطات */}
+      <div className="mt-2 border-t border-[#333]/50 pt-6">
+        <h3 className="px-4 font-bold text-lg mb-4 text-white">معرض اللقطات (Gallery)</h3>
+        <div className="flex gap-3 overflow-x-auto px-4 pb-4 scrollbar-hide" dir="rtl">
+          {gallery.filter(img => img).map((img, idx) => (
+            <button 
+              key={idx}
+              onClick={() => setActiveImage(img)}
+              className={`flex-shrink-0 relative w-32 h-44 rounded-md overflow-hidden transition-all duration-300 ${activeImage === img ? "ring-2 ring-[#F5C518] scale-105" : "border border-[#333] opacity-60 hover:opacity-100"}`}
+            >
+              <img src={getImageUrl(img)} className="w-full h-full object-cover" alt="" />
+              <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-bold">
+                لقطة {idx + 1}
+              </div>
+            </button>
           ))}
         </div>
+      </div>
 
-        {/* اسم المنتج داخل الصورة */}
-        <div className="absolute bottom-0 right-0 left-0 px-5 pb-5 pt-16 pointer-events-none z-20">
-          <div className="max-w-4xl mx-auto" dir="rtl">
-            <div className="flex items-end justify-between gap-4">
-              <div className="flex-1">
-                <p className="text-[#F5C518] text-[9px] tracking-[0.3em] uppercase mb-1.5 opacity-80" style={{fontFamily:"Tajawal,sans-serif"}}>
-                  WIND Series &nbsp;·&nbsp; {product.category || product.type || "أزياء"}
-                </p>
-                <h1 className="text-white text-[26px] md:text-3xl font-black leading-tight tracking-tight" style={{fontFamily:"Cairo,sans-serif"}}>
-                  {product.title}
-                </h1>
-              </div>
-              <div className="flex-shrink-0 flex flex-col items-end gap-1 mb-1">
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_,i) => <Star key={i} size={11} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
-                </div>
-                <span className="text-white/60 text-[10px]" style={{fontFamily:"Tajawal,sans-serif"}}>{product.reviewsCount||"490K"} تقييم</span>
-              </div>
-            </div>
+      {/* 6. الشريط السفلي المطور (الكمية + أضف للسلة + المفضلة) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/95 to-transparent pt-10 pb-4 px-4 z-50">
+        <div className="max-w-4xl mx-auto flex items-center gap-2" dir="rtl">
+          
+          {/* ✅ عداد الكمية (+ و -) */}
+          <div className="flex items-center justify-between bg-[#242424] border border-[#444] rounded-[4px] px-2 py-3 w-28 shrink-0">
+            <button 
+              onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} 
+              className="text-white hover:text-[#F5C518] px-2 transition-colors"
+            >
+              <Minus size={18} />
+            </button>
+            <span className="text-white font-bold text-lg">{quantity}</span>
+            <button 
+              onClick={() => setQuantity(q => q + 1)} 
+              className="text-white hover:text-[#F5C518] px-2 transition-colors"
+            >
+              <Plus size={18} />
+            </button>
           </div>
+
+          {/* ✅ زر السلة بتصميم الدفع اللامع من كاشير */}
+          <button 
+            onClick={() => addToCart({ ...product, selectedSize, selectedColor, image: getImageUrl(activeImage), qty: quantity })}
+            className="pay-btn flex-1 font-black text-base md:text-lg py-4 rounded-[4px] shadow-lg flex justify-center items-center gap-2"
+          >
+            <ShoppingBag size={20} className="hidden sm:block" />
+            أضف إلي السلة ( {(product.price * quantity)} ج.م )
+          </button>
+          
+          {/* ✅ زر المفضلة (Love) */}
+          <button 
+            onClick={() => setIsWishlisted(!isWishlisted)}
+            className="bg-[#242424] p-4 rounded-[4px] text-white hover:bg-[#333] transition-colors border border-[#444] flex-shrink-0"
+          >
+             <Heart size={22} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} className="transition-all" />
+          </button>
         </div>
       </div>
 
-      {/* 2. BODY */}
-      <div className="max-w-4xl mx-auto px-4" dir="rtl">
-
-        {/* السعر + البوستر المصغر */}
-        <div className="flex gap-5 items-start pt-6 pb-7 border-b border-[#1a1a1a]">
-          <div className="flex-1">
-            <div className="flex items-end gap-3 mb-2">
-              <span className="text-[44px] leading-none font-black text-white" style={{fontFamily:"Cairo,sans-serif", letterSpacing:"-2px"}}>{product.price}</span>
-              <span className="text-base font-bold text-[#F5C518] mb-1" style={{fontFamily:"Cairo,sans-serif"}}>ج.م</span>
-              {product.compareAtPrice && <span className="text-sm text-gray-600 line-through mb-1.5" style={{fontFamily:"Tajawal,sans-serif"}}>{product.compareAtPrice} ج.م</span>}
-            </div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="relative flex h-2 w-2">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${isInStock?"bg-green-400":"bg-red-400"}`} />
-                <span className={`relative inline-flex h-2 w-2 rounded-full ${isInStock?"bg-green-500":"bg-red-500"}`} />
-              </span>
-              <span className={`text-xs font-semibold ${isInStock?"text-green-400":"text-red-400"}`} style={{fontFamily:"Tajawal,sans-serif"}}>{isInStock?"متوفر في المخزون":"غير متوفر"}</span>
-              <span className="text-gray-700 text-[10px]">—</span>
-              <span className="text-gray-600 text-[10px]" style={{fontFamily:"Tajawal,sans-serif"}}>الشحن يُحسب عند الدفع</span>
-            </div>
-            <div className="flex items-center gap-5">
-              {[{icon:<Truck size={13}/>,l:"شحن سريع"},{icon:<Eye size={13}/>,l:"معاينة"},{icon:<ShieldCheck size={13}/>,l:"دفع آمن"}].map(({icon,l}) => (
-                <div key={l} className="flex items-center gap-1.5 text-[10px] text-gray-500" style={{fontFamily:"Tajawal,sans-serif"}}>
-                  <span className="text-[#F5C518]">{icon}</span>{l}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* البوستر المصغر */}
-          <div className="relative w-24 flex-shrink-0 group/poster cursor-pointer" onClick={() => openGallery(0)}>
-            <div className="relative w-24 h-[136px] rounded-xl overflow-hidden ring-1 ring-white/10 shadow-2xl transition-all duration-500 group-hover/poster:ring-[#F5C518]/40 group-hover/poster:shadow-[0_8px_40px_rgba(245,197,24,0.18)]">
-              <img src={getUrl(currentColorImage())} className="w-full h-full object-cover transition-transform duration-700 group-hover/poster:scale-110" alt={selectedColor||"preview"} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute top-0 right-0 bg-black/70 p-1 rounded-bl-lg"><Plus size={12} className="text-white" /></div>
-              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/poster:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="bg-black/60 border border-[#F5C518]/50 p-2 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#F5C518]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-                </div>
-              </div>
-              {selectedColor && <span className="absolute bottom-2 inset-x-1 text-center text-[9px] font-bold text-white/90 truncate" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
-            </div>
-            <div className="mt-2 flex justify-center gap-1">
-              {gallery.slice(0,4).map((img,i) => (
-                <div key={i} onClick={e => { e.stopPropagation(); goTo(i); }} className={`w-4 h-6 rounded overflow-hidden cursor-pointer transition-all ${activeIdx===i ? "ring-1 ring-[#F5C518]" : "opacity-40 hover:opacity-70"}`}>
-                  <img src={getUrl(img)} className="w-full h-full object-cover" alt="" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* الألوان — مربعات */}
-        {safeColors.length > 0 && (
-          <div className="py-6 border-b border-[#1a1a1a]">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-              <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>اختر اللون</span>
-              {selectedColor && <span className="text-[#F5C518] text-[11px] bg-[#141414] border border-[#252525] px-2.5 py-0.5 rounded" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
-            </div>
-            <div ref={colorsRef} className="flex flex-wrap gap-3">
-              {safeColors.map((ci, i) => {
-                const name  = typeof ci === "string" ? ci : ci.name;
-                const hi    = product.colorSwatches?.[name] || (typeof ci === "object" ? ci.swatch : "#333");
-                const isImg = hi.startsWith("http") || hi.includes("/");
-                const isSel = selectedColor === name;
-                return (
-                  <button key={i} onClick={() => { setSelectedColor(name); if (isImg) { setActiveImage(hi); setActiveIdx(0); } }} title={name} className="flex flex-col items-center gap-1.5 group/c transition-all duration-200">
-                    <div className={`w-11 h-11 overflow-hidden transition-all duration-200 ${isSel ? "ring-2 ring-[#F5C518] ring-offset-2 ring-offset-[#0D0D0D] scale-105" : "ring-1 ring-white/10 hover:ring-white/30 hover:scale-105"}`}>
-                      {isImg ? <img src={hi} className="w-full h-full object-cover" alt={name} /> : <div style={{backgroundColor:hi}} className="w-full h-full" />}
-                    </div>
-                    <span className={`text-[9px] font-medium uppercase tracking-wide max-w-[44px] text-center truncate transition-colors ${isSel ? "text-[#F5C518]" : "text-gray-600 group-hover/c:text-gray-400"}`} style={{fontFamily:"Tajawal,sans-serif"}}>{name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* المقاسات */}
-        {safeSizes.length > 0 && (
-          <div className="py-6 border-b border-[#1a1a1a]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-                <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>اختر المقاس</span>
-                {selectedSize && <span className="text-[#F5C518] text-[11px] bg-[#141414] border border-[#252525] px-2.5 py-0.5 rounded" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedSize}</span>}
-              </div>
-              <button onClick={() => setSizeGuideOpen(true)} className="text-[11px] text-[#F5C518] flex items-center gap-1.5 border border-[#F5C518]/20 hover:border-[#F5C518]/50 hover:bg-[#F5C518]/5 px-3 py-1.5 rounded-full transition-all" style={{fontFamily:"Cairo,sans-serif"}}>
-                <Info size={12} /> دليل القياسات
-              </button>
-            </div>
-            {safeSizes.length > 1 && (
-              <div className="flex flex-wrap gap-2.5">
-                {safeSizes.map(sz => (
-                  <button key={sz} onClick={() => setSelectedSize(sz)} className={`min-w-[58px] h-11 text-sm font-black rounded border transition-all duration-200 ${selectedSize===sz ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.15)] scale-105" : "bg-[#141414] text-gray-400 border-[#252525] hover:border-[#F5C518]/30 hover:text-gray-200"}`} style={{fontFamily:"Cairo,sans-serif"}}>{sz}</button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* الخامة والـ Fit */}
-        <div className="py-5 border-b border-[#1a1a1a] flex flex-wrap gap-x-8 gap-y-2">
-          <div className="text-sm" style={{fontFamily:"Tajawal,sans-serif"}}><span className="text-gray-600">الخامة: </span><span className="text-gray-300">{product.metafields?.fabric||"قطن 100% معالج ضد الانكماش"}</span></div>
-          <div className="text-sm" style={{fontFamily:"Tajawal,sans-serif"}}><span className="text-gray-600">القصّة: </span><span className="text-gray-300">{product.metafields?.fit||"Relaxed Fit — مناسب للجنسين"}</span></div>
-        </div>
-
-        {/* زر أضف للسلة — ظاهر دايماً */}
-        <div className="py-6 border-b border-[#1a1a1a]">
-          <div className="flex gap-2">
-            <button onClick={() => addToCart({...product, selectedSize, selectedColor, image: getUrl(activeImage)})} className="flex-1 bg-[#F5C518] hover:bg-[#ffd23f] active:scale-[0.98] text-black font-black text-base py-4 rounded flex items-center justify-center gap-2 shadow-[0_0_40px_rgba(245,197,24,0.18)] transition-all group/cta" style={{fontFamily:"Cairo,sans-serif"}}>
-              <Plus size={19} className="transition-transform group-hover/cta:rotate-90 duration-300" />
-              أضف إلى حقيبتك — {product.price} ج.م
+      {/* 🎬 مودال تكبير صورة اللون (الكارت المنبثق) */}
+      {isImageZoomModalOpen && (
+        <div 
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-[fadeIn_0.3s_ease-out]"
+          onClick={() => setImageZoomModalOpen(false)}
+        >
+          <div className="relative w-full max-w-lg aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover" alt="Zoomed Color" />
+            <button 
+              onClick={() => setImageZoomModalOpen(false)} 
+              className="absolute top-4 left-4 bg-black/60 hover:bg-black p-2 rounded-full text-white/70 hover:text-white transition-colors backdrop-blur-sm border border-white/20"
+            >
+              <X size={24} />
             </button>
-            <button onClick={() => setIsWishlisted(!isWishlisted)} className={`p-4 rounded border transition-all ${isWishlisted ? "bg-[#F5C518]/10 border-[#F5C518]/40 text-[#F5C518]" : "bg-[#141414] border-[#252525] text-gray-500 hover:border-[#F5C518]/20 hover:text-[#F5C518]"}`}>
-              <Heart size={18} fill={isWishlisted?"#F5C518":"none"} />
-            </button>
-            <button className="bg-[#141414] border border-[#252525] hover:border-[#F5C518]/20 p-4 rounded text-gray-500 transition-all">
-              <ChevronDown size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* الوصف الكامل بتنسيقه الداخلي */}
-        {product.description && (
-          <div className="py-8">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-              <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>تفاصيل المنتج</span>
-            </div>
-            <div className="ql-editor-display dark-wind-tabs" dir="rtl">
-              <div dangerouslySetInnerHTML={{__html: product.description}} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* GALLERY MODAL */}
-      {isGalleryOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/97 flex flex-col gallery-enter">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#1a1a1a]">
-            <div className="flex items-center gap-3">
-              <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-              <span className="text-white font-black text-sm" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-gray-600 text-xs" style={{fontFamily:"Cairo,sans-serif"}}>{galleryIdx+1} / {gallery.length}</span>
-              <button onClick={() => setGalleryOpen(false)} className="bg-[#1a1a1a] hover:bg-[#252525] border border-[#252525] p-2 rounded-full text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
-            </div>
-          </div>
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-            <img key={galleryIdx} src={getUrl(gallery[galleryIdx])} alt="" className="max-h-full max-w-full object-contain gallery-img-enter" />
-            <button onClick={galleryPrev} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all"><ChevronRight size={22} strokeWidth={1.5} /></button>
-            <button onClick={galleryNext} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all"><ChevronLeft size={22} strokeWidth={1.5} /></button>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
-              {gallery.map((_,i) => <span key={i} className={`rounded-full transition-all duration-300 ${galleryIdx===i ? "w-5 h-1.5 bg-[#F5C518]" : "w-1.5 h-1.5 bg-white/20"}`} />)}
-            </div>
-          </div>
-          <div className="border-t border-[#1a1a1a] py-3 px-4 bg-[#0D0D0D]">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide justify-center">
-              {gallery.filter(Boolean).map((img,i) => (
-                <button key={i} onClick={() => setGalleryIdx(i)} className={`flex-shrink-0 w-14 h-20 overflow-hidden rounded-md transition-all duration-200 ${galleryIdx===i ? "ring-2 ring-[#F5C518] ring-offset-1 ring-offset-[#0D0D0D] scale-105" : "ring-1 ring-white/5 opacity-40 hover:opacity-80"}`}>
-                  <img src={getUrl(img)} className="w-full h-full object-cover" alt="" />
-                </button>
-              ))}
+            <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm border border-[#F5C518]/30">
+              <span className="text-[#F5C518] font-bold text-sm">{selectedColor}</span>
             </div>
           </div>
         </div>
       )}
 
-      <SizeChartModal isOpen={isSizeGuideOpen} onClose={() => setSizeGuideOpen(false)} product={product} />
+      {/* 🎬 مودال تفاصيل الوصف (الكارت السينمائي) */}
+      {isDescModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
+          <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
+            <div className="p-4 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] sticky top-0 z-10">
+              <h3 className="font-black text-lg text-white flex items-center gap-2">
+                <div className="w-1.5 h-5 bg-[#F5C518] rounded-full"></div>
+                معلومات المنتج والتفاصيل
+              </h3>
+              <button onClick={() => setDescModalOpen(false)} className="bg-[#242424] hover:bg-[#333] p-1.5 rounded-full text-gray-400 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            {/* ✅ تم استدعاء دالة getClosedDescriptionHTML للتأكد أن الخانات مقفولة */}
+            <div className="p-5 overflow-y-auto ql-editor-display dark-wind-tabs" dir="rtl">
+              <div dangerouslySetInnerHTML={{ __html: getClosedDescriptionHTML() }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SizeChartModal 
+        isOpen={isSizeGuideOpen} 
+        onClose={() => setSizeGuideOpen(false)} 
+        product={product} 
+      />
 
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@300;400;500;700&display=swap');
-        .wp { font-family: 'Tajawal', sans-serif; }
-        .scrollbar-hide::-webkit-scrollbar { display:none }
-        .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none }
-        @keyframes galleryIn { from{opacity:0} to{opacity:1} }
-        @keyframes imgIn { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
-        .gallery-enter { animation: galleryIn 0.25s ease-out }
-        .gallery-img-enter { animation: imgIn 0.3s cubic-bezier(0.25,1,0.5,1) }
-        .dark-wind-tabs .wind-tabs-container { background:transparent!important }
-        .dark-wind-tabs .wind-tabs-container details { background:#161616!important; border-bottom:1px solid #1e1e1e!important; border-radius:10px; margin-bottom:8px; padding:0 16px!important; transition:all .3s }
-        .dark-wind-tabs .wind-tabs-container details[open] { border-color:#F5C518!important; background:#181818!important }
-        .dark-wind-tabs .wind-tabs-container summary { color:#e5e7eb!important; border:none!important; padding:14px 0!important; font-family:'Cairo',sans-serif; font-weight:700 }
-        .dark-wind-tabs .wind-tabs-container summary::-webkit-details-marker { display:none }
-        .dark-wind-tabs .wind-tabs-container summary svg path { stroke:#F5C518!important }
-        .dark-wind-tabs .wind-tabs-container div { color:#9ca3af!important; font-family:'Tajawal',sans-serif; line-height:1.8 }
-        .dark-wind-tabs .wind-tabs-container span[style*="color: #800020"] { color:#F5C518!important }
-        .dark-wind-tabs .wind-tabs-container div[style*="border-bottom: 1px solid #f3f4f6"] { border-bottom:1px solid #1e1e1e!important }
-        .dark-wind-tabs .wind-tabs-container div[style*="color: #111827"], .dark-wind-tabs .wind-tabs-container strong[style*="color: #111827"] { color:#f3f4f6!important }
-        .dark-wind-tabs .wind-tabs-container button, .dark-wind-tabs .wind-tabs-container .read-more-wrapper summary { color:#F5C518!important }
-        .dark-wind-tabs .wind-tabs-container summary:hover { background-color:transparent!important }
-        .ql-editor-display ul { list-style-type:disc!important; padding-right:20px!important; margin-bottom:10px }
-        .ql-editor-display ol { list-style-type:decimal!important; padding-right:20px!important; margin-bottom:10px }
-        .ql-editor-display strong { font-weight:900; color:#f9fafb }
-        .ql-editor-display p { margin-bottom:8px; line-height:1.75; color:#9ca3af; font-family:'Tajawal',sans-serif }
+        /* أنيميشن الدخول */
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ✅ إخفاء شريط التمرير الأفقي للألوان مع الحفاظ على التمرير */
+        .hide-scrollbar-horizontal::-webkit-scrollbar {
+          height: 0px;
+          background: transparent;
+        }
+        .hide-scrollbar-horizontal {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        /* ✅ تصميم زر الإضافة للسلة المقتبس من صفحة الدفع (اللامع) */
+        @keyframes shine {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .pay-btn {
+          background: #F5C518;
+          color: #1a1a1a;
+          position: relative;
+          overflow: hidden;
+        }
+        .pay-btn::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
+          background-size: 200% auto;
+        }
+        .pay-btn:hover::after { animation: shine 0.7s linear; }
+        .pay-btn:hover { background: #e6b800; }
+        .pay-btn:active { transform: scale(0.995); }
+
+        /* ========================================== */
+        /* تحويل ألوان تصميمك للوضع الليلي داخل المودال */
+        /* ========================================== */
+        .dark-wind-tabs .wind-tabs-container {
+          background: transparent !important;
+        }
+        .dark-wind-tabs .wind-tabs-container details {
+          background: #1a1a1a !important;
+          border-bottom: 1px solid #333 !important;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          padding: 0 15px !important;
+          transition: all 0.3s ease;
+        }
+        .dark-wind-tabs .wind-tabs-container details[open] {
+          border-color: #F5C518 !important;
+        }
+        .dark-wind-tabs .wind-tabs-container summary {
+          color: #fff !important;
+          border: none !important;
+        }
+        .dark-wind-tabs .wind-tabs-container summary svg path {
+          stroke: #F5C518 !important; 
+        }
+        .dark-wind-tabs .wind-tabs-container div {
+          color: #a1a1aa !important;
+        }
+        .dark-wind-tabs .wind-tabs-container span[style*="color: #800020"] {
+          color: #F5C518 !important;
+        }
+        .dark-wind-tabs .wind-tabs-container div[style*="border-bottom: 1px solid #f3f4f6"] {
+          border-bottom: 1px solid #333 !important;
+        }
+        .dark-wind-tabs .wind-tabs-container div[style*="color: #111827"],
+        .dark-wind-tabs .wind-tabs-container strong[style*="color: #111827"] {
+          color: #e5e7eb !important;
+        }
+        .dark-wind-tabs .wind-tabs-container button,
+        .dark-wind-tabs .wind-tabs-container .read-more-wrapper summary {
+          color: #F5C518 !important;
+        }
+        .dark-wind-tabs .wind-tabs-container summary:hover {
+          background-color: transparent !important;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .ql-editor-display ul { list-style-type: disc !important; padding-right: 20px !important; margin-bottom: 10px; }
+        .ql-editor-display ol { list-style-type: decimal !important; padding-right: 20px !important; margin-bottom: 10px; }
+        .ql-editor-display strong { font-weight: 900; color: #fff; }
       `}</style>
     </div>
   );
