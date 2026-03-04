@@ -584,7 +584,9 @@ export const ExclusiveOffers = ({ data }) => {
 
 // --- 8. قسم أبرز المجموعات (Masterpiece Collections) ---
 export const MasterpieceCollections = ({ data }) => {
-  if (!data || !data.cards || data.cards.length === 0) return null;
+  // ✅ التعديل هنا: نقرأ من الأقسام المربوطة ذكياً بدل الكروت اليدوية
+  const collections = data?.linkedCollections || [];
+  if (!collections || collections.length === 0) return null;
 
   return (
     <section className="bg-[#000] py-16" dir="rtl">
@@ -598,23 +600,23 @@ export const MasterpieceCollections = ({ data }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {data.cards.slice(0, 3).map((card, index) => (
-            <Link key={index} href={card.linkUrl || "#"} className="group relative h-[500px] overflow-hidden rounded-sm border border-white/5 transition-all duration-700">
+          {collections.slice(0, 3).map((col, index) => (
+            <Link key={index} href={`/collections/${col.slug || col.id}`} className="group relative h-[500px] overflow-hidden rounded-sm border border-white/5 transition-all duration-700">
               
               {/* خلفية الرقم الشفاف */}
               <span className="absolute top-0 left-4 text-[120px] font-black text-white/5 leading-none select-none group-hover:text-[#F5C518]/10 transition-colors">
                 0{index + 1}
               </span>
 
-              {/* الصورة */}
-              <img src={card.image} alt={card.mainTitle} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000" />
+              {/* الصورة - إما البوستر المخصص اللي ضفته في الإدارة، أو صورة افتراضية */}
+              <img src={col.image || "/placeholder.jpg"} alt={col.name} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000" />
               
               {/* الظل والكلام */}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
               
               <div className="absolute bottom-8 right-8 left-8 text-right">
                 <h3 className="text-white text-3xl font-black mb-2 transform group-hover:-translate-y-2 transition-transform duration-500">
-                  {card.mainTitle}
+                  {col.name}
                 </h3>
                 <div className="h-1 w-0 bg-[#F5C518] group-hover:w-full transition-all duration-500"></div>
                 <p className="text-gray-400 text-sm mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-700">

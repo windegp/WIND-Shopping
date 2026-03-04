@@ -28,13 +28,13 @@ const SECTION_TYPES = {
     hasProducts: true 
   },
 
-  // 📽️ القسم الجديد: تصنيفات النخبة
+ // 📽️ القسم الجديد: تصنيفات النخبة
   COLLECTIONS_SPOTLIGHT: { 
     label: "أبرز المجموعات (بوسترات تصنيف)", 
     designId: "POSTER_COLLECTIONS", 
     hasTitle: true, 
     hasSubTitle: true, 
-    hasFeaturedCards: true // هنستخدم الكروت هنا لوضع روابط الأقسام
+    hasProducts: true // ✅ رجعناها تسحب الأقسام ذكياً زي الباقي
   }
 };
 
@@ -716,71 +716,91 @@ export default function HomeManagerPage() {
                               </span>
                             </div>
 
-                            {/* عرض الأقسام المربوطة كـ Checkboxes للحذف السريع */}
-                            {(section.data?.linkedCollections || []).length > 0 && (
-                              <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                <span className="text-[11px] font-bold text-gray-600">🔗 الأقسام المربوطة:</span>
-                                {(section.data.linkedCollections).map((c, i) => (
-                                  <label key={i} className="flex items-center gap-1.5 bg-white text-[#0066cc] px-2 py-1.5 rounded text-[11px] font-bold border border-[#0066cc]/30 cursor-pointer hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors shadow-sm">
-                                    <input 
-                                      type="checkbox" 
-                                      checked={true}
-                                      onChange={() => {
-                                          const updated = [...layoutSections];
-                                          let currentLinked = updated[sectionIndex].data.linkedCollections || [];
-                                          let currentProds = updated[sectionIndex].data.products || [];
-                                          
-                                          currentLinked = currentLinked.filter(item => item.id !== c.id);
-                                          
-                                          const normalizeText = (text) => text ? text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim() : "";
-                                          const normColId = normalizeText(c.id);
-                                          const normColName = normalizeText(c.name);
-                                          const normColSlug = normalizeText(c.slug);
+                            {/* عرض الأقسام المربوطة كـ Checkboxes للحذف السريع مع إضافة حقل البوستر لقسم النخبة */}
+                            {(section.data?.linkedCollections || []).length > 0 && (
+                              <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <span className="text-[12px] font-bold text-gray-700">🔗 الأقسام المربوطة بهذا القسم:</span>
+                                <div className="flex flex-wrap items-start gap-3">
+                                  {(section.data.linkedCollections).map((c, i) => (
+                                    <div key={i} className={`flex flex-col gap-2 bg-white p-2 border ${section.category === 'COLLECTIONS_SPOTLIGHT' ? 'border-[#008060]/30 shadow-sm' : 'border-[#0066cc]/30'} rounded-lg min-w-[140px]`}>
+                                      <label className="flex items-center gap-1.5 text-[#0066cc] px-1 text-[11px] font-bold cursor-pointer hover:text-red-600 transition-colors">
+                                        <input 
+                                          type="checkbox" 
+                                          checked={true}
+                                          onChange={() => {
+                                              const updated = [...layoutSections];
+                                              let currentLinked = updated[sectionIndex].data.linkedCollections || [];
+                                              let currentProds = updated[sectionIndex].data.products || [];
+                                              
+                                              currentLinked = currentLinked.filter(item => item.id !== c.id);
+                                              
+                                              const normalizeText = (text) => text ? text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim() : "";
+                                              const normColId = normalizeText(c.id);
+                                              const normColName = normalizeText(c.name);
+                                              const normColSlug = normalizeText(c.slug);
 
-                                          const idsToRemove = allStoreProducts.filter(p => {
-                                            let pCats = [];
-                                            if (p.category) pCats.push(p.category);
-                                            if (p.categoryId) pCats.push(p.categoryId);
-                                            if (p.collection) pCats.push(p.collection);
-                                            if (p.collectionId) pCats.push(p.collectionId);
-                                            if (p.productType) pCats.push(p.productType);
-                                            if (p.type) pCats.push(p.type);
-                                            if (p.organization) {
-                                              if (p.organization.productType) pCats.push(p.organization.productType);
-                                              if (p.organization.type) pCats.push(p.organization.type);
-                                              if (p.organization.category) pCats.push(p.organization.category);
-                                            }
-                                            if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
-                                            if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
-                                            if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags);
-                                            const normalizedPCats = pCats.map(normalizeText);
-                                            
-                                            return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
-                                          }).map(p => p.id);
+                                              const idsToRemove = allStoreProducts.filter(p => {
+                                                let pCats = [];
+                                                if (p.category) pCats.push(p.category);
+                                                if (p.categoryId) pCats.push(p.categoryId);
+                                                if (p.collection) pCats.push(p.collection);
+                                                if (p.collectionId) pCats.push(p.collectionId);
+                                                if (p.productType) pCats.push(p.productType);
+                                                if (p.type) pCats.push(p.type);
+                                                if (p.organization) {
+                                                  if (p.organization.productType) pCats.push(p.organization.productType);
+                                                  if (p.organization.type) pCats.push(p.organization.type);
+                                                  if (p.organization.category) pCats.push(p.organization.category);
+                                                }
+                                                if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
+                                                if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
+                                                if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags);
+                                                const normalizedPCats = pCats.map(normalizeText);
+                                                
+                                                return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
+                                            }).map(p => p.id);
 
-                                          currentProds = currentProds.filter(p => !idsToRemove.includes(p.productId));
+                                            currentProds = currentProds.filter(p => !idsToRemove.includes(p.productId));
 
-                                          updated[sectionIndex].data.linkedCollections = currentLinked;
-                                          updated[sectionIndex].data.products = currentProds;
+                                            updated[sectionIndex].data.linkedCollections = currentLinked;
+                                            updated[sectionIndex].data.products = currentProds;
 
-                                          if (currentLinked.length === 1) {
-                                              const autoLink = `/collections/${currentLinked[0].slug}`;
-                                              updated[sectionIndex].data.linkUrl = autoLink;
-                                              if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
-                                          } else {
-                                              updated[sectionIndex].data.linkUrl = "";
-                                              if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
-                                          }
+                                            if (currentLinked.length === 1) {
+                                                const autoLink = `/collections/${currentLinked[0].slug}`;
+                                                updated[sectionIndex].data.linkUrl = autoLink;
+                                                if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
+                                            } else {
+                                                updated[sectionIndex].data.linkUrl = "";
+                                                if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
+                                            }
 
-                                          setLayoutSections(updated);
-                                      }}
-                                      className="w-3.5 h-3.5 text-red-500 rounded border-gray-300 focus:ring-0 cursor-pointer"
-                                    />
-                                    <span>{c.name}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
+                                            setLayoutSections(updated);
+                                        }}
+                                        className="w-3.5 h-3.5 text-red-500 rounded border-gray-300 focus:ring-0 cursor-pointer"
+                                      />
+                                      <span className="truncate max-w-[120px]">{c.name}</span>
+                                    </label>
+                                    
+                                    {/* ✅ الحقل الجديد لبوستر القسم يظهر فقط في قسم النخبة */}
+                                    {section.category === 'COLLECTIONS_SPOTLIGHT' && (
+                                      <input 
+                                        type="text" 
+                                        placeholder="رابط بوستر القسم (اختياري)" 
+                                        value={c.image || ""}
+                                        onChange={(e) => {
+                                          const updated = [...layoutSections];
+                                          updated[sectionIndex].data.linkedCollections[i].image = e.target.value;
+                                          setLayoutSections(updated);
+                                        }}
+                                        className="w-full p-1.5 border border-gray-300 rounded text-[10px] focus:border-[#008060] outline-none font-mono"
+                                        dir="ltr"
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           </div>
 
                           {/* خيار 1: القائمة المنسدلة لإضافة قسم جديد */}
