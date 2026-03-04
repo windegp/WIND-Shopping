@@ -5,28 +5,37 @@ import { db } from "@/lib/firebase";
 
 // --- خريطة الأقسام الأساسية فقط ---
 const SECTION_TYPES = {
-  HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
-  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
-  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true },
-  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true },
-  
-  // ✅ القسم الجديد: الأكثر مبيعاً
-  BEST_SELLERS_SECTION: { 
-    label: "الأكثر مبيعاً (شبكة منتجات)", 
-    designId: "BEST_SELLERS_GRID", 
-    hasTitle: true, 
-    hasSubTitle: true, 
-    hasProducts: true // دي اللي بتفتحلك أداة سحب الكولكشنات والمنتجات
-  },
+  HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
+  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
+  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true },
+  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true },
+  
+  // ✅ القسم الجديد: الأكثر مبيعاً
+  BEST_SELLERS_SECTION: { 
+    label: "الأكثر مبيعاً (شبكة منتجات)", 
+    designId: "BEST_SELLERS_GRID", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true // دي اللي بتفتحلك أداة سحب الكولكشنات والمنتجات
+  },
 
-  // 🔥 القسم الجديد المبتكر: العروض الحصرية
-  EXCLUSIVE_OFFERS_SECTION: { 
-    label: "العروض الحصرية (كروت فاخرة)", 
-    designId: "PREMIUM_CARDS", 
-    hasTitle: true, 
-    hasSubTitle: true, 
-    hasProducts: true 
-  }
+  // 🔥 القسم الجديد المبتكر: العروض الحصرية
+  EXCLUSIVE_OFFERS_SECTION: { 
+    label: "العروض الحصرية (كروت فاخرة)", 
+    designId: "PREMIUM_CARDS", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true 
+  },
+
+  // 📽️ القسم الجديد: تصنيفات النخبة
+  COLLECTIONS_SPOTLIGHT: { 
+    label: "أبرز المجموعات (بوسترات تصنيف)", 
+    designId: "POSTER_COLLECTIONS", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasFeaturedCards: true // هنستخدم الكروت هنا لوضع روابط الأقسام
+  }
 };
 
 export default function HomeManagerPage() {
@@ -674,17 +683,25 @@ export default function HomeManagerPage() {
                             ))}
                           </div>
 
-                          {/* ✅ زرار إضافة بطاقة جديدة مع template مختلف حسب نوع القسم */}
-                          <button
-                            onClick={() => addArrayItem(sectionIndex, 'cards',
-                              section.category === 'TOP_TEN_SECTION'
-                                ? { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" }
-                                : { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] }
-                            )}
-                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
-                          >
-                            + إضافة بطاقة جديدة
-                          </button>
+                          {/* ✅ زرار إضافة بطاقة جديدة بتنسيق ذكي حسب نوع القسم */}
+                          <button
+                            onClick={() => {
+                              let template = { image: "", mainTitle: "", linkUrl: "" };
+
+                              if (section.category === 'TOP_TEN_SECTION') {
+                                template = { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" };
+                              } else if (section.category === 'FEATURED_SECTION') {
+                                template = { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] };
+                              } else if (section.category === 'COLLECTIONS_SPOTLIGHT') {
+                                template = { image: "", mainTitle: "", linkUrl: "" };
+                              }
+
+                              addArrayItem(sectionIndex, 'cards', template);
+                            }}
+                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
+                          >
+                            + إضافة بطاقة جديدة (بوستر/منتج)
+                          </button>
                         </div>
                       )}
 
