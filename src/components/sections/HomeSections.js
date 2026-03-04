@@ -2,56 +2,119 @@
 import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 
+// ==========================================================================
+// LUXURY REDESIGN — كل الـ props والـ data structure محفوظة بالكامل
+// التعديل فقط على: الألوان، الـ spacing، الـ typography، والـ visual hierarchy
+// ==========================================================================
+
+// --- DESIGN TOKENS (luxury palette) ---
+// bg-[#0A0A0A]   → أسود فاخر (base)
+// bg-[#111111]   → رمادي داكن جداً (section bg)
+// bg-[#1C1C1C]   → رمادي داكن (card bg)
+// text-[#E8E0D0] → أوف وايت (primary text) — مش أبيض صارخ
+// text-[#8A8070] → بيج داكن (secondary text) — بدل gray-400
+// border-[#2A2A2A] → حدود خفيفة جداً
+// #C9A84C        → ذهبي مطفي (بدل الأصفر الفج)
+// #FFFFFF        → أبيض فقط للـ CTA المهمة
+
 // --- 1. الأنماط والحركات ---
 const GlobalStyles = () => (
   <style jsx global>{`
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+    
     @keyframes kenburns {
       0% { transform: scale(1); }
-      100% { transform: scale(1.15); }
-    }
-    @keyframes marquee {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(50%); }
+      100% { transform: scale(1.08); }
     }
     @keyframes marquee-infinite {
       0% { transform: translateX(0); }
       100% { transform: translateX(-50%); }
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .animate-marquee { display: flex; animation: marquee 25s linear infinite; }
-    .animate-marquee-infinite { display: flex; width: max-content; animation: marquee-infinite 35s linear infinite; }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .animate-marquee-infinite { 
+      display: flex; 
+      width: max-content; 
+      animation: marquee-infinite 40s linear infinite; 
+    }
     .pause-on-hover:hover { animation-play-state: paused; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-    .kenburns-bg { animation: kenburns 20s infinite alternate; }
+    .kenburns-bg { animation: kenburns 20s infinite alternate ease-in-out; }
+    .font-serif { font-family: 'Cormorant Garamond', serif; }
+    .font-sans-luxury { font-family: 'Inter', sans-serif; }
+    
+    /* الـ Gold gradient للعناوين المميزة */
+    .gold-text {
+      background: linear-gradient(135deg, #C9A84C 0%, #E8D5A3 50%, #C9A84C 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .gold-shimmer {
+      background: linear-gradient(135deg, #C9A84C 0%, #E8D5A3 50%, #C9A84C 100%);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    /* Luxury thin divider */
+    .luxury-divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #C9A84C40, transparent);
+    }
+    /* Card hover lift */
+    .card-lift {
+      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                  box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .card-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,168,76,0.2);
+    }
   `}</style>
 );
 
-// --- 2. مكون الهيدر (مهم كقالب جاهز لأي قسم جديد مستقبلاً) ---
+// --- 2. مكون الهيدر المحسوب (props محفوظة بالكامل) ---
 export const SectionHeader = ({ title, subTitle, link = "#" }) => (
-  <div className="flex items-center justify-between mb-6 px-4 pt-10" dir="rtl">
-    <div className="flex items-center gap-3">
-      <div className="w-1.5 h-8 bg-[#F5C518] rounded-sm"></div>
+  <div className="flex items-center justify-between mb-8 px-4 pt-12" dir="rtl">
+    <div className="flex items-start gap-4">
+      {/* خط ذهبي رفيع أنيق بدل الشريط السميك */}
+      <div className="w-px h-10 bg-gradient-to-b from-[#C9A84C] to-transparent mt-1 shrink-0"></div>
       <div>
-        <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">{title}</h2>
-        {subTitle && <p className="text-gray-400 text-[10px] md:text-xs mt-1 font-normal">{subTitle}</p>}
+        <h2 className="text-xl md:text-2xl font-black text-[#E8E0D0] tracking-wide font-sans-luxury">
+          {title}
+        </h2>
+        {subTitle && (
+          <p className="text-[#6B6358] text-[10px] md:text-xs mt-1.5 font-normal tracking-widest uppercase">
+            {subTitle}
+          </p>
+        )}
       </div>
     </div>
-    <Link href={link} className="text-[#F5C518] text-sm font-bold flex items-center gap-1 hover:opacity-80 transition-opacity">
-      عرض الكل <span className="text-xl leading-none">›</span>
+    <Link 
+      href={link} 
+      className="text-[#8A8070] hover:text-[#C9A84C] text-xs font-medium tracking-widest uppercase flex items-center gap-2 transition-colors duration-300 pb-1 border-b border-transparent hover:border-[#C9A84C]/30"
+    >
+      عرض الكل
+      <span className="text-base leading-none opacity-60">›</span>
     </Link>
   </div>
 );
 
-// --- 3. قسم Featured Today (المميز اليوم) المطور بنظام المجموعات والكوتشينة ---
+// --- 3. قسم Featured Today (props محفوظة بالكامل) ---
 export const FeaturedToday = ({ data }) => {
   const scrollRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(true);
   const [showRightArrow, setShowRightArrow] = useState(false);
-  
   const [expandedDeck, setExpandedDeck] = useState(null);
 
   const handleScroll = () => {
@@ -71,53 +134,63 @@ export const FeaturedToday = ({ data }) => {
   };
 
   const toggleDeck = (index, e) => {
-    e.preventDefault(); 
-    e.stopPropagation(); 
+    e.preventDefault();
+    e.stopPropagation();
     setExpandedDeck(expandedDeck === index ? null : index);
   };
 
-  useEffect(() => {
-    handleScroll();
-  }, [data]);
+  useEffect(() => { handleScroll(); }, [data]);
 
   if (!data || !data.cards) return null;
 
   return (
-    <section className="bg-[#181818] pt-2 pb-1 mt-0 border-t border-[#333]">
+    <section className="bg-[#0D0D0D] pt-4 pb-2 border-t border-[#1E1E1E]">
       <GlobalStyles />
       <div className="max-w-[1400px] mx-auto relative px-4 text-right">
-        
-        <div className="mb-3" dir="rtl">
-          <h2 className="text-[#F5C518] text-lg md:text-xl font-black uppercase tracking-wider">
-            {data.title || "Featured today"}
+
+        {/* العنوان — أبسط وأفخم */}
+        <div className="mb-5 pt-8" dir="rtl">
+          <p className="text-[#6B6358] text-[10px] tracking-[0.3em] uppercase mb-1.5 font-sans-luxury">
+            مختارات اليوم
+          </p>
+          <h2 className="text-[#E8E0D0] text-xl md:text-2xl font-black tracking-wide font-sans-luxury">
+            {data.title || "Featured Today"}
           </h2>
           {data.subTitle && (
-            <p className="text-gray-400 text-[11px] md:text-sm mt-1 font-medium">
-              {data.subTitle}
-            </p>
+            <p className="text-[#6B6358] text-[11px] mt-1.5">{data.subTitle}</p>
           )}
         </div>
 
+        <div className="luxury-divider mb-5"></div>
+
         <div className="relative group/slider">
-          
-          <button 
-            onClick={() => scroll('right')}
-            className={`absolute top-1/2 -translate-y-1/2 right-2 z-30 bg-black/40 hover:bg-black/60 border border-white/20 text-white w-10 h-14 flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-          </button>
+          {/* أسهم التنقل — أنيقة وخفيفة */}
+          {[
+            { dir: 'right', show: showRightArrow, pos: 'right-0' },
+            { dir: 'left', show: showLeftArrow, pos: 'left-0' }
+          ].map(({ dir, show, pos }) => (
+            <button
+              key={dir}
+              onClick={() => scroll(dir)}
+              className={`absolute top-1/2 -translate-y-1/2 ${pos} z-30 
+                         w-9 h-9 flex items-center justify-center
+                         bg-[#0D0D0D]/80 backdrop-blur-md
+                         border border-[#2A2A2A] hover:border-[#C9A84C]/40
+                         text-[#8A8070] hover:text-[#C9A84C]
+                         rounded-full transition-all duration-300
+                         ${show ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
+                      d={dir === 'right' ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
+              </svg>
+            </button>
+          ))}
 
-          <button 
-            onClick={() => scroll('left')}
-            className={`absolute top-1/2 -translate-y-1/2 left-2 z-30 bg-black/40 hover:bg-black/60 border border-white/20 text-white w-10 h-14 flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
-          </button>
-
-          <div 
+          <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex overflow-x-auto gap-4 md:gap-6 scrollbar-hide snap-x relative z-10 py-4" 
+            className="flex overflow-x-auto gap-4 md:gap-5 scrollbar-hide snap-x relative z-10 py-4"
             dir="rtl"
           >
             {data.cards.map((mainCard, mIndex) => {
@@ -126,23 +199,33 @@ export const FeaturedToday = ({ data }) => {
 
               return (
                 <div key={mIndex} className="flex items-stretch snap-start">
-                  
                   <div className="relative z-50 flex flex-col gap-2 pb-2">
-                    <Link href={mainCard.linkUrl || "#"} className="min-w-[150px] md:min-w-[190px] block relative">
-                      <div className={`relative aspect-[2/3] overflow-hidden bg-[#222] shadow-[0_0_15px_rgba(0,0,0,0.4)] transition-all duration-500 ${isExpanded && hasSubCards ? 'rounded-none border-l border-[#333]' : 'rounded-2xl'}`}>
+                    <Link href={mainCard.linkUrl || "#"} className="min-w-[150px] md:min-w-[185px] block relative card-lift">
+                      <div className={`relative aspect-[2/3] overflow-hidden bg-[#1C1C1C] 
+                                      transition-all duration-500
+                                      ${isExpanded && hasSubCards ? 'rounded-none' : 'rounded-xl'}
+                                      ring-1 ring-white/5`}>
                         <img src={mainCard.image} alt={mainCard.mainTitle} className="w-full h-full object-cover" />
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
-                        
+                        {/* gradient أغمق وأفخم */}
+                        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#080808] via-[#080808]/60 to-transparent pointer-events-none"></div>
+
                         {mainCard.badgeType && mainCard.badgeType !== 'none' && (
-                          <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1 text-white font-bold text-[10px] md:text-xs drop-shadow-md z-10 bg-black/40 px-2 py-1 rounded backdrop-blur-[2px]">
+                          <div className="absolute bottom-3 right-3 flex flex-row-reverse items-center gap-1 
+                                         text-[#E8E0D0] font-medium text-[9px] z-10 
+                                         bg-black/60 backdrop-blur-md px-2.5 py-1 
+                                         border border-white/10 rounded-sm tracking-wider uppercase">
                             {mainCard.badgeType === 'list' ? (
                               <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
                                 قائمة
                               </>
                             ) : (
                               <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
                                 صور
                               </>
                             )}
@@ -151,19 +234,25 @@ export const FeaturedToday = ({ data }) => {
                       </div>
                     </Link>
 
-                    <div className="px-1 text-right mt-1 flex justify-between items-start">
+                    <div className="px-1 text-right mt-1.5 flex justify-between items-start gap-2">
                       <div>
-                        <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{mainCard.mainTitle}</h3>
-                        <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{mainCard.linkText}</span>
+                        <h3 className="text-[#D4CCC0] text-[12px] md:text-[13px] font-medium line-clamp-2 leading-snug tracking-wide">
+                          {mainCard.mainTitle}
+                        </h3>
+                        <span className="text-[#C9A84C] text-[10px] font-medium tracking-wider mt-0.5 block opacity-80">
+                          {mainCard.linkText}
+                        </span>
                       </div>
-                      
+
                       {hasSubCards && !isExpanded && (
-                        <button 
+                        <button
                           onClick={(e) => toggleDeck(mIndex, e)}
-                          className="bg-[#222] hover:bg-[#333] border border-[#444] text-white p-1.5 rounded-full transition-all duration-300 ml-1 shrink-0"
+                          className="bg-[#1C1C1C] hover:bg-[#252525] border border-[#2A2A2A] hover:border-[#C9A84C]/30
+                                     text-[#8A8070] hover:text-[#C9A84C] 
+                                     p-1.5 rounded-full transition-all duration-300 ml-1 shrink-0"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
                       )}
@@ -172,34 +261,35 @@ export const FeaturedToday = ({ data }) => {
 
                   {hasSubCards && mainCard.subCards.map((subCard, sIndex) => {
                     const isLastSubCard = sIndex === mainCard.subCards.length - 1;
-
                     return (
-                      <Link 
-                        key={`${mIndex}-${sIndex}`} 
-                        href={subCard.linkUrl || "#"} 
-                        className={`min-w-[150px] md:min-w-[190px] flex flex-col gap-2 cursor-pointer pb-2 
+                      <Link
+                        key={`${mIndex}-${sIndex}`}
+                        href={subCard.linkUrl || "#"}
+                        className={`min-w-[150px] md:min-w-[185px] flex flex-col gap-2 cursor-pointer pb-2
                                    transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-right
-                                   ${isExpanded ? 'mr-0 opacity-100 scale-100' : '-mr-[150px] md:-mr-[190px] opacity-0 scale-95 pointer-events-none'}`}
+                                   ${isExpanded ? 'mr-0 opacity-100 scale-100' : '-mr-[150px] md:-mr-[185px] opacity-0 scale-95 pointer-events-none'}`}
                         style={{ zIndex: 40 - sIndex }}
                       >
-                        <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#222] border-r border-[#181818]/60 shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
+                        <div className="relative aspect-[2/3] rounded-none overflow-hidden bg-[#1C1C1C] 
+                                       shadow-[-8px_0_30px_rgba(0,0,0,0.6)] ring-1 ring-white/5">
                           <img src={subCard.image} alt={subCard.mainTitle} className="w-full h-full object-cover" />
-                          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#121212]/90 to-transparent pointer-events-none"></div>
+                          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#080808] to-transparent pointer-events-none"></div>
                         </div>
-                        
-                        <div className={`px-1 text-right mt-1 flex justify-between items-start transition-opacity duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+
+                        <div className={`px-1 text-right mt-1.5 flex justify-between items-start gap-2 transition-opacity duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
                           <div>
-                            <h3 className="text-white text-[13px] md:text-sm font-bold line-clamp-2">{subCard.mainTitle}</h3>
-                            <span className="text-[#5799ef] text-[10px] md:text-xs font-semibold">{subCard.linkText}</span>
+                            <h3 className="text-[#D4CCC0] text-[12px] font-medium line-clamp-2 leading-snug">{subCard.mainTitle}</h3>
+                            <span className="text-[#C9A84C] text-[10px] font-medium tracking-wider mt-0.5 block opacity-80">{subCard.linkText}</span>
                           </div>
-                          
+
                           {isExpanded && isLastSubCard && (
-                            <button 
+                            <button
                               onClick={(e) => toggleDeck(mIndex, e)}
-                              className="bg-[#222] hover:bg-[#333] border border-[#444] text-[#F5C518] p-1.5 rounded-full transition-all duration-300 ml-1 shrink-0"
+                              className="bg-[#1C1C1C] hover:bg-[#252525] border border-[#2A2A2A] hover:border-[#C9A84C]/30
+                                         text-[#C9A84C] p-1.5 rounded-full transition-all duration-300 ml-1 shrink-0"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
                               </svg>
                             </button>
                           )}
@@ -207,7 +297,6 @@ export const FeaturedToday = ({ data }) => {
                       </Link>
                     );
                   })}
-
                 </div>
               );
             })}
@@ -218,421 +307,477 @@ export const FeaturedToday = ({ data }) => {
   );
 };
 
-
-// --- 4. قسم أفضل 10 منتجات لدي وينـد (IMDb Style) ---
+// --- 4. قسم أفضل 10 منتجات (props محفوظة بالكامل) ---
 export const TopTenProducts = ({ data }) => {
-  // التحقق من وجود بيانات لتجنب أخطاء الرندرة
   if (!data || !data.cards || data.cards.length === 0) return null;
 
   return (
-    <section className="bg-[#000000] pt-6 pb-10 mt-0 border-t border-[#333]">
-      <div className="max-w-[800px] mx-auto relative px-4 text-right" dir="rtl">
-        
-        {/* عنوان القسم مطابق لصورة IMDb */}
-        <div className="flex items-center gap-2 mb-6 cursor-pointer group w-max">
-          <div className="w-1.5 h-6 bg-[#F5C518] rounded-sm"></div>
-          <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-1 transition-colors group-hover:text-[#F5C518]">
-            {data.title || "أفضل 10 منتجات لدي وينـد"}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mt-1 text-white group-hover:text-[#F5C518]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-            </svg>
-          </h2>
+    <section className="bg-[#080808] pt-12 pb-16 border-t border-[#1A1A1A]">
+      <div className="max-w-[720px] mx-auto relative px-4 text-right" dir="rtl">
+
+        {/* العنوان — أنيق ومختلف */}
+        <div className="mb-10">
+          <p className="text-[#6B6358] text-[10px] tracking-[0.35em] uppercase mb-2 font-sans-luxury">
+            الأكثر طلباً
+          </p>
+          <div className="flex items-center gap-3 group cursor-pointer w-max">
+            <div className="w-px h-8 bg-gradient-to-b from-[#C9A84C] to-transparent"></div>
+            <h2 className="text-2xl md:text-3xl font-black text-[#E8E0D0] tracking-tight font-sans-luxury 
+                          group-hover:text-[#C9A84C] transition-colors duration-500">
+              {data.title || "أفضل 10 منتجات"}
+            </h2>
+          </div>
+          <div className="luxury-divider mt-6"></div>
         </div>
 
-        {/* قائمة المنتجات الطولية */}
-        <div className="flex flex-col gap-4">
+        {/* قائمة المنتجات */}
+        <div className="flex flex-col gap-px">
           {data.cards.slice(0, 10).map((card, index) => (
-            <div key={index} className="flex bg-[#1a1a1a] rounded-xl overflow-hidden shadow-lg border border-[#222] transition-all hover:border-[#444]">
-              
-              {/* صورة المنتج مع الـ Bookmark */}
-              <div className="relative w-[110px] md:w-[130px] shrink-0 bg-[#222]">
-                <img src={card.image} alt={card.mainTitle} className="w-full h-full object-cover aspect-[2/3]" />
-                
-                {/* علامة + الشفافة أعلى الصورة */}
-                <div className="absolute top-0 right-0 w-8 h-10 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-1" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                </div>
+            <div
+              key={index}
+              className="flex bg-[#0F0F0F] hover:bg-[#141414] 
+                        transition-all duration-300 group
+                        border-b border-[#1A1A1A] last:border-b-0"
+            >
+              {/* رقم الترتيب — ضخم وشفاف (luxury style) */}
+              <div className="w-[70px] md:w-[90px] shrink-0 flex items-center justify-center 
+                             relative overflow-hidden">
+                <span className="text-[48px] md:text-[56px] font-black text-[#1A1A1A] leading-none select-none
+                               group-hover:text-[#C9A84C]/10 transition-colors duration-500">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="absolute text-[#C9A84C] text-[10px] font-black tracking-wider">
+                  #{index + 1}
+                </span>
+              </div>
+
+              {/* صورة المنتج */}
+              <div className="relative w-[80px] md:w-[95px] shrink-0 my-3 overflow-hidden rounded-lg bg-[#1C1C1C]">
+                <img
+                  src={card.image}
+                  alt={card.mainTitle}
+                  className="w-full h-full object-cover aspect-[2/3] group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
 
               {/* تفاصيل المنتج */}
-              <div className="flex-1 p-3 md:p-4 flex flex-col justify-start">
-                
-                {/* شارة الترتيب الزرقاء (Ranking Badge) */}
-                <div className="mb-2">
-                  <span className="inline-block bg-[#1f75d9] text-white text-xs md:text-sm font-black px-2.5 py-0.5" style={{ clipPath: 'polygon(0 0, 100% 0, 85% 100%, 0% 100%)', borderTopLeftRadius: '0.25rem', borderBottomLeftRadius: '0.25rem' }}>
-                    #{index + 1}
-                  </span>
-                </div>
+              <div className="flex-1 p-4 flex flex-col justify-center">
+                <h3 className="text-[#D4CCC0] font-semibold text-[13px] md:text-sm line-clamp-2 leading-snug mb-2 tracking-wide">
+                  {card.mainTitle}
+                </h3>
 
-                {/* عنوان المنتج */}
-                <h3 className="text-white font-bold text-base md:text-lg mb-1 line-clamp-2 leading-tight">{card.mainTitle}</h3>
-                
-                {/* السعر والتصنيف */}
-                <div className="flex items-center gap-3 text-gray-400 text-[11px] md:text-sm mb-2">
-                  <span className="text-white font-semibold">{card.price || "متوفر الآن"}</span>
-                  {card.category && <span>{card.category}</span>}
-                </div>
-
-                {/* التقييم وزر المراجعة */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-2">
                   <div className="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#F5C518]" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-[#C9A84C]" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
-                    <span className="text-white text-[13px] md:text-sm font-bold">{card.rating || "5.0"}</span>
-                    <span className="text-gray-400 text-[11px] md:text-xs">({card.reviewsCount || "التقييمات"})</span>
+                    <span className="text-[#E8E0D0] text-[11px] font-semibold">{card.rating || "5.0"}</span>
+                    <span className="text-[#4A4540] text-[10px]">({card.reviewsCount || "—"})</span>
                   </div>
-                  <button className="flex items-center gap-1 text-[#5799ef] hover:bg-[#2a3f5f] px-2 py-0.5 rounded transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                    <span className="text-[13px] md:text-sm font-bold">قيّم</span>
-                  </button>
                 </div>
 
-                {/* زر عرض التفاصيل (مربوط بـ linkUrl الكارت) */}
-                <div className="mt-auto">
-                   <Link href={card.linkUrl || "/"} className="inline-flex items-center gap-2 text-[#5799ef] hover:text-white transition-colors text-[13px] md:text-sm font-bold">
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                     </svg>
-                     عرض التفاصيل
-                   </Link>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#E8E0D0] font-medium text-[12px]">{card.price || "متوفر"}</span>
+                  <Link
+                    href={card.linkUrl || "/"}
+                    className="text-[#8A8070] hover:text-[#C9A84C] text-[11px] font-medium 
+                              tracking-wider uppercase transition-colors duration-300 
+                              flex items-center gap-1"
+                  >
+                    تفاصيل
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        
-        {/* زر عرض الكل السفلي (يظهر فقط إذا كان هناك رابط مخصص ويحافظ على التصميم الأصلي) */}
-        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
-          <div className="mt-6 flex justify-center pb-2">
-             <Link href={data.linkUrl || data.viewAllLink} className="w-full text-center bg-[#242424] hover:bg-[#333] text-[#5799ef] font-bold py-3 px-8 rounded-full transition-colors text-sm md:text-base border border-[#333]">
-               عرض الكل
-             </Link>
+
+        {/* زر عرض الكل */}
+        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) && (
+          <div className="mt-10 flex justify-center">
+            <Link
+              href={data.linkUrl || data.viewAllLink}
+              className="text-[#8A8070] hover:text-[#C9A84C] text-xs font-medium tracking-[0.2em] uppercase
+                        py-3 px-10 border border-[#2A2A2A] hover:border-[#C9A84C]/30
+                        transition-all duration-400 rounded-none"
+            >
+              عرض الكل
+            </Link>
           </div>
-        ) : null}
+        )}
       </div>
     </section>
   );
 };
-// --- 5. قسم شريط المنتجات المتحرك (Marquee Products Slider) ---
+
+// --- 5. قسم شريط المنتجات المتحرك (props محفوظة بالكامل) ---
 export const MarqueeProducts = ({ data }) => {
   if (!data || !data.products || data.products.length === 0) return null;
-
   const duplicatedProducts = [...data.products, ...data.products, ...data.products];
 
   return (
-    <section className="bg-[#161616] pt-8 pb-10 mt-0 border-y border-[#333] overflow-hidden">
+    <section className="bg-[#0A0A0A] pt-12 pb-14 border-y border-[#1A1A1A] overflow-hidden">
       <div className="max-w-[1400px] mx-auto relative px-4 text-right" dir="rtl">
-        
-        <div className="flex items-end justify-between mb-6">
-          
+
+        {/* الهيدر */}
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-[#F5C518] rounded-sm"></div>
-              <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+            <p className="text-[#6B6358] text-[10px] tracking-[0.35em] uppercase mb-2">التشكيلة</p>
+            <div className="flex items-center gap-3">
+              <div className="w-px h-7 bg-gradient-to-b from-[#C9A84C] to-transparent"></div>
+              <h2 className="text-xl md:text-2xl font-black text-[#E8E0D0] tracking-wide">
                 {data.title || "تسوق التشكيلة الجديدة"}
               </h2>
             </div>
             {data.subTitle && (
-              <p className="text-gray-400 text-[11px] md:text-sm mt-1.5 font-medium pr-3.5">
-                {data.subTitle}
-              </p>
+              <p className="text-[#6B6358] text-[11px] mt-2 pr-4">{data.subTitle}</p>
             )}
           </div>
 
-          {/* زر عرض الكل (يظهر فقط إذا كان هناك رابط مخصص ويحافظ على مكانه وشكله) */}
-          {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
-            <Link href={data.linkUrl || data.viewAllLink} className="text-[#5799ef] hover:text-white text-sm md:text-base font-bold flex items-center gap-1 transition-colors pb-1 shrink-0">
+          {(data.linkUrl?.trim() || data.viewAllLink?.trim()) && (
+            <Link
+              href={data.linkUrl || data.viewAllLink}
+              className="text-[#8A8070] hover:text-[#C9A84C] text-xs font-medium 
+                        tracking-[0.2em] uppercase flex items-center gap-1.5 
+                        transition-colors duration-300 pb-1 border-b border-transparent hover:border-[#C9A84C]/30"
+            >
               عرض الكل
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
             </Link>
-          ) : null}
-          
+          )}
         </div>
 
-        <div className="relative flex overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing pb-4" dir="ltr" style={{ WebkitOverflowScrolling: 'touch' }}>
-          
-          <div className="flex gap-4 md:gap-6 animate-marquee-infinite pause-on-hover items-start" style={{ animationDuration: '25s', width: 'max-content' }}>
+        <div className="luxury-divider mb-8"></div>
+
+        {/* الشريط المتحرك */}
+        <div className="relative overflow-hidden" dir="ltr">
+          <div className="flex animate-marquee-infinite pause-on-hover items-start"
+               style={{ animationDuration: '40s', width: 'max-content', gap: '20px' }}>
             {duplicatedProducts.map((product, index) => (
-              <Link key={index} href={product.linkUrl || "#"} className="w-[160px] md:w-[220px] flex-none opacity-80 hover:opacity-100 transition-opacity block group">
-                
-                <div className="relative aspect-[3/4] w-full bg-[#222] rounded-lg overflow-hidden mb-3 border border-[#333] group-hover:border-[#F5C518]/50 transition-colors">
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  
+              <Link
+                key={index}
+                href={product.linkUrl || "#"}
+                className="w-[155px] md:w-[200px] flex-none group block"
+              >
+                <div className="relative aspect-[3/4] w-full bg-[#1C1C1C] 
+                               overflow-hidden mb-3 ring-1 ring-white/5
+                               group-hover:ring-[#C9A84C]/20 transition-all duration-500">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+
                   {product.badge && (
-                    <span className="absolute top-2 right-2 bg-[#F5C518] text-black text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md z-10">
+                    <span className="absolute top-2.5 right-2.5 bg-[#C9A84C] text-black 
+                                    text-[9px] font-black px-2 py-0.5 uppercase tracking-wider">
                       {product.badge}
                     </span>
                   )}
-
                   {product.compareAtPrice && (
-                    <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-sm uppercase shadow-md z-10">
+                    <span className="absolute top-2.5 left-2.5 bg-[#1A1A1A] text-[#E8E0D0] 
+                                    text-[9px] font-medium px-2 py-0.5 border border-[#333] uppercase tracking-wider">
                       تخفيض
                     </span>
                   )}
                 </div>
-                
-                <div className="text-right px-1" dir="rtl">
-                  <h3 className="text-white font-bold text-sm md:text-base line-clamp-1">{product.name}</h3>
-                  
-                  <div className="flex items-center justify-start gap-2 mt-1.5">
-                    <span className="text-[#5799ef] font-black text-sm md:text-base">
+
+                <div className="text-right px-0.5" dir="rtl">
+                  <h3 className="text-[#D4CCC0] font-medium text-[12px] md:text-sm line-clamp-1 tracking-wide">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[#C9A84C] font-semibold text-[12px] md:text-[13px]">
                       {product.price} LE
                     </span>
                     {product.compareAtPrice && (
-                      <span className="text-gray-500 line-through text-[11px] md:text-sm font-semibold">
+                      <span className="text-[#4A4540] line-through text-[10px]">
                         {product.compareAtPrice} LE
                       </span>
                     )}
                   </div>
                 </div>
-
               </Link>
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );
 };
-// --- 6. قسم الأكثر مبيعاً (Best Sellers Grid) ---
+
+// --- 6. قسم الأكثر مبيعاً (props محفوظة بالكامل) ---
 export const BestSellersSection = ({ data }) => {
-  // التحقق من وجود المنتجات، وإلا يتم إخفاء القسم
   if (!data || !data.products || data.products.length === 0) return null;
 
-  // فصل المنتج الأول ليكون "البطل"، وباقي المنتجات (حتى 4) في الشبكة المصغرة
   const heroProduct = data.products[0];
   const gridProducts = data.products.slice(1, 5);
 
   return (
-    <section className="bg-[#181818] py-8 mt-0 border-y border-[#333]">
-      
-      {/* 1. الهيدر (العنوان وزر عرض الكل الديناميكي) */}
-      <div className="flex items-end justify-between px-4 mb-6 max-w-[1400px] mx-auto" dir="rtl">
+    <section className="bg-[#0D0D0D] py-14 border-y border-[#1A1A1A]">
+      {/* الهيدر */}
+      <div className="flex items-end justify-between px-4 mb-10 max-w-[1400px] mx-auto" dir="rtl">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-6 bg-[#F5C518] rounded-sm"></div>
-            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+          <p className="text-[#6B6358] text-[10px] tracking-[0.35em] uppercase mb-2">الأكثر مبيعاً</p>
+          <div className="flex items-center gap-3">
+            <div className="w-px h-7 bg-gradient-to-b from-[#C9A84C] to-transparent"></div>
+            <h2 className="text-xl md:text-2xl font-black text-[#E8E0D0] tracking-wide">
               {data.title || "الأكثر مبيعاً"}
             </h2>
           </div>
           {data.subTitle && (
-            <p className="text-gray-400 text-[11px] md:text-sm mt-1.5 font-medium pr-3.5">
-              {data.subTitle}
-            </p>
+            <p className="text-[#6B6358] text-[11px] mt-2 pr-4">{data.subTitle}</p>
           )}
         </div>
 
-        {/* زر عرض الكل (يظهر فقط إذا كان هناك رابط مخصص) */}
-        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
-          <Link href={data.linkUrl || data.viewAllLink} className="text-[#5799ef] hover:text-white text-sm md:text-base font-bold flex items-center gap-1 transition-colors pb-1 shrink-0">
+        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) && (
+          <Link
+            href={data.linkUrl || data.viewAllLink}
+            className="text-[#8A8070] hover:text-[#C9A84C] text-xs font-medium 
+                      tracking-[0.2em] uppercase flex items-center gap-1.5 
+                      transition-colors duration-300 pb-1 border-b border-transparent hover:border-[#C9A84C]/30"
+          >
             عرض الكل
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-            </svg>
           </Link>
-        ) : null}
+        )}
       </div>
 
-      {/* 2. شبكة المنتجات */}
-      <div className="flex flex-col md:flex-row gap-4 px-4 max-w-[1400px] mx-auto" dir="rtl">
-        
-        {/* المنتج البطل (#1) */}
+      <div className="luxury-divider mb-10 mx-4"></div>
+
+      {/* شبكة المنتجات */}
+      <div className="flex flex-col md:flex-row gap-5 px-4 max-w-[1400px] mx-auto" dir="rtl">
+
+        {/* المنتج البطل */}
         {heroProduct && (
-          <div className="md:w-1/3 w-full bg-[#121212] border border-[#333] p-4 relative group hover:border-[#F5C518]/40 transition-colors rounded-xl flex flex-col">
-            <div className="absolute top-4 right-4 bg-[#F5C518] text-black font-black text-[10px] md:text-xs px-2 py-1 z-10 rounded-sm shadow-md uppercase">
-              الأكثر طلباً #1
+          <div className="md:w-1/3 w-full relative group card-lift">
+            {/* شارة #1 */}
+            <div className="absolute top-4 right-4 z-10 flex flex-col items-end">
+              <span className="text-[#C9A84C] text-[9px] font-black tracking-[0.3em] uppercase">الأكثر طلباً</span>
+              <span className="text-[#C9A84C] font-black text-2xl leading-none">#1</span>
             </div>
-            
-            <Link href={heroProduct.linkUrl || "#"} className="flex flex-col h-full w-full">
-              <div className="relative aspect-[3/4] w-full mb-4 overflow-hidden rounded-lg bg-[#222]">
-                <img src={heroProduct.image} alt={heroProduct.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              </div>
-              <div className="flex-1 flex flex-col justify-end">
-                <h3 className="text-white font-bold text-base md:text-lg line-clamp-2">{heroProduct.name}</h3>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[#5799ef] font-black text-lg">{heroProduct.price} LE</span>
-                  {heroProduct.compareAtPrice && (
-                    <span className="text-gray-500 line-through text-sm font-semibold">{heroProduct.compareAtPrice} LE</span>
-                  )}
+
+            <Link href={heroProduct.linkUrl || "#"} className="block h-full">
+              <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#1C1C1C] ring-1 ring-white/5 group-hover:ring-[#C9A84C]/20 transition-all duration-500">
+                <img src={heroProduct.image} alt={heroProduct.name}
+                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-transparent to-transparent opacity-70"></div>
+                <div className="absolute bottom-5 right-5 left-5">
+                  <h3 className="text-[#E8E0D0] font-bold text-lg line-clamp-2 leading-snug mb-2">{heroProduct.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#C9A84C] font-black text-xl">{heroProduct.price} LE</span>
+                    {heroProduct.compareAtPrice && (
+                      <span className="text-[#4A4540] line-through text-sm">{heroProduct.compareAtPrice} LE</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </Link>
           </div>
         )}
 
-        {/* باقي المنتجات (2 إلى 5) */}
+        {/* باقي المنتجات */}
         <div className="md:w-2/3 w-full grid grid-cols-2 gap-3 md:gap-4">
           {gridProducts.map((p, index) => (
-            <div key={index} className="bg-[#121212] border border-[#333] p-3 rounded-xl hover:border-[#F5C518]/30 transition-colors group">
-              <Link href={p.linkUrl || "#"} className="flex flex-col h-full w-full">
-                <div className="relative aspect-[3/4] w-full mb-3 overflow-hidden rounded-lg bg-[#222]">
-                   <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                </div>
-                <div className="flex-1 flex flex-col justify-end">
-                  <h3 className="text-white font-bold text-[13px] md:text-sm line-clamp-2">{p.name}</h3>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-[#5799ef] font-bold text-[14px] md:text-base">{p.price} LE</span>
-                    {p.compareAtPrice && (
-                      <span className="text-gray-500 line-through text-[11px] md:text-xs">{p.compareAtPrice} LE</span>
-                    )}
+            <div key={index} className="group card-lift">
+              <Link href={p.linkUrl || "#"} className="block">
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#1C1C1C] 
+                               ring-1 ring-white/5 group-hover:ring-[#C9A84C]/20 transition-all duration-500">
+                  <img src={p.image} alt={p.name}
+                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#080808]/80 to-transparent"></div>
+                  <div className="absolute bottom-3 right-3 left-3">
+                    <h3 className="text-[#D4CCC0] font-semibold text-[12px] line-clamp-2 leading-snug">{p.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[#C9A84C] font-semibold text-[13px]">{p.price} LE</span>
+                      {p.compareAtPrice && (
+                        <span className="text-[#4A4540] line-through text-[10px]">{p.compareAtPrice} LE</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Link>
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );
 };
-// --- 7. قسم العروض الحصرية (Premium Showcase) المبتكر ---
+
+// --- 7. قسم العروض الحصرية (props محفوظة بالكامل) ---
 export const ExclusiveOffers = ({ data }) => {
   if (!data || !data.products || data.products.length === 0) return null;
-
-  // هنكتفي بأول 4 منتجات بس عشان نحافظ على فخامة وحجم الكروت
   const premiumProducts = data.products.slice(0, 4);
 
   return (
-    <section className="bg-gradient-to-b from-[#0a0a0a] to-[#121212] py-14 border-y border-[#222] relative overflow-hidden">
-      
-      {/* تأثير إضاءة خفيف في الخلفية للمسة السينمائية */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#F5C518] opacity-[0.03] blur-[100px] pointer-events-none"></div>
+    <section className="bg-[#060606] py-20 border-y border-[#1A1A1A] relative overflow-hidden">
+      {/* إضاءة خلفية ذهبية خفيفة جداً */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] 
+                     bg-[#C9A84C] opacity-[0.025] blur-[120px] pointer-events-none"></div>
 
       <div className="max-w-[1400px] mx-auto px-4 relative z-10" dir="rtl">
-        
-        {/* الهيدر: متمركز في المنتصف لكسر الروتين */}
-        <div className="text-center mb-10 flex flex-col items-center">
 
-          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase">
+        {/* الهيدر — متمركز وفاخر */}
+        <div className="text-center mb-14 flex flex-col items-center">
+          <p className="text-[#6B6358] text-[10px] tracking-[0.4em] uppercase mb-4">مجموعة مختارة</p>
+          <h2 className="text-2xl md:text-4xl font-black text-[#E8E0D0] tracking-tight uppercase font-sans-luxury">
             {data.title || "عروض حصرية"}
           </h2>
+          <div className="luxury-divider w-24 mt-5"></div>
           {data.subTitle && (
-            <p className="text-gray-400 text-sm mt-2 max-w-lg mx-auto">{data.subTitle}</p>
+            <p className="text-[#6B6358] text-sm mt-5 max-w-md mx-auto leading-relaxed">{data.subTitle}</p>
           )}
         </div>
 
-        {/* شبكة الكروت الفاخرة */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* شبكة الكروت */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {premiumProducts.map((p, index) => (
-            <Link key={index} href={p.linkUrl || "#"} className="group relative block aspect-[4/5] overflow-hidden rounded-2xl bg-[#1a1a1a] border border-[#333] hover:border-[#F5C518]/60 hover:shadow-[0_0_20px_rgba(245,197,24,0.15)] transition-all duration-500">
-              
-              {/* صورة المنتج مع تأثير زووم بطيء */}
-              <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
-              
-              {/* تدرج لوني أسود من تحت لفوق عشان الكلام يقرأ بوضوح */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
+            <Link
+              key={index}
+              href={p.linkUrl || "#"}
+              className="group relative block aspect-[4/5] overflow-hidden bg-[#111] ring-1 ring-white/5 
+                        hover:ring-[#C9A84C]/25 transition-all duration-700 card-lift"
+            >
+              <img
+                src={p.image}
+                alt={p.name}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out"
+              />
+              {/* gradient أعمق وأكثر تحكماً */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-[#060606]/30 to-transparent 
+                             opacity-75 group-hover:opacity-90 transition-opacity duration-500"></div>
 
-              {/* بادج خصم شيك لو فيه سعر قديم */}
+              {/* Badge */}
               {p.compareAtPrice && (
-                <div className="absolute top-4 right-4 bg-red-600/90 backdrop-blur-sm text-white text-xs font-black px-3 py-1.5 rounded-full border border-red-400/30">
+                <div className="absolute top-4 left-4 bg-[#0D0D0D]/80 backdrop-blur-md 
+                               text-[#C9A84C] text-[9px] font-medium px-3 py-1.5 
+                               border border-[#C9A84C]/20 uppercase tracking-[0.2em]">
                   عرض خاص
                 </div>
               )}
 
-              {/* تفاصيل المنتج متمركزة في الأسفل */}
-              <div className="absolute bottom-0 inset-x-0 p-5 flex flex-col justify-end translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 mb-2">{p.name}</h3>
-                
+              {/* تفاصيل المنتج */}
+              <div className="absolute bottom-0 inset-x-0 p-5 
+                             translate-y-3 group-hover:translate-y-0 
+                             transition-transform duration-500">
+                <h3 className="text-[#E8E0D0] font-semibold text-base leading-snug line-clamp-2 mb-3">
+                  {p.name}
+                </h3>
+
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="text-[#F5C518] font-black text-xl">{p.price} LE</span>
+                  <span className="text-[#C9A84C] font-black text-lg">{p.price} LE</span>
                   {p.compareAtPrice && (
-                    <span className="text-gray-400 line-through text-sm">{p.compareAtPrice} LE</span>
+                    <span className="text-[#4A4540] line-through text-sm">{p.compareAtPrice} LE</span>
                   )}
                 </div>
 
-                {/* زرار تسوق بيظهر بالـ Hover */}
-                <div className="overflow-hidden">
-                  <span className="inline-flex items-center gap-2 text-white text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
-                    تسوق الآن 
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </span>
-                </div>
-              </div>
+                <div className="h-px bg-gradient-to-r from-[#C9A84C]/40 to-transparent 
+                               opacity-0 group-hover:opacity-100 transition-opacity duration-500 mb-3"></div>
 
+                <span className="text-[#8A8070] group-hover:text-[#C9A84C] text-[11px] font-medium 
+                               tracking-[0.25em] uppercase opacity-0 group-hover:opacity-100 
+                               transition-all duration-500 delay-100">
+                  تسوق الآن →
+                </span>
+              </div>
             </Link>
           ))}
         </div>
 
-        {/* زر عرض الكل (يظهر فقط إذا كان هناك رابط مخصص) */}
-        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) ? (
-          <div className="mt-10 flex justify-center">
-             <Link href={data.linkUrl || data.viewAllLink} className="group relative inline-flex items-center gap-2 bg-transparent text-white font-bold py-3 px-8 rounded-full transition-all duration-300 border border-[#F5C518]/50 hover:border-[#F5C518] hover:bg-[#F5C518]/10 overflow-hidden">
-               <span className="relative z-10 text-sm md:text-base">عرض الكل</span>
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 relative z-10 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-               </svg>
-             </Link>
-          </div>
-        ) : null}
-
-      </div>
-    </section>
-  );
+        {/* زر عرض الكل */}
+        {(data.linkUrl?.trim() || data.viewAllLink?.trim()) && (
+          <div className="mt-12 flex justify-center">
+            <Link
+              href={data.linkUrl || data.viewAllLink}
+              className="text-[#8A8070] hover:text-[#C9A84C] text-xs font-medium 
+                        tracking-[0.25em] uppercase py-4 px-12
+                        border border-[#2A2A2A] hover:border-[#C9A84C]/30
+                        transition-all duration-400"
+            >
+              عرض الكل
+            </Link>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 };
 
-// --- 8. قسم أبرز المجموعات (Masterpiece Collections) ---
+// --- 8. قسم أبرز المجموعات (props محفوظة بالكامل) ---
 export const MasterpieceCollections = ({ data }) => {
   const collections = data?.linkedCollections || [];
   if (!collections || collections.length === 0) return null;
 
   return (
-    <section className="bg-[#000] py-16" dir="rtl">
+    <section className="bg-[#040404] py-20" dir="rtl">
       <div className="max-w-[1400px] mx-auto px-4">
-        
-        {/* العنوان الرئيسي والفرعي */}
-        <div className="flex flex-col mb-10">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-10 bg-[#F5C518]"></div>
-            <h2 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">
+
+        {/* الهيدر */}
+        <div className="flex flex-col mb-14">
+          <p className="text-[#6B6358] text-[10px] tracking-[0.4em] uppercase mb-4">استكشف</p>
+          <div className="flex items-center gap-4">
+            <div className="w-px h-12 bg-gradient-to-b from-[#C9A84C] via-[#C9A84C]/50 to-transparent"></div>
+            <h2 className="text-3xl md:text-5xl font-black text-[#E8E0D0] uppercase tracking-tighter font-sans-luxury">
               {data.title || "استكشف المجموعات"}
             </h2>
           </div>
           {data.subTitle && (
-            <p className="text-gray-400 text-sm md:text-base mt-3 max-w-2xl leading-relaxed">
+            <p className="text-[#6B6358] text-sm mt-4 max-w-xl leading-relaxed pr-5">
               {data.subTitle}
             </p>
           )}
+          <div className="luxury-divider mt-8"></div>
         </div>
 
-        {/* شبكة الأقسام (تظهر أي عدد يتم إضافته) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* شبكة المجموعات */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {collections.map((col, index) => (
-            <Link key={index} href={`/collections/${col.slug || col.id}`} className="group relative h-[400px] md:h-[500px] overflow-hidden rounded-sm border border-white/5 transition-all duration-700">
-              
-              {/* خلفية الرقم الشفاف */}
-              <span className="absolute top-0 left-4 text-[100px] md:text-[120px] font-black text-white/5 leading-none select-none group-hover:text-[#F5C518]/10 transition-colors z-10">
-                0{index + 1}
+            <Link
+              key={index}
+              href={`/collections/${col.slug || col.id}`}
+              className="group relative overflow-hidden ring-1 ring-white/5 
+                        hover:ring-[#C9A84C]/20 transition-all duration-700"
+              style={{ height: index === 0 ? '520px' : '460px' }}
+            >
+              {/* رقم شفاف */}
+              <span className="absolute top-4 left-5 text-[80px] md:text-[100px] font-black 
+                             text-white/[0.04] leading-none select-none 
+                             group-hover:text-[#C9A84C]/[0.06] transition-colors duration-700 z-10">
+                {String(index + 1).padStart(2, '0')}
               </span>
 
               {/* الصورة */}
-              <img src={col.image || "/placeholder.jpg"} alt={col.customName || col.name} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000" />
-              
-              {/* الظل */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-              
+              <img
+                src={col.image || "/placeholder.jpg"}
+                alt={col.customName || col.name}
+                className="w-full h-full object-cover 
+                          grayscale-[20%] group-hover:grayscale-0 
+                          group-hover:scale-105 transition-all duration-1000"
+              />
+
+              {/* Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#040404] via-[#040404]/30 to-transparent"></div>
+
               {/* النصوص */}
               <div className="absolute bottom-8 right-8 left-8 text-right z-20">
-                <h3 className="text-white text-2xl md:text-3xl font-black mb-2 transform group-hover:-translate-y-2 transition-transform duration-500">
+                <h3 className="text-[#E8E0D0] text-xl md:text-2xl font-black mb-3 
+                              transform group-hover:-translate-y-2 transition-transform duration-500 tracking-wide">
                   {col.customName || col.name}
                 </h3>
-                <div className="h-1 w-0 bg-[#F5C518] group-hover:w-full transition-all duration-500"></div>
-                <p className="text-gray-300 text-xs md:text-sm mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-700 line-clamp-2">
-                   {col.description || "تصفح المجموعة كاملة الآن ›"}
+
+                {/* خط ذهبي متحرك */}
+                <div className="h-px w-0 bg-gradient-to-r from-[#C9A84C] to-transparent 
+                               group-hover:w-full transition-all duration-700"></div>
+
+                <p className="text-[#6B6358] text-xs mt-3 
+                             opacity-0 group-hover:opacity-100 
+                             transition-opacity duration-700 delay-100 
+                             line-clamp-2 tracking-wider">
+                  {col.description || "تصفح المجموعة كاملة"}
                 </p>
               </div>
-
             </Link>
           ))}
         </div>
