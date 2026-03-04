@@ -264,12 +264,7 @@ export default function ProductPage() {
         {/* --- سهم التقليب التالي (يسار) --- */}
         <button
           onClick={handleNextImage}
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-10
-                     bg-black/30 hover:bg-black/60 p-2.5 rounded-full
-                     backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30
-                     text-white/60 hover:text-[#F5C518]
-                     opacity-0 group-hover:opacity-100
-                     transition-all duration-300"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/60 p-2.5 rounded-full backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] opacity-0 group-hover:opacity-100 transition-all duration-300"
         >
           <ChevronLeft size={32} strokeWidth={1.5} />
         </button>
@@ -277,12 +272,7 @@ export default function ProductPage() {
         {/* --- سهم التقليب السابق (يمين اختياري) --- */}
         <button
           onClick={handlePrevImage}
-          className="absolute right-20 top-1/2 -translate-y-1/2 z-10
-                     bg-black/30 hover:bg-black/60 p-2.5 rounded-full
-                     backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30
-                     text-white/60 hover:text-[#F5C518]
-                     opacity-0 group-hover:opacity-100
-                     transition-all duration-300"
+          className="absolute right-20 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/60 p-2.5 rounded-full backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] opacity-0 group-hover:opacity-100 transition-all duration-300"
         >
           <ChevronRight size={32} strokeWidth={1.5} />
         </button>
@@ -360,8 +350,7 @@ export default function ProductPage() {
         <div className="flex gap-4 items-start mb-7">
 
           {/* --- البوستر المصغر المرتبط باللون --- */}
-          <div className="w-28 h-40 flex-shrink-0 relative rounded-lg overflow-hidden
-                         ring-1 ring-white/10 shadow-2xl group/poster">
+          <div className="w-28 h-40 flex-shrink-0 relative rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl group/poster">
             <img
               src={getImageUrl(currentColorImage())}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/poster:scale-110"
@@ -374,12 +363,9 @@ export default function ProductPage() {
             {/* عدسة التكبير */}
             <button
               onClick={() => setImageZoomModalOpen(true)}
-              className="absolute inset-0 bg-black/50 flex items-center justify-center
-                        opacity-0 group-hover/poster:opacity-100
-                        transition-opacity backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/poster:opacity-100 transition-opacity backdrop-blur-sm"
             >
-              <div className="bg-black/70 p-2 rounded-full border border-[#F5C518]/40
-                            text-white hover:text-[#F5C518] transition-colors">
+              <div className="bg-black/70 p-2 rounded-full border border-[#F5C518]/40 text-white hover:text-[#F5C518] transition-colors">
                 <Search size={18} />
               </div>
             </button>
@@ -438,8 +424,7 @@ export default function ProductPage() {
             </p>
 
             {/* Trust badges */}
-            <div className="flex items-center justify-between gap-1
-                           bg-[#141414] border border-[#222] rounded-lg p-2.5">
+            <div className="flex items-center justify-between gap-1 bg-[#141414] border border-[#222] rounded-lg p-2.5">
               {[
                 { icon: <Truck size={13} />, label: "شحن سريع" },
                 { icon: <Eye size={13} />, label: "معاينة" },
@@ -462,8 +447,7 @@ export default function ProductPage() {
           </span>
           <button
             onClick={() => setDescModalOpen(true)}
-            className="inline-flex items-center gap-1 text-[#F5C518] text-sm font-bold mr-1
-                      hover:underline decoration-1 underline-offset-4 whitespace-nowrap"
+            className="inline-flex items-center gap-1 text-[#F5C518] text-sm font-bold mr-1 hover:underline decoration-1 underline-offset-4 whitespace-nowrap"
             style={{ fontFamily: "Cairo, sans-serif" }}
           >
             المزيد
@@ -538,9 +522,7 @@ export default function ProductPage() {
                 </div>
 
                 {safeColors.length > 4 && (
-                  <div className="absolute left-0 top-0 bottom-6 w-8
-                                 bg-gradient-to-r from-[#0D0D0D] to-transparent
-                                 flex items-center justify-start pointer-events-none">
+                  <div className="absolute left-0 top-0 bottom-6 w-8 bg-gradient-to-r from-[#0D0D0D] to-transparent flex items-center justify-start pointer-events-none">
                     <ChevronLeft size={14} className="text-gray-600 animate-pulse" />
                   </div>
                 )}
@@ -568,10 +550,7 @@ export default function ProductPage() {
 
                 <button
                   onClick={() => setSizeGuideOpen(true)}
-                  className="text-xs text-[#F5C518] flex items-center gap-1.5
-                            hover:bg-[#F5C518]/8 transition-all
-                            px-3 py-1.5 rounded-full border border-[#F5C518]/25
-                            hover:border-[#F5C518]/50"
+                  className="text-xs text-[#F5C518] flex items-center gap-1.5 hover:bg-[#F5C518]/8 transition-all px-3 py-1.5 rounded-full border border-[#F5C518]/25 hover:border-[#F5C518]/50"
                   style={{ fontFamily: "Cairo, sans-serif" }}
                 >
                   <Info size={13} /> دليل القياسات
@@ -655,9 +634,7 @@ export default function ProductPage() {
       {/* =====================================================
           4. زر الإضافة للسلة (ثابت أسفل الشاشة)
       ===================================================== */}
-      <div className="fixed bottom-0 left-0 right-0 z-50
-                     bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/98 to-transparent
-                     pt-8 pb-5 px-4">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/98 to-transparent pt-8 pb-5 px-4">
         <div className="max-w-4xl mx-auto flex items-center gap-3" dir="rtl">
           <button
             onClick={() =>
@@ -668,11 +645,7 @@ export default function ProductPage() {
                 image: getImageUrl(activeImage),
               })
             }
-            className="flex-1 bg-[#F5C518] hover:bg-[#ffd23f] active:scale-[0.98]
-                      text-black font-black text-base py-4 rounded
-                      shadow-[0_0_30px_rgba(245,197,24,0.25)]
-                      transition-all duration-200
-                      flex justify-center items-center gap-2 group"
+            className="flex-1 bg-[#F5C518] hover:bg-[#ffd23f] active:scale-[0.98] text-black font-black text-base py-4 rounded shadow-[0_0_30px_rgba(245,197,24,0.25)] transition-all duration-200 flex justify-center items-center gap-2 group"
             style={{ fontFamily: "Cairo, sans-serif" }}
           >
             <Plus size={20} className="transition-transform group-hover:scale-125" />
@@ -681,9 +654,7 @@ export default function ProductPage() {
 
           {/* Dropdown */}
           <button
-            className="bg-[#1a1a1a] hover:bg-[#222] active:scale-95
-                      p-4 rounded border border-[#2a2a2a] hover:border-[#F5C518]/20
-                      text-white transition-all"
+            className="bg-[#1a1a1a] hover:bg-[#222] active:scale-95 p-4 rounded border border-[#2a2a2a] hover:border-[#F5C518]/20 text-white transition-all"
           >
             <ChevronDown size={20} />
           </button>
@@ -695,8 +666,7 @@ export default function ProductPage() {
       ===================================================== */}
       {isImageZoomModalOpen && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center
-                    bg-black/95 backdrop-blur-md p-4"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
           onClick={() => setImageZoomModalOpen(false)}
         >
           <div
@@ -710,15 +680,12 @@ export default function ProductPage() {
             />
             <button
               onClick={() => setImageZoomModalOpen(false)}
-              className="absolute top-3 left-3 bg-black/60 hover:bg-black/90
-                        p-2 rounded-full text-white/70 hover:text-white
-                        transition-colors backdrop-blur-sm border border-white/15"
+              className="absolute top-3 left-3 bg-black/60 hover:bg-black/90 p-2 rounded-full text-white/70 hover:text-white transition-colors backdrop-blur-sm border border-white/15"
             >
               <X size={20} />
             </button>
             {selectedColor && (
-              <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm
-                             px-3 py-1.5 rounded-full border border-[#F5C518]/25">
+              <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-[#F5C518]/25">
                 <span className="text-[#F5C518] font-semibold text-sm"
                       style={{ fontFamily: "Tajawal, sans-serif" }}>
                   {selectedColor}
@@ -733,17 +700,11 @@ export default function ProductPage() {
           MODAL: وصف المنتج الكامل
       ===================================================== */}
       {isDescModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center
-                       bg-black/85 backdrop-blur-sm">
-          <div className="bg-[#111] w-full md:max-w-xl
-                         rounded-t-2xl md:rounded-2xl
-                         border border-[#1e1e1e]
-                         shadow-2xl overflow-hidden flex flex-col max-h-[88vh]
-                         animate-[slideUp_0.35s_cubic-bezier(0.25,1,0.5,1)]">
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/85 backdrop-blur-sm">
+          <div className="bg-[#111] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#1e1e1e] shadow-2xl overflow-hidden flex flex-col max-h-[88vh] animate-[slideUp_0.35s_cubic-bezier(0.25,1,0.5,1)]">
 
             {/* رأس المودال */}
-            <div className="px-5 py-4 border-b border-[#1e1e1e]
-                           flex justify-between items-center bg-[#141414] sticky top-0 z-10">
+            <div className="px-5 py-4 border-b border-[#1e1e1e] flex justify-between items-center bg-[#141414] sticky top-0 z-10">
               <div className="flex items-center gap-3">
                 <div className="w-[3px] h-6 bg-[#F5C518] rounded-sm" />
                 <h3 className="font-black text-white text-base"
@@ -753,8 +714,7 @@ export default function ProductPage() {
               </div>
               <button
                 onClick={() => setDescModalOpen(false)}
-                className="bg-[#1e1e1e] hover:bg-[#2a2a2a] p-1.5 rounded-full
-                          text-gray-500 hover:text-white transition-colors"
+                className="bg-[#1e1e1e] hover:bg-[#2a2a2a] p-1.5 rounded-full text-gray-500 hover:text-white transition-colors"
               >
                 <X size={18} />
               </button>
