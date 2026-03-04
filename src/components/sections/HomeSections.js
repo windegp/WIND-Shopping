@@ -584,7 +584,6 @@ export const ExclusiveOffers = ({ data }) => {
 
 // --- 8. قسم أبرز المجموعات (Masterpiece Collections) ---
 export const MasterpieceCollections = ({ data }) => {
-  // ✅ التعديل هنا: نقرأ من الأقسام المربوطة ذكياً بدل الكروت اليدوية
   const collections = data?.linkedCollections || [];
   if (!collections || collections.length === 0) return null;
 
@@ -592,35 +591,45 @@ export const MasterpieceCollections = ({ data }) => {
     <section className="bg-[#000] py-16" dir="rtl">
       <div className="max-w-[1400px] mx-auto px-4">
         
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-2 h-10 bg-[#F5C518]"></div>
-          <h2 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">
-            {data.title || "استكشف المجموعات"}
-          </h2>
+        {/* العنوان الرئيسي والفرعي */}
+        <div className="flex flex-col mb-10">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-10 bg-[#F5C518]"></div>
+            <h2 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">
+              {data.title || "استكشف المجموعات"}
+            </h2>
+          </div>
+          {data.subTitle && (
+            <p className="text-gray-400 text-sm md:text-base mt-3 max-w-2xl leading-relaxed">
+              {data.subTitle}
+            </p>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {collections.slice(0, 3).map((col, index) => (
-            <Link key={index} href={`/collections/${col.slug || col.id}`} className="group relative h-[500px] overflow-hidden rounded-sm border border-white/5 transition-all duration-700">
+        {/* شبكة الأقسام (تظهر أي عدد يتم إضافته) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {collections.map((col, index) => (
+            <Link key={index} href={`/collections/${col.slug || col.id}`} className="group relative h-[400px] md:h-[500px] overflow-hidden rounded-sm border border-white/5 transition-all duration-700">
               
               {/* خلفية الرقم الشفاف */}
-              <span className="absolute top-0 left-4 text-[120px] font-black text-white/5 leading-none select-none group-hover:text-[#F5C518]/10 transition-colors">
+              <span className="absolute top-0 left-4 text-[100px] md:text-[120px] font-black text-white/5 leading-none select-none group-hover:text-[#F5C518]/10 transition-colors z-10">
                 0{index + 1}
               </span>
 
-              {/* الصورة - إما البوستر المخصص اللي ضفته في الإدارة، أو صورة افتراضية */}
-              <img src={col.image || "/placeholder.jpg"} alt={col.name} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000" />
+              {/* الصورة */}
+              <img src={col.image || "/placeholder.jpg"} alt={col.customName || col.name} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000" />
               
-              {/* الظل والكلام */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+              {/* الظل */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
               
-              <div className="absolute bottom-8 right-8 left-8 text-right">
-                <h3 className="text-white text-3xl font-black mb-2 transform group-hover:-translate-y-2 transition-transform duration-500">
-                  {col.name}
+              {/* النصوص */}
+              <div className="absolute bottom-8 right-8 left-8 text-right z-20">
+                <h3 className="text-white text-2xl md:text-3xl font-black mb-2 transform group-hover:-translate-y-2 transition-transform duration-500">
+                  {col.customName || col.name}
                 </h3>
                 <div className="h-1 w-0 bg-[#F5C518] group-hover:w-full transition-all duration-500"></div>
-                <p className="text-gray-400 text-sm mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                   تصفح المجموعة كاملة الآن ›
+                <p className="text-gray-300 text-xs md:text-sm mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-700 line-clamp-2">
+                   {col.description || "تصفح المجموعة كاملة الآن ›"}
                 </p>
               </div>
 

@@ -5,77 +5,66 @@ import { db } from "@/lib/firebase";
 
 // --- خريطة الأقسام الأساسية فقط ---
 const SECTION_TYPES = {
-  HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
-  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
-  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true },
-  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true },
-  
-  // ✅ القسم الجديد: الأكثر مبيعاً
-  BEST_SELLERS_SECTION: { 
-    label: "الأكثر مبيعاً (شبكة منتجات)", 
-    designId: "BEST_SELLERS_GRID", 
-    hasTitle: true, 
-    hasSubTitle: true, 
-    hasProducts: true // دي اللي بتفتحلك أداة سحب الكولكشنات والمنتجات
-  },
+  HERO_SECTION: { label: "الهيرو الرئيسي", designId: "MODERN_SLIDER" },
+  FEATURED_SECTION: { label: "المميز (Featured Today)", designId: "IMDB_STYLE", hasTitle: true, hasSubTitle: true, hasFeaturedCards: true },
+  TOP_TEN_SECTION: { label: "أفضل 10 منتجات", designId: "TOP_TEN_LIST", hasTitle: true, hasFeaturedCards: true, hasViewAllLink: true },
+  MARQUEE_SECTION: { label: "شريط المنتجات المتحرك", designId: "PRODUCTS_SLIDER", hasTitle: true, hasSubTitle: true, hasProducts: true },
+  
+  // ✅ القسم الجديد: الأكثر مبيعاً
+  BEST_SELLERS_SECTION: { 
+    label: "الأكثر مبيعاً (شبكة منتجات)", 
+    designId: "BEST_SELLERS_GRID", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true 
+  },
 
-  // 🔥 القسم الجديد المبتكر: العروض الحصرية
-  EXCLUSIVE_OFFERS_SECTION: { 
-    label: "العروض الحصرية (كروت فاخرة)", 
-    designId: "PREMIUM_CARDS", 
-    hasTitle: true, 
-    hasSubTitle: true, 
-    hasProducts: true 
-  },
+  // 🔥 القسم الجديد المبتكر: العروض الحصرية
+  EXCLUSIVE_OFFERS_SECTION: { 
+    label: "العروض الحصرية (كروت فاخرة)", 
+    designId: "PREMIUM_CARDS", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true 
+  },
 
- // 📽️ القسم الجديد: تصنيفات النخبة
-  COLLECTIONS_SPOTLIGHT: { 
-    label: "أبرز المجموعات (بوسترات تصنيف)", 
-    designId: "POSTER_COLLECTIONS", 
-    hasTitle: true, 
-    hasSubTitle: true, 
-    hasProducts: true // ✅ رجعناها تسحب الأقسام ذكياً زي الباقي
-  }
+ // 📽️ القسم الجديد: تصنيفات النخبة
+  COLLECTIONS_SPOTLIGHT: { 
+    label: "أبرز المجموعات (بوسترات تصنيف)", 
+    designId: "POSTER_COLLECTIONS", 
+    hasTitle: true, 
+    hasSubTitle: true, 
+    hasProducts: true 
+  }
 };
 
 export default function HomeManagerPage() {
-  // --- 1. التبويب النشط ---
   const [activeTab, setActiveTab] = useState('layout');
-
-  // --- 2. حالات قسم الهيرو والأقسام السفلية ---
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
-
-  // --- 3. حالة محرك الترتيب الديناميكي ---
   const [layoutSections, setLayoutSections] = useState([]);
-
-  // --- 4. حالة واجهة المستخدم (الأكورديون) ---
-  const [expandedSections, setExpandedSections] = useState({});
-  const [allStoreProducts, setAllStoreProducts] = useState([]); // لحفظ منتجات المتجر
-  const [allStoreCollections, setAllStoreCollections] = useState([]); // لحفظ أقسام المتجر (collections)
-
-  // حالات التحميل والحفظ
+  const [expandedSections, setExpandedSections] = useState({});
+  const [allStoreProducts, setAllStoreProducts] = useState([]); 
+  const [allStoreCollections, setAllStoreCollections] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // جلب جميع البيانات عند فتح الصفحة
   useEffect(() => {
     const fetchCurrentData = async () => {
       try {
         const layoutRef = doc(db, "homepage", "layout_config");
-        // جلب منتجات وأقسام المتجر لعرضها في القوائم المنسدلة
-        try {
-          const productsRef = collection(db, "products"); // تأكد أن اسم مجموعة المنتجات عندك في فايربيز هو products
-          const productsSnap = await getDocs(productsRef);
-          setAllStoreProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        try {
+          const productsRef = collection(db, "products"); 
+          const productsSnap = await getDocs(productsRef);
+          setAllStoreProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-          // جلب الأقسام من collections
-          const collectionsRef = collection(db, "collections"); 
-          const collectionsSnap = await getDocs(collectionsRef);
-          setAllStoreCollections(collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } catch (err) {
-          console.error("خطأ في جلب المنتجات أو الأقسام:", err);
-        }
+          const collectionsRef = collection(db, "collections"); 
+          const collectionsSnap = await getDocs(collectionsRef);
+          setAllStoreCollections(collectionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (err) {
+          console.error("خطأ في جلب المنتجات أو الأقسام:", err);
+        }
+        
         const layoutSnap = await getDoc(layoutRef);
         let currentLayout = [];
         if (layoutSnap.exists()) {
@@ -110,10 +99,6 @@ export default function HomeManagerPage() {
     };
     fetchCurrentData();
   }, []);
-
-  // ==========================================
-  // --- دوال محرك الترتيب والتأسيس الذكي للمحتوى ---
-  // ==========================================
 
   const handleLayoutCategoryChange = (index, newCategory) => {
     const updated = [...layoutSections];
@@ -169,7 +154,6 @@ export default function HomeManagerPage() {
     }
   };
 
-  // --- دوال التحكم في مصفوفات البطاقات ---
   const addArrayItem = (sectionIndex, arrayName, emptyTemplate) => {
     const updated = [...layoutSections];
     if (!updated[sectionIndex].data[arrayName]) updated[sectionIndex].data[arrayName] = [];
@@ -189,7 +173,6 @@ export default function HomeManagerPage() {
     setLayoutSections(updated);
   };
 
-  // --- دوال التحكم في البطاقات الفرعية ---
   const addSubCard = (sectionIndex, cardIndex) => {
     const updated = [...layoutSections];
     if (!updated[sectionIndex].data.cards[cardIndex].subCards) {
@@ -215,17 +198,16 @@ export default function HomeManagerPage() {
     setExpandedSections(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // ==========================================
-  // --- دوال قسم الهيرو ---
-  // ==========================================
   const handleSlideChange = (index, field, value) => {
     const updatedSlides = [...slides];
     updatedSlides[index][field] = value;
     setSlides(updatedSlides);
   };
+
   const addNewSlide = () => {
     setSlides([...slides, { image: "", tag: "", title: "", desc: "", thumbnail: "", productLink: "", buttonText: "" }]);
   };
+
   const removeSlide = (index) => {
     const updatedSlides = slides.filter((_, i) => i !== index);
     setSlides(updatedSlides);
@@ -236,17 +218,16 @@ export default function HomeManagerPage() {
     updatedCategories[index][field] = value;
     setCategories(updatedCategories);
   };
+
   const addNewCategory = () => {
     setCategories([...categories, { title: "", link: "" }]);
   };
+
   const removeCategory = (index) => {
     const updatedCategories = categories.filter((_, i) => i !== index);
     setCategories(updatedCategories);
   };
 
-  // ==========================================
-  // --- دالة الحفظ الشاملة ---
-  // ==========================================
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -684,24 +665,24 @@ export default function HomeManagerPage() {
                           </div>
 
                           {/* ✅ زرار إضافة بطاقة جديدة بتنسيق ذكي حسب نوع القسم */}
-                          <button
-                            onClick={() => {
-                              let template = { image: "", mainTitle: "", linkUrl: "" };
+                          <button
+                            onClick={() => {
+                              let template = { image: "", mainTitle: "", linkUrl: "" };
 
-                              if (section.category === 'TOP_TEN_SECTION') {
-                                template = { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" };
-                              } else if (section.category === 'FEATURED_SECTION') {
-                                template = { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] };
-                              } else if (section.category === 'COLLECTIONS_SPOTLIGHT') {
-                                template = { image: "", mainTitle: "", linkUrl: "" };
-                              }
+                              if (section.category === 'TOP_TEN_SECTION') {
+                                template = { image: "", mainTitle: "", linkUrl: "", price: "", rating: "", reviewsCount: "", category: "" };
+                              } else if (section.category === 'FEATURED_SECTION') {
+                                template = { image: "", badgeType: "none", mainTitle: "", linkText: "", linkUrl: "", subCards: [] };
+                              } else if (section.category === 'COLLECTIONS_SPOTLIGHT') {
+                                template = { image: "", mainTitle: "", linkUrl: "" };
+                              }
 
-                              addArrayItem(sectionIndex, 'cards', template);
-                            }}
-                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
-                          >
-                            + إضافة بطاقة جديدة (بوستر/منتج)
-                          </button>
+                              addArrayItem(sectionIndex, 'cards', template);
+                            }}
+                            className="mt-4 w-full py-3 border border-dashed border-gray-300 text-[#202223] text-sm font-bold rounded-xl hover:bg-white hover:border-gray-400 bg-gray-50 transition-all shadow-sm"
+                          >
+                            + إضافة بطاقة جديدة (بوستر/منتج)
+                          </button>
                         </div>
                       )}
 
@@ -710,102 +691,128 @@ export default function HomeManagerPage() {
                         <div className="mt-6 border-t border-gray-100 pt-5">
                           <div className="flex flex-col gap-3 mb-4">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-bold text-[#202223]">تحديد المنتجات المعروضة:</h4>
-                              <span className="bg-[#008060] text-white px-2.5 py-1 rounded text-xs font-bold shadow-sm whitespace-nowrap">
-                                {(section.data?.products || []).length} منتج محدد
-                              </span>
+                              <h4 className="text-sm font-bold text-[#202223]">تحديد الأقسام / المنتجات:</h4>
+                              {section.category !== 'COLLECTIONS_SPOTLIGHT' && (
+                                <span className="bg-[#008060] text-white px-2.5 py-1 rounded text-xs font-bold shadow-sm whitespace-nowrap">
+                                  {(section.data?.products || []).length} منتج محدد
+                                </span>
+                              )}
                             </div>
 
-                            {/* عرض الأقسام المربوطة كـ Checkboxes للحذف السريع مع إضافة حقل البوستر لقسم النخبة */}
-                            {(section.data?.linkedCollections || []).length > 0 && (
-                              <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <span className="text-[12px] font-bold text-gray-700">🔗 الأقسام المربوطة بهذا القسم:</span>
-                                <div className="flex flex-wrap items-start gap-3">
-                                  {(section.data.linkedCollections).map((c, i) => (
-                                    <div key={i} className={`flex flex-col gap-2 bg-white p-2 border ${section.category === 'COLLECTIONS_SPOTLIGHT' ? 'border-[#008060]/30 shadow-sm' : 'border-[#0066cc]/30'} rounded-lg min-w-[140px]`}>
-                                      <label className="flex items-center gap-1.5 text-[#0066cc] px-1 text-[11px] font-bold cursor-pointer hover:text-red-600 transition-colors">
-                                        <input 
-                                          type="checkbox" 
-                                          checked={true}
-                                          onChange={() => {
-                                              const updated = [...layoutSections];
-                                              let currentLinked = updated[sectionIndex].data.linkedCollections || [];
-                                              let currentProds = updated[sectionIndex].data.products || [];
-                                              
-                                              currentLinked = currentLinked.filter(item => item.id !== c.id);
-                                              
-                                              const normalizeText = (text) => text ? text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim() : "";
-                                              const normColId = normalizeText(c.id);
-                                              const normColName = normalizeText(c.name);
-                                              const normColSlug = normalizeText(c.slug);
+                            {/* عرض الأقسام المربوطة كـ Checkboxes للحذف السريع */}
+                            {(section.data?.linkedCollections || []).length > 0 && (
+                              <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <span className="text-[12px] font-bold text-gray-700">🔗 الأقسام المربوطة بهذا القسم:</span>
+                                <div className="flex flex-wrap items-start gap-3">
+                                  {(section.data.linkedCollections).map((c, i) => (
+                                    <div key={i} className={`flex flex-col gap-2 bg-white p-3 border ${section.category === 'COLLECTIONS_SPOTLIGHT' ? 'border-[#008060]/40 shadow-sm w-full sm:w-[300px]' : 'border-[#0066cc]/30 w-auto'} rounded-lg`}>
+                                      <label className="flex items-center gap-1.5 text-[#0066cc] text-[12px] font-bold cursor-pointer hover:text-red-600 transition-colors">
+                                        <input 
+                                          type="checkbox" 
+                                          checked={true}
+                                          onChange={() => {
+                                              const updated = [...layoutSections];
+                                              let currentLinked = updated[sectionIndex].data.linkedCollections || [];
+                                              let currentProds = updated[sectionIndex].data.products || [];
+                                              
+                                              currentLinked = currentLinked.filter(item => item.id !== c.id);
+                                              
+                                              const normalizeText = (text) => text ? text.toString().toLowerCase().replace(/[أإآا]/g, 'ا').replace(/ة/g, 'ه').replace(/[\u064B-\u065F]/g, '').trim() : "";
+                                              const normColId = normalizeText(c.id);
+                                              const normColName = normalizeText(c.name);
+                                              const normColSlug = normalizeText(c.slug);
 
-                                              const idsToRemove = allStoreProducts.filter(p => {
-                                                let pCats = [];
-                                                if (p.category) pCats.push(p.category);
-                                                if (p.categoryId) pCats.push(p.categoryId);
-                                                if (p.collection) pCats.push(p.collection);
-                                                if (p.collectionId) pCats.push(p.collectionId);
-                                                if (p.productType) pCats.push(p.productType);
-                                                if (p.type) pCats.push(p.type);
-                                                if (p.organization) {
-                                                  if (p.organization.productType) pCats.push(p.organization.productType);
-                                                  if (p.organization.type) pCats.push(p.organization.type);
-                                                  if (p.organization.category) pCats.push(p.organization.category);
-                                                }
-                                                if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
-                                                if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
-                                                if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags);
-                                                const normalizedPCats = pCats.map(normalizeText);
-                                                
-                                                return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
-                                            }).map(p => p.id);
+                                              const idsToRemove = allStoreProducts.filter(p => {
+                                                let pCats = [];
+                                                if (p.category) pCats.push(p.category);
+                                                if (p.categoryId) pCats.push(p.categoryId);
+                                                if (p.collection) pCats.push(p.collection);
+                                                if (p.collectionId) pCats.push(p.collectionId);
+                                                if (p.productType) pCats.push(p.productType);
+                                                if (p.type) pCats.push(p.type);
+                                                if (p.organization) {
+                                                  if (p.organization.productType) pCats.push(p.organization.productType);
+                                                  if (p.organization.type) pCats.push(p.organization.type);
+                                                  if (p.organization.category) pCats.push(p.organization.category);
+                                                }
+                                                if (Array.isArray(p.categories)) pCats = pCats.concat(p.categories);
+                                                if (Array.isArray(p.collections)) pCats = pCats.concat(p.collections);
+                                                if (Array.isArray(p.tags)) pCats = pCats.concat(p.tags);
+                                                const normalizedPCats = pCats.map(normalizeText);
+                                                
+                                                return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
+                                              }).map(p => p.id);
 
-                                            currentProds = currentProds.filter(p => !idsToRemove.includes(p.productId));
+                                              currentProds = currentProds.filter(p => !idsToRemove.includes(p.productId));
 
-                                            updated[sectionIndex].data.linkedCollections = currentLinked;
-                                            updated[sectionIndex].data.products = currentProds;
+                                              updated[sectionIndex].data.linkedCollections = currentLinked;
+                                              updated[sectionIndex].data.products = currentProds;
 
-                                            if (currentLinked.length === 1) {
-                                                const autoLink = `/collections/${currentLinked[0].slug}`;
-                                                updated[sectionIndex].data.linkUrl = autoLink;
-                                                if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
-                                            } else {
-                                                updated[sectionIndex].data.linkUrl = "";
-                                                if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
-                                            }
+                                              if (currentLinked.length === 1) {
+                                                  const autoLink = `/collections/${currentLinked[0].slug}`;
+                                                  updated[sectionIndex].data.linkUrl = autoLink;
+                                                  if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
+                                              } else {
+                                                  updated[sectionIndex].data.linkUrl = "";
+                                                  if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
+                                              }
 
-                                            setLayoutSections(updated);
-                                        }}
-                                        className="w-3.5 h-3.5 text-red-500 rounded border-gray-300 focus:ring-0 cursor-pointer"
-                                      />
-                                      <span className="truncate max-w-[120px]">{c.name}</span>
-                                    </label>
-                                    
-                                    {/* ✅ الحقل الجديد لبوستر القسم يظهر فقط في قسم النخبة */}
-                                    {section.category === 'COLLECTIONS_SPOTLIGHT' && (
-                                      <input 
-                                        type="text" 
-                                        placeholder="رابط بوستر القسم (اختياري)" 
-                                        value={c.image || ""}
-                                        onChange={(e) => {
-                                          const updated = [...layoutSections];
-                                          updated[sectionIndex].data.linkedCollections[i].image = e.target.value;
-                                          setLayoutSections(updated);
-                                        }}
-                                        className="w-full p-1.5 border border-gray-300 rounded text-[10px] focus:border-[#008060] outline-none font-mono"
-                                        dir="ltr"
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                                              setLayoutSections(updated);
+                                          }}
+                                          className="w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-0 cursor-pointer"
+                                        />
+                                        <span className="truncate">🗑️ إزالة: {c.name}</span>
+                                      </label>
+                                      
+                                      {/* ✅ حقول التعديل المتقدمة تظهر فقط في قسم النخبة */}
+                                      {section.category === 'COLLECTIONS_SPOTLIGHT' && (
+                                        <div className="flex flex-col gap-2 mt-2 border-t border-gray-100 pt-2">
+                                          <input 
+                                            type="text" 
+                                            placeholder="اسم العرض (بدل الاسم الأصلي)" 
+                                            value={c.customName || ""}
+                                            onChange={(e) => {
+                                              const updated = [...layoutSections];
+                                              updated[sectionIndex].data.linkedCollections[i].customName = e.target.value;
+                                              setLayoutSections(updated);
+                                            }}
+                                            className="w-full p-2 border border-gray-200 rounded text-xs bg-gray-50 focus:bg-white focus:border-[#008060] outline-none"
+                                          />
+                                          <input 
+                                            type="text" 
+                                            placeholder="وصف مختصر للقسم (اختياري)" 
+                                            value={c.description || ""}
+                                            onChange={(e) => {
+                                              const updated = [...layoutSections];
+                                              updated[sectionIndex].data.linkedCollections[i].description = e.target.value;
+                                              setLayoutSections(updated);
+                                            }}
+                                            className="w-full p-2 border border-gray-200 rounded text-xs bg-gray-50 focus:bg-white focus:border-[#008060] outline-none"
+                                          />
+                                          <input 
+                                            type="text" 
+                                            placeholder="رابط بوستر القسم (اختياري)" 
+                                            value={c.image || ""}
+                                            onChange={(e) => {
+                                              const updated = [...layoutSections];
+                                              updated[sectionIndex].data.linkedCollections[i].image = e.target.value;
+                                              setLayoutSections(updated);
+                                            }}
+                                            className="w-full p-2 border border-gray-200 rounded text-xs bg-gray-50 focus:bg-white focus:border-[#008060] outline-none font-mono"
+                                            dir="ltr"
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* خيار 1: القائمة المنسدلة لإضافة قسم جديد */}
                           <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة منتجات قسم (Collection) بالكامل:</label>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-2">إضافة قسم (Collection) بالكامل:</label>
                             <select 
                               onChange={(e) => {
                                 const colId = e.target.value;
@@ -856,7 +863,7 @@ export default function HomeManagerPage() {
                                   return normalizedPCats.includes(normColId) || normalizedPCats.includes(normColName) || normalizedPCats.includes(normColSlug);
                                 });
 
-                                if(categoryProducts.length === 0) {
+                                if(categoryProducts.length === 0 && section.category !== 'COLLECTIONS_SPOTLIGHT') {
                                   alert(`تنبيه: لم يتم العثور على أي منتجات مرتبطة بقسم "${colName}".`);
                                   e.target.value = "";
                                   return;
@@ -884,11 +891,9 @@ export default function HomeManagerPage() {
                                     const autoLink = `/collections/${colSlug}`;
                                     updated[sectionIndex].data.linkUrl = autoLink;
                                     if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = autoLink;
-                                    alert(`تم إضافة القسم. وتم تعيين رابط عرض الكل التلقائي.`);
                                 } else {
                                     updated[sectionIndex].data.linkUrl = "";
                                     if(updated[sectionIndex].data.viewAllLink !== undefined) updated[sectionIndex].data.viewAllLink = "";
-                                    alert(`تنبيه: تم اختيار أكثر من قسم معاً، سيتم مسح رابط (عرض الكل) التلقائي، برجاء وضع رابط مخصص إن أردت.`);
                                 }
 
                                 setLayoutSections(updated);
@@ -901,81 +906,81 @@ export default function HomeManagerPage() {
                                 <option key={col.id} value={col.id}>{col.name || col.title || col.id}</option>
                               ))}
                             </select>
-                            <p className="text-[10px] text-gray-500 mt-2 font-medium leading-relaxed">
-                              ملاحظة: عند اختيار <strong className="text-black">قسم واحد</strong> سيتم وضع الرابط تلقائياً. عند اختيار <strong className="text-red-500">أكثر من قسم</strong> سيتم مسح الرابط ويجب كتابته يدوياً بالأعلى (وإلا سيختفي زر عرض الكل).
-                            </p>
+                            {section.category !== 'COLLECTIONS_SPOTLIGHT' && (
+                              <p className="text-[10px] text-gray-500 mt-2 font-medium leading-relaxed">
+                                ملاحظة: عند اختيار <strong className="text-black">قسم واحد</strong> سيتم وضع الرابط تلقائياً. عند اختيار <strong className="text-red-500">أكثر من قسم</strong> سيتم مسح الرابط ويجب كتابته يدوياً بالأعلى (وإلا سيختفي زر عرض الكل).
+                              </p>
+                            )}
                           </div>
 
-                          {/* خيار 2: قائمة كل المنتجات مع Checkbox */}
-                          <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
-                            {allStoreProducts.map((product) => {
-                              // التحقق هل المنتج ده متحدد ولا لأ
-                              const isSelected = (section.data?.products || []).some(p => p.productId === product.id);
-                              const selectedProductData = (section.data?.products || []).find(p => p.productId === product.id);
+                          {/* خيار 2: قائمة كل المنتجات مع Checkbox (تختفي في قسم مجموعات النخبة) */}
+                          {section.category !== 'COLLECTIONS_SPOTLIGHT' && (
+                            <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
+                              {allStoreProducts.map((product) => {
+                                const isSelected = (section.data?.products || []).some(p => p.productId === product.id);
+                                const selectedProductData = (section.data?.products || []).find(p => p.productId === product.id);
 
-                              return (
-                                <div key={product.id} className={`p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${isSelected ? 'bg-[#f4fae5]' : 'hover:bg-gray-50'}`}>
-                                  
-                                  {/* بيانات المنتج مع الـ Checkbox */}
-                                  <div className="flex items-center gap-3 flex-1">
-                                    <input 
-                                      type="checkbox" 
-                                      checked={isSelected}
-                                      onChange={(e) => {
-                                        const isChecked = e.target.checked;
-                                        const updated = [...layoutSections];
-                                        let currentProds = updated[sectionIndex].data.products || [];
-                                        
-                                        if (isChecked) {
-                                          currentProds.push({
-                                            productId: product.id,
-                                            name: product.title || product.name || "بدون اسم",
-                                            image: (product.images && product.images[0]) || product.image || "",
-                                            price: product.price || "",
-                                            compareAtPrice: product.compareAtPrice || product.oldPrice || "",
-                                            linkUrl: `/product/${product.id}`,
-                                            badge: ""
-                                          });
-                                        } else {
-                                          currentProds = currentProds.filter(p => p.productId !== product.id);
-                                        }
-                                        
-                                        updated[sectionIndex].data.products = currentProds;
-                                        setLayoutSections(updated);
-                                      }}
-                                      className="w-4 h-4 text-[#008060] rounded border-gray-300 focus:ring-[#008060] cursor-pointer"
-                                    />
-                                    <img src={(product.images && product.images[0]) || product.image || "/placeholder.jpg"} className="w-10 h-10 rounded border border-gray-200 object-cover" />
-                                    <div>
-                                      <p className="text-sm font-bold text-[#202223] line-clamp-1">{product.title || product.name}</p>
-                                      <p className="text-[11px] text-gray-500">{product.price} LE {product.category && `- ${product.category}`}</p>
-                                    </div>
-                                  </div>
-
-                                  {/* خانة الشارة تظهر فقط لو المنتج متحدد */}
-                                  {isSelected && (
-                                    <div className="sm:w-1/3 mt-2 sm:mt-0">
+                                return (
+                                  <div key={product.id} className={`p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${isSelected ? 'bg-[#f4fae5]' : 'hover:bg-gray-50'}`}>
+                                    <div className="flex items-center gap-3 flex-1">
                                       <input 
-                                        type="text" 
-                                        placeholder="شارة (مثال: جديد)" 
-                                        value={selectedProductData?.badge || ""}
+                                        type="checkbox" 
+                                        checked={isSelected}
                                         onChange={(e) => {
+                                          const isChecked = e.target.checked;
                                           const updated = [...layoutSections];
-                                          const pIndex = updated[sectionIndex].data.products.findIndex(p => p.productId === product.id);
-                                          if(pIndex > -1) {
-                                            updated[sectionIndex].data.products[pIndex].badge = e.target.value;
-                                            setLayoutSections(updated);
+                                          let currentProds = updated[sectionIndex].data.products || [];
+                                          
+                                          if (isChecked) {
+                                            currentProds.push({
+                                              productId: product.id,
+                                              name: product.title || product.name || "بدون اسم",
+                                              image: (product.images && product.images[0]) || product.image || "",
+                                              price: product.price || "",
+                                              compareAtPrice: product.compareAtPrice || product.oldPrice || "",
+                                              linkUrl: `/product/${product.id}`,
+                                              badge: ""
+                                            });
+                                          } else {
+                                            currentProds = currentProds.filter(p => p.productId !== product.id);
                                           }
+                                          
+                                          updated[sectionIndex].data.products = currentProds;
+                                          setLayoutSections(updated);
                                         }}
-                                        className="w-full p-2 text-xs border border-[#008060]/30 rounded bg-white focus:border-[#008060] outline-none"
+                                        className="w-4 h-4 text-[#008060] rounded border-gray-300 focus:ring-[#008060] cursor-pointer"
                                       />
+                                      <img src={(product.images && product.images[0]) || product.image || "/placeholder.jpg"} className="w-10 h-10 rounded border border-gray-200 object-cover" />
+                                      <div>
+                                        <p className="text-sm font-bold text-[#202223] line-clamp-1">{product.title || product.name}</p>
+                                        <p className="text-[11px] text-gray-500">{product.price} LE {product.category && `- ${product.category}`}</p>
+                                      </div>
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          
+
+                                    {isSelected && (
+                                      <div className="sm:w-1/3 mt-2 sm:mt-0">
+                                        <input 
+                                          type="text" 
+                                          placeholder="شارة (مثال: جديد)" 
+                                          value={selectedProductData?.badge || ""}
+                                          onChange={(e) => {
+                                            const updated = [...layoutSections];
+                                            const pIndex = updated[sectionIndex].data.products.findIndex(p => p.productId === product.id);
+                                            if(pIndex > -1) {
+                                              updated[sectionIndex].data.products[pIndex].badge = e.target.value;
+                                              setLayoutSections(updated);
+                                            }
+                                          }}
+                                          className="w-full p-2 text-xs border border-[#008060]/30 rounded bg-white focus:border-[#008060] outline-none"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
                         </div>
                       )}
 
