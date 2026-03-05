@@ -5,7 +5,6 @@ import Link from "next/link";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
-// ✅ تم استيراد دوال الاستعلام من فايربيز
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore"; 
 import SizeChartModal from "@/components/SizeChartModal";
 import { Plus, Minus, Star, Info, Share2, Heart, ImageIcon, X, Truck, Eye, ShieldCheck, ChevronLeft, ChevronRight, Search, ShoppingBag, CreditCard, Banknote } from "lucide-react";
@@ -14,6 +13,7 @@ export default function ProductPage() {
   const { id } = useParams();
   const [product, setProduct]               = useState(null);
   const [loading, setLoading]               = useState(true);
+  const [loadingDot, setLoadingDot]         = useState(0);
   const { addToCart }                       = useCart();
   const [activeImage, setActiveImage]       = useState("");
   const [activeIdx, setActiveIdx]           = useState(0);
@@ -27,12 +27,20 @@ export default function ProductPage() {
   const [isZoomed, setIsZoomed]             = useState(false); 
   const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); 
   const [isDescModalOpen, setDescModalOpen] = useState(false); 
+  const [heroLoaded, setHeroLoaded]         = useState(false);
   
   const [relatedProducts, setRelatedProducts] = useState([]);
 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const colorsRef   = useRef(null);
+
+  // Loading dots animation
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => setLoadingDot(d => (d + 1) % 4), 400);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (isGalleryOpen || isImageZoomModalOpen || isDescModalOpen) {
@@ -46,6 +54,7 @@ export default function ProductPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
+      setHeroLoaded(false);
       
       const sp = staticProducts.find(p => p.id.toString() === id.toString());
       if (sp) {
@@ -87,7 +96,6 @@ export default function ProductPage() {
           if (iC) setSelectedColor(iC);
           else { const a = fb.options?.colors; if (Array.isArray(a) && a.length) setSelectedColor(a[0].name || a[0]); }
           
-          // ✅ استعلام فايربيز المتقدم للمنتجات المشابهة بناءً على مصفوفة categories أو collections
           const fbRefValue = (Array.isArray(fb.categories) && fb.categories[0]) || (Array.isArray(fb.collections) && fb.collections[0]) || fb.type || fb.category;
           
           let relatedFbs = [];
@@ -95,12 +103,10 @@ export default function ProductPage() {
 
           if (fbRefValue) {
             try {
-              // البحث أولاً في مصفوفة categories
               const qCat = query(productsRef, where("categories", "array-contains", fbRefValue), limit(6));
               const snapCat = await getDocs(qCat);
               snapCat.forEach(d => { if(d.id !== id.toString()) relatedFbs.push({ id: d.id, ...d.data() }) });
 
-              // لو ملقاش، يبحث في مصفوفة collections
               if (relatedFbs.length === 0) {
                 const qCol = query(productsRef, where("collections", "array-contains", fbRefValue), limit(6));
                 const snapCol = await getDocs(qCol);
@@ -109,14 +115,12 @@ export default function ProductPage() {
             } catch (err) { console.error("Error fetching related by category:", err); }
           }
 
-          // بديل ذكي (Fallback): لو ملقاش منتجات من نفس القسم أو حصل خطأ، هيجيب أي منتجات عشان القسم ميختفيش
           if (relatedFbs.length === 0) {
             const qFallback = query(productsRef, limit(6));
             const snapFallback = await getDocs(qFallback);
             snapFallback.forEach(d => { if(d.id !== id.toString()) relatedFbs.push({ id: d.id, ...d.data() }) });
           }
 
-          // استخدام set لضمان عدم التكرار (Unique Products)
           const uniqueRelated = Array.from(new Map(relatedFbs.map(item => [item.id, item])).values());
           setRelatedProducts(uniqueRelated.slice(0, 5));
         }
@@ -142,9 +146,20 @@ export default function ProductPage() {
   }, [product?.description]);
 
   if (loading) return (
-    <div className="h-screen bg-[#121212] flex flex-col items-center justify-center text-[#F5C518] gap-4">
-      <div className="w-12 h-12 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin mb-4"></div>
-      <span className="font-bold tracking-widest animate-pulse" style={{fontFamily:"Cairo,sans-serif"}}>WIND ORIGINALS...</span>
+    <div className="h-screen bg-[#0e0e0e] flex flex-col items-center justify-center text-[#F5C518] gap-5">
+      {/* Enhanced spinner — thinner, larger, more elegant */}
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 rounded-full border-[2px] border-[#F5C518]/10"></div>
+        <div className="absolute inset-0 rounded-full border-[2px] border-transparent border-t-[#F5C518] animate-spin"></div>
+        <div className="absolute inset-[5px] rounded-full border-[1px] border-transparent border-t-[#F5C518]/40 animate-spin" style={{animationDuration:"1.5s", animationDirection:"reverse"}}></div>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <span className="font-black tracking-[0.3em] text-sm text-[#F5C518]" style={{fontFamily:"Cairo,sans-serif"}}>WIND ORIGINALS</span>
+        {/* Animated loading text — fades in after 500ms */}
+        <span className="text-[11px] text-gray-500 tracking-widest animate-pulse" style={{fontFamily:"Tajawal,sans-serif"}}>
+          جارٍ تحميل المنتج{'.'.repeat(loadingDot)}
+        </span>
+      </div>
     </div>
   );
   
@@ -158,14 +173,13 @@ export default function ProductPage() {
     return `/images/products/${product.folderName}/${img}`;
   };
 
-  // ✅ دالة ذكية لاستخراج صورة المنتج المشابه سواء من استاتيك أو فايربيز
   const getRelatedImageUrl = (rp) => {
     if (rp.mainImage?.startsWith("http")) return rp.mainImage;
     if (rp.mainImage && rp.folderName) return `/images/products/${rp.folderName}/${rp.mainImage}`;
     if (rp.images && rp.images.length > 0) return rp.images[0];
     if (rp.mainImageUrl) return rp.mainImageUrl;
     if (rp.image) return rp.image;
-    return ""; // Fallback
+    return "";
   };
 
   const gallery = product.images || [product.mainImage, ...Array.from({length: product.imagesCount || 0}, (_, i) => `${i+1}.webp`)];
@@ -225,33 +239,40 @@ export default function ProductPage() {
         </div>
       </div>
 
-      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer" onClick={() => openGallery(activeIdx)}>
+      {/* ✅ Hero Image — Ken Burns effect + corner glow */}
+      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer hero-wrap" onClick={() => openGallery(activeIdx)}>
         <img 
           src={getImageUrl(activeImage)} 
           alt={product.title} 
           decoding="async"
-          className="w-full h-full object-cover object-top opacity-85 transition-all duration-500"
+          onLoad={() => setHeroLoaded(true)}
+          className={`w-full h-full object-cover object-top opacity-85 transition-opacity duration-700 ${heroLoaded ? "hero-ken-burns" : "opacity-0"}`}
         />
         
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-[#121212]/30 pointer-events-none"></div>
+        {/* Corner glow — top right warm gold */}
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none" style={{background:"radial-gradient(circle at top right, rgba(245,197,24,0.07) 0%, transparent 70%)"}}></div>
+
+        {/* Stronger bottom gradient for drama */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-[#121212]/30 pointer-events-none"></div>
         
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10" onClick={e => e.stopPropagation()}>
-          <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
-            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+          {/* ✅ Glow on hover for side buttons */}
+          <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-all drop-shadow-md group/btn">
+            <div className="bg-[#1a1a1a]/80 p-2.5 rounded-full backdrop-blur-md border border-white/10 group-hover/btn:border-[#F5C518]/30 group-hover/btn:shadow-[0_0_14px_rgba(245,197,24,0.22)] transition-all">
               <ImageIcon size={20} />
             </div>
             <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
           </button>
           
-          <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
-            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+          <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-all drop-shadow-md group/btn">
+            <div className="bg-[#1a1a1a]/80 p-2.5 rounded-full backdrop-blur-md border border-white/10 group-hover/btn:border-[#F5C518]/30 group-hover/btn:shadow-[0_0_14px_rgba(245,197,24,0.22)] transition-all">
               <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
             </div>
             <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
           </button>
           
-          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
-            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-all drop-shadow-md group/btn">
+            <div className="bg-[#1a1a1a]/80 p-2.5 rounded-full backdrop-blur-md border border-white/10 group-hover/btn:border-[#F5C518]/30 group-hover/btn:shadow-[0_0_14px_rgba(245,197,24,0.22)] transition-all">
               <Share2 size={20} />
             </div>
             <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
@@ -259,16 +280,17 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {/* ✅ Thumbnails — rounded-xl, taller, shadow on active */}
       <div className="pt-4 pb-2 px-4 max-w-4xl mx-auto" dir="rtl">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar-horizontal items-center">
           {gallery.filter(Boolean).map((img, idx) => (
             <button 
               key={idx}
               onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
-              className={`flex-shrink-0 w-16 h-24 md:w-20 md:h-28 rounded-md overflow-hidden transition-all duration-300 ${
+              className={`flex-shrink-0 w-16 h-24 md:w-20 md:h-28 rounded-xl overflow-hidden transition-all duration-300 ${
                 activeImage === img 
-                  ? "ring-2 ring-[#F5C518] scale-105 shadow-lg" 
-                  : "border border-[#333] opacity-60 hover:opacity-100"
+                  ? "ring-2 ring-[#F5C518] scale-105 shadow-[0_4px_20px_rgba(245,197,24,0.25)]" 
+                  : "border border-[#333] opacity-55 hover:opacity-90 hover:border-[#F5C518]/20"
               }`}
             >
               <img src={getImageUrl(img)} loading="lazy" decoding="async" className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
@@ -290,7 +312,7 @@ export default function ProductPage() {
         </div>
 
         <div className="flex gap-4 items-start border-t border-[#333]/50 pt-5">
-          <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
+          <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
             <img src={getImageUrl(currentColorImage())} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
             <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
               <Plus size={14} className="text-white" />
@@ -312,11 +334,12 @@ export default function ProductPage() {
                 <span className="border border-[#444] rounded px-1.5 py-0.5 text-[9px] font-bold text-gray-300 bg-[#1a1a1a]">WIND-24</span>
               </div>
               
-              <div className="flex items-end gap-2 mt-1">
-                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '0.5px' }} className="text-3xl md:text-4xl font-normal text-white">{product.price}</span>
-                <span className="text-xs font-normal text-[#F5C518] mb-1.5">ج.م</span>
+              {/* ✅ Price — better baseline alignment + letter-spacing */}
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '1px' }} className="text-3xl md:text-4xl font-normal text-white">{product.price}</span>
+                <span className="text-sm font-bold text-[#F5C518]">ج.م</span>
                 {product.compareAtPrice && (
-                  <span className="text-xs text-gray-500 line-through mb-1.5 mr-2">{product.compareAtPrice} ج.م</span>
+                  <span className="text-xs text-gray-500 line-through mr-1">{product.compareAtPrice} ج.م</span>
                 )}
               </div>
 
@@ -367,7 +390,7 @@ export default function ProductPage() {
                   const isSel = selectedColor === name;
                   return (
                     <button key={i} onClick={() => { setSelectedColor(name); if (isImg) { setActiveImage(hi); setActiveIdx(0); } }} title={name} className="flex flex-col items-center group/c transition-all duration-300 ease-out">
-                      <div className={`w-11 h-11 rounded-[10px] overflow-hidden transition-all duration-300 ease-out ${isSel ? "ring-2 ring-[#F5C518] ring-offset-2 ring-offset-[#121212] shadow-[0_4px_12px_rgba(245,197,24,0.3)] scale-[1.05]" : "ring-1 ring-white/10 hover:ring-white/30 hover:shadow-[0_4px_10px_rgba(255,255,255,0.08)] hover:-translate-y-1"}`}>
+                      <div className={`w-11 h-11 rounded-[10px] overflow-hidden transition-all duration-300 ease-out ${isSel ? "ring-2 ring-[#F5C518] ring-offset-2 ring-offset-[#121212] shadow-[0_4px_16px_rgba(245,197,24,0.35)] scale-[1.08]" : "ring-1 ring-white/10 hover:ring-white/30 hover:shadow-[0_4px_10px_rgba(255,255,255,0.08)] hover:-translate-y-1"}`}>
                         {isImg ? <img src={hi} className="w-full h-full object-cover" alt={name} /> : <div style={{backgroundColor:hi}} className="w-full h-full" />}
                       </div>
                     </button>
@@ -393,8 +416,9 @@ export default function ProductPage() {
               </div>
               {safeSizes.length > 1 && (
                 <div className="flex flex-wrap gap-2.5">
+                  {/* ✅ Sizes — rounded-xl + selected glow */}
                   {safeSizes.map(sz => (
-                    <button key={sz} onClick={() => setSelectedSize(sz)} className={`min-w-[58px] h-11 text-sm font-black rounded border transition-all duration-200 ${selectedSize===sz ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.15)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-[#F5C518]/30 hover:text-gray-200"}`} style={{fontFamily:"Cairo,sans-serif"}}>{sz}</button>
+                    <button key={sz} onClick={() => setSelectedSize(sz)} className={`min-w-[58px] h-11 text-sm font-black rounded-xl border transition-all duration-200 ${selectedSize===sz ? "bg-white text-black border-white shadow-[0_0_22px_rgba(255,255,255,0.18)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-[#F5C518]/30 hover:text-gray-200 hover:shadow-[0_0_10px_rgba(245,197,24,0.1)]"}`} style={{fontFamily:"Cairo,sans-serif"}}>{sz}</button>
                   ))}
                 </div>
               )}
@@ -403,7 +427,8 @@ export default function ProductPage() {
 
           <div className="pt-2">
             <div className="flex gap-2">
-              <button onClick={() => addToCart({...product, selectedSize, selectedColor, image: getImageUrl(activeImage), qty: quantity})} className="pay-btn flex-1 text-black font-black text-base py-3.5 rounded-[8px] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,197,24,0.15)] transition-all group/cta" style={{fontFamily:"Cairo,sans-serif"}}>
+              {/* ✅ Add to cart — continuous shimmer + larger padding */}
+              <button onClick={() => addToCart({...product, selectedSize, selectedColor, image: getImageUrl(activeImage), qty: quantity})} className="pay-btn flex-1 text-black font-black text-base py-4 rounded-[8px] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,197,24,0.15)] transition-all group/cta tracking-wide" style={{fontFamily:"Cairo,sans-serif"}}>
                 <ShoppingBag size={18} className="transition-transform group-hover/cta:-translate-y-0.5" />
                 أضف إلي السلة — {(product.price * quantity)} ج.م
               </button>
@@ -417,10 +442,19 @@ export default function ProductPage() {
           </div>
         </div>
 
+        {/* ✅ Trust strip — dividers between items + bigger icons */}
         <div className="mt-5 flex justify-between items-center bg-[#1a1a1a] p-3 rounded-lg border border-[#333]">
-          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><Truck size={14} className="text-[#F5C518]" /> شحن سريع</div>
-          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><Eye size={14} className="text-[#F5C518]" /> معاينة قبل الاستلام</div>
-          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><ShieldCheck size={14} className="text-[#F5C518]" /> استرجاع سهل</div>
+          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
+            <Truck size={16} className="text-[#F5C518] flex-shrink-0" /> شحن سريع
+          </div>
+          <div className="w-px h-5 bg-[#333]"></div>
+          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
+            <Eye size={16} className="text-[#F5C518] flex-shrink-0" /> معاينة قبل الاستلام
+          </div>
+          <div className="w-px h-5 bg-[#333]"></div>
+          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
+            <ShieldCheck size={16} className="text-[#F5C518] flex-shrink-0" /> استرجاع سهل
+          </div>
         </div>
 
         <div className="mt-3 flex flex-col items-center justify-center bg-[#121212] p-4 rounded-lg border border-[#333] gap-3">
@@ -458,7 +492,7 @@ export default function ProductPage() {
           </div>
         )}
 
-        {/* ✅ قسم المنتجات المشابهة (بيجيب الصور والداتا بديناميكية تامة من فايربيز) */}
+        {/* ✅ Related Products — rounded-2xl + card hover glow */}
         {relatedProducts.length > 0 && (
           <div className="py-8 border-t border-[#333]/50 mt-4">
             <div className="flex items-center gap-2 mb-6">
@@ -473,9 +507,9 @@ export default function ProductPage() {
                 <Link 
                   href={`/product/${rp.id}`} 
                   key={rp.id} 
-                  className="flex-shrink-0 w-[140px] md:w-[180px] group cursor-pointer block"
+                  className="flex-shrink-0 w-[140px] md:w-[180px] group cursor-pointer block transition-all duration-300 hover:shadow-[0_8px_32px_rgba(245,197,24,0.10)] rounded-2xl"
                 >
-                  <div className="relative aspect-[3/4] bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#333] shadow-lg mb-3">
+                  <div className="relative aspect-[3/4] bg-[#1a1a1a] rounded-2xl overflow-hidden border border-[#333] shadow-lg mb-3 group-hover:border-[#F5C518]/20 transition-colors duration-300">
                     <img 
                       src={getRelatedImageUrl(rp)} 
                       alt={rp.title} 
@@ -494,11 +528,11 @@ export default function ProductPage() {
                   <h3 className="text-xs md:text-sm text-gray-300 font-bold truncate mb-1.5 transition-colors group-hover:text-white" style={{fontFamily:"Cairo,sans-serif"}}>
                     {rp.title}
                   </h3>
-                  <div className="flex items-end gap-1">
-                    <span className="text-white font-black text-sm md:text-base" style={{fontFamily:"Impact, sans-serif", letterSpacing:"0.5px"}}>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-white font-black text-sm md:text-base" style={{fontFamily:"Impact, sans-serif", letterSpacing:"1px"}}>
                       {rp.price}
                     </span>
-                    <span className="text-[#F5C518] text-[10px] md:text-xs font-bold mb-0.5">ج.م</span>
+                    <span className="text-[#F5C518] text-[10px] md:text-xs font-bold">ج.م</span>
                   </div>
                 </Link>
               ))}
@@ -508,6 +542,7 @@ export default function ProductPage() {
 
       </div>
 
+      {/* ✅ Gallery Modal — smoother dots indicator */}
       {isGalleryOpen && (
         <div 
           className="fixed inset-0 z-[99999] bg-black/95 flex flex-col gallery-enter backdrop-blur-md"
@@ -540,13 +575,14 @@ export default function ProductPage() {
             
             {!isZoomed && (
               <>
-                <button onClick={galleryPrev} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all"><ChevronRight size={22} strokeWidth={1.5} /></button>
-                <button onClick={galleryNext} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all"><ChevronLeft size={22} strokeWidth={1.5} /></button>
+                <button onClick={galleryPrev} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all hover:shadow-[0_0_12px_rgba(245,197,24,0.2)]"><ChevronRight size={22} strokeWidth={1.5} /></button>
+                <button onClick={galleryNext} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/30 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all hover:shadow-[0_0_12px_rgba(245,197,24,0.2)]"><ChevronLeft size={22} strokeWidth={1.5} /></button>
               </>
             )}
             
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
-              {gallery.map((_,i) => <span key={i} className={`rounded-full transition-all duration-300 ${galleryIdx===i ? "w-5 h-1.5 bg-[#F5C518]" : "w-1.5 h-1.5 bg-white/20"}`} />)}
+            {/* ✅ Smoother dots — use transition-[width] for pill animation */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none items-center">
+              {gallery.map((_,i) => <span key={i} className={`rounded-full bg-[#F5C518] transition-all duration-400 ease-out ${galleryIdx===i ? "w-5 h-1.5 opacity-100" : "w-1.5 h-1.5 opacity-25"}`} />)}
             </div>
           </div>
         </div>
@@ -599,6 +635,21 @@ export default function ProductPage() {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes galleryIn { from{opacity:0} to{opacity:1} }
         @keyframes imgIn { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
+
+        /* ✅ Ken Burns — subtle slow zoom */
+        @keyframes kenBurns {
+          0%   { transform: scale(1);    transform-origin: center top; }
+          100% { transform: scale(1.06); transform-origin: center top; }
+        }
+        .hero-ken-burns {
+          animation: kenBurns 8s ease-out forwards;
+        }
+
+        /* ✅ Continuous shimmer on pay button */
+        @keyframes shineContinuous {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
         
         .gallery-enter { animation: galleryIn 0.25s ease-out }
         .gallery-img-enter { animation: imgIn 0.3s cubic-bezier(0.25,1,0.5,1) }
@@ -620,10 +671,10 @@ export default function ProductPage() {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
-          background-size: 200% auto;
+          background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.4) 50%, transparent 65%);
+          background-size: 250% auto;
+          animation: shineContinuous 2.5s linear infinite;
         }
-        .pay-btn:hover::after { animation: shine 0.7s linear; }
         .pay-btn:hover { background: #e6b800; }
 
         .dark-wind-tabs .wind-tabs-container { background:transparent!important }
