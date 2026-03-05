@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
@@ -30,6 +30,7 @@ export default function ProductPage() {
   const touchStartY = useRef(null);
   const colorsRef   = useRef(null);
 
+  // منع الـ Scroll للصفحة الخلفية عند فتح أي نافذة
   useEffect(() => {
     if (isGalleryOpen || isImageZoomModalOpen || isDescModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -75,6 +76,23 @@ export default function ProductPage() {
     };
     fetchProduct();
   }, [id]);
+
+  // ✅ حل مشكلة الثقل (Performance Optimization) 
+  // منعنا الدالة من إنها تشتغل مع كل كليك عن طريق useMemo
+  const shortDescription = useMemo(() => {
+    if (!product?.description) return "";
+    let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
+    const doc = new DOMParser().parseFromString(clean, 'text/html');
+    let text = doc.body.textContent || "";
+    const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
+    keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
+    return text.trim().substring(0, 140) + "...";
+  }, [product?.description]);
+
+  const closedDescriptionHTML = useMemo(() => {
+    if (!product?.description) return "";
+    return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
+  }, [product?.description]);
 
   if (loading) return (
     <div className="h-screen bg-[#121212] flex flex-col items-center justify-center text-[#F5C518] gap-4">
@@ -135,27 +153,10 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
 
-  const stripHtml = (html) => {
-    if (!html) return "";
-    let clean = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
-    const doc = new DOMParser().parseFromString(clean, 'text/html');
-    let text = doc.body.textContent || "";
-    const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
-    keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
-    return text.trim();
-  };
-  
-  const shortDescription = stripHtml(product.description).substring(0, 140) + "...";
-
-  const getClosedDescriptionHTML = () => {
-    if (!product.description) return "";
-    return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
-  };
-
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
-      {/* 1. مسار الصفحة (Breadcrumbs) بخط أبيض خفيف من الأعلى للدمج مع الناف بار */}
+      {/* 1. مسار الصفحة (Breadcrumbs) */}
       <div className="bg-[#0D0D0D] border-t border-white/10">
         <div className="pt-3 pb-3 px-4 max-w-4xl mx-auto text-[10px] md:text-xs text-gray-500 flex items-center gap-2 overflow-x-auto hide-scrollbar-horizontal whitespace-nowrap" dir="rtl" style={{fontFamily:"Cairo,sans-serif"}}>
           <span className="hover:text-white cursor-pointer transition-colors">الرئيسية</span> 
@@ -168,9 +169,11 @@ export default function ProductPage() {
 
       {/* 2. القسم السينمائي العلوي (الصورة الرئيسية خالية من أسهم التقليب) */}
       <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer" onClick={() => openGallery(activeIdx)}>
+        {/* ✅ تحسين الأداء: decoding="async" لتسريع الريندر */}
         <img 
           src={getImageUrl(activeImage)} 
           alt={product.title} 
+          decoding="async"
           className="w-full h-full object-cover object-top opacity-85 transition-all duration-500"
         />
         
@@ -214,7 +217,8 @@ export default function ProductPage() {
                   : "border border-[#333] opacity-60 hover:opacity-100"
               }`}
             >
-              <img src={getImageUrl(img)} className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
+              {/* ✅ تحسين الأداء: loading="lazy" للصور المصغرة */}
+              <img src={getImageUrl(img)} loading="lazy" decoding="async" className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
             </button>
           ))}
         </div>
@@ -233,11 +237,11 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* 5 & 6. البوستر المصغر، السعر، والنبذة المتلاشية المظبوطة مع طول البوستر */}
+        {/* 5 & 6. البوستر المصغر، السعر، والنبذة المتلاشية */}
         <div className="flex gap-4 items-start border-t border-[#333]/50 pt-5">
           {/* البوستر المصغر */}
           <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
-            <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
+            <img src={getImageUrl(currentColorImage())} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
             <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
               <Plus size={14} className="text-white" />
             </div>
@@ -248,10 +252,9 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* العمود المقابل للبوستر (طوله محكوم بطول البوستر) */}
           <div className="flex-1 flex flex-col h-40 md:h-48 justify-between">
             <div>
-              {/* التاجات مكان Premium */}
+              {/* التاجات */}
               <div className="flex items-center flex-wrap gap-1.5 mb-2.5">
                 <span className="text-[#F5C518] text-[9px] md:text-[10px] font-bold tracking-wider">WIND Series</span>
                 <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
@@ -277,14 +280,13 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* النبذة المتلاشية - تبدأ من اليمين وتملأ المساحة المتبقية بنعومة */}
+            {/* النبذة المتلاشية */}
             {product.description && (
               <div className="relative mt-2 flex flex-col justify-end overflow-hidden flex-1">
                 <div className="relative flex-1 overflow-hidden">
                   <p className="text-[11px] leading-relaxed text-gray-400 text-right pr-1" style={{fontFamily:"Tajawal,sans-serif"}}>
                     {shortDescription}
                   </p>
-                  {/* تأثير التلاشي */}
                   <div className="absolute bottom-0 w-full h-8 bg-gradient-to-t from-[#121212] via-[#121212]/90 to-transparent pointer-events-none"></div>
                 </div>
                 <button 
@@ -391,6 +393,31 @@ export default function ProductPage() {
           </div>
         </div>
 
+        {/* ✅ تم إرجاع قسم التقييمات هنا */}
+        <div className="mt-6 flex flex-col items-center justify-center border-t border-[#333]/50 pt-6 gap-1.5">
+          <div className="flex gap-1">
+            {[...Array(5)].map((_,i) => <Star key={i} size={16} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-black text-xl text-white">{product.rating || "4.9"}</span>
+            <span className="text-gray-500 text-xs">/ 5  ({product.reviewsCount || "490K"} تقييم)</span>
+          </div>
+        </div>
+
+        {/* ✅ تم إرجاع قسم الوصف التفصيلي في نهاية الصفحة */}
+        {product.description && (
+          <div className="py-8 border-t border-[#333]/50 mt-6">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
+              <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>تفاصيل المنتج</span>
+            </div>
+            <div className="ql-editor-display dark-wind-tabs" dir="rtl">
+              {/* استخدام النص المعالج مسبقاً من useMemo لضمان الأداء */}
+              <div dangerouslySetInnerHTML={{__html: closedDescriptionHTML}} />
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ========================================== */}
@@ -477,7 +504,7 @@ export default function ProductPage() {
               </button>
             </div>
             <div className="p-5 overflow-y-auto ql-editor-display dark-wind-tabs" dir="rtl">
-              <div dangerouslySetInnerHTML={{ __html: getClosedDescriptionHTML() }} />
+              <div dangerouslySetInnerHTML={{ __html: closedDescriptionHTML }} />
             </div>
           </div>
         </div>
