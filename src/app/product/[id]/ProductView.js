@@ -5,7 +5,8 @@ import Link from "next/link";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+// ✅ تم استيراد دوال الاستعلام من فايربيز
+import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore"; 
 import SizeChartModal from "@/components/SizeChartModal";
 import { Plus, Minus, Star, Info, Share2, Heart, ImageIcon, X, Truck, Eye, ShieldCheck, ChevronLeft, ChevronRight, Search, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
@@ -46,24 +47,6 @@ export default function ProductPage() {
     const fetchProduct = async () => {
       setLoading(true);
       
-      // ✅ دالة ذكية تدعم collections (سواء نص أو مصفوفة) و type
-      const getRelated = (currentId, refValue) => {
-        if (!refValue) {
-          return staticProducts.filter(p => p.id.toString() !== currentId.toString()).slice(0, 5);
-        }
-        
-        let related = staticProducts.filter(p => {
-          const matchCol = Array.isArray(p.collections) ? p.collections.includes(refValue) : p.collections === refValue;
-          const matchType = p.type === refValue;
-          return (matchCol || matchType) && p.id.toString() !== currentId.toString();
-        });
-
-        if (related.length === 0) {
-          related = staticProducts.filter(p => p.id.toString() !== currentId.toString());
-        }
-        return related.slice(0, 5);
-      };
-
       const sp = staticProducts.find(p => p.id.toString() === id.toString());
       if (sp) {
         setProduct(sp);
@@ -71,9 +54,14 @@ export default function ProductPage() {
         if (sp.sizes?.length  > 0) setSelectedSize(sp.sizes[0]);
         if (sp.colors?.length > 0) setSelectedColor(sp.colors[0].name || sp.colors[0]);
         
-        // جلب قيمة الـ collections أو الـ type
-        const spRefValue = (Array.isArray(sp.collections) ? sp.collections[0] : sp.collections) || sp.type;
-        setRelatedProducts(getRelated(id, spRefValue));
+        const spRefValue = (Array.isArray(sp.categories) ? sp.categories[0] : sp.categories) || (Array.isArray(sp.collections) ? sp.collections[0] : sp.collections) || sp.type;
+        let related = staticProducts.filter(p => {
+          const matchCat = Array.isArray(p.categories) ? p.categories.includes(spRefValue) : p.categories === spRefValue;
+          const matchCol = Array.isArray(p.collections) ? p.collections.includes(spRefValue) : p.collections === spRefValue;
+          return (matchCat || matchCol || p.type === spRefValue) && p.id.toString() !== id.toString();
+        });
+        if (related.length === 0) related = staticProducts.filter(p => p.id.toString() !== id.toString());
+        setRelatedProducts(related.slice(0, 5));
         
         setLoading(false);
         return;
@@ -85,6 +73,7 @@ export default function ProductPage() {
           const fb = { id: snap.id, ...snap.data() };
           setProduct(fb);
           setActiveImage(fb.images?.[0] || fb.mainImageUrl || fb.image);
+          
           let iS = "", iC = "";
           if (fb.options && Array.isArray(fb.options)) {
             fb.options.forEach(opt => {
@@ -98,8 +87,38 @@ export default function ProductPage() {
           if (iC) setSelectedColor(iC);
           else { const a = fb.options?.colors; if (Array.isArray(a) && a.length) setSelectedColor(a[0].name || a[0]); }
           
-          const fbRefValue = (Array.isArray(fb.collections) ? fb.collections[0] : fb.collections) || fb.type;
-          setRelatedProducts(getRelated(id, fbRefValue));
+          // ✅ استعلام فايربيز المتقدم للمنتجات المشابهة بناءً على مصفوفة categories أو collections
+          const fbRefValue = (Array.isArray(fb.categories) && fb.categories[0]) || (Array.isArray(fb.collections) && fb.collections[0]) || fb.type || fb.category;
+          
+          let relatedFbs = [];
+          const productsRef = collection(db, "products");
+
+          if (fbRefValue) {
+            try {
+              // البحث أولاً في مصفوفة categories
+              const qCat = query(productsRef, where("categories", "array-contains", fbRefValue), limit(6));
+              const snapCat = await getDocs(qCat);
+              snapCat.forEach(d => { if(d.id !== id.toString()) relatedFbs.push({ id: d.id, ...d.data() }) });
+
+              // لو ملقاش، يبحث في مصفوفة collections
+              if (relatedFbs.length === 0) {
+                const qCol = query(productsRef, where("collections", "array-contains", fbRefValue), limit(6));
+                const snapCol = await getDocs(qCol);
+                snapCol.forEach(d => { if(d.id !== id.toString()) relatedFbs.push({ id: d.id, ...d.data() }) });
+              }
+            } catch (err) { console.error("Error fetching related by category:", err); }
+          }
+
+          // بديل ذكي (Fallback): لو ملقاش منتجات من نفس القسم أو حصل خطأ، هيجيب أي منتجات عشان القسم ميختفيش
+          if (relatedFbs.length === 0) {
+            const qFallback = query(productsRef, limit(6));
+            const snapFallback = await getDocs(qFallback);
+            snapFallback.forEach(d => { if(d.id !== id.toString()) relatedFbs.push({ id: d.id, ...d.data() }) });
+          }
+
+          // استخدام set لضمان عدم التكرار (Unique Products)
+          const uniqueRelated = Array.from(new Map(relatedFbs.map(item => [item.id, item])).values());
+          setRelatedProducts(uniqueRelated.slice(0, 5));
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -137,6 +156,16 @@ export default function ProductPage() {
     if (!img) return "";
     if (img.startsWith("http")) return img;
     return `/images/products/${product.folderName}/${img}`;
+  };
+
+  // ✅ دالة ذكية لاستخراج صورة المنتج المشابه سواء من استاتيك أو فايربيز
+  const getRelatedImageUrl = (rp) => {
+    if (rp.mainImage?.startsWith("http")) return rp.mainImage;
+    if (rp.mainImage && rp.folderName) return `/images/products/${rp.folderName}/${rp.mainImage}`;
+    if (rp.images && rp.images.length > 0) return rp.images[0];
+    if (rp.mainImageUrl) return rp.mainImageUrl;
+    if (rp.image) return rp.image;
+    return ""; // Fallback
   };
 
   const gallery = product.images || [product.mainImage, ...Array.from({length: product.imagesCount || 0}, (_, i) => `${i+1}.webp`)];
@@ -181,8 +210,7 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
 
-  // تجهيز قيمة الـ Category/Collection للعرض
-  const displayCategory = (Array.isArray(product.collections) ? product.collections[0] : product.collections) || product.type || 'المنتجات';
+  const displayCategory = (Array.isArray(product.categories) ? product.categories[0] : product.categories) || (Array.isArray(product.collections) ? product.collections[0] : product.collections) || product.type || 'المنتجات';
 
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
@@ -430,6 +458,7 @@ export default function ProductPage() {
           </div>
         )}
 
+        {/* ✅ قسم المنتجات المشابهة (بيجيب الصور والداتا بديناميكية تامة من فايربيز) */}
         {relatedProducts.length > 0 && (
           <div className="py-8 border-t border-[#333]/50 mt-4">
             <div className="flex items-center gap-2 mb-6">
@@ -448,7 +477,7 @@ export default function ProductPage() {
                 >
                   <div className="relative aspect-[3/4] bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#333] shadow-lg mb-3">
                     <img 
-                      src={rp.mainImage?.startsWith("http") ? rp.mainImage : `/images/products/${rp.folderName}/${rp.mainImage}`} 
+                      src={getRelatedImageUrl(rp)} 
                       alt={rp.title} 
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
