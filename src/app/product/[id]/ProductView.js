@@ -229,74 +229,79 @@ export default function ProductPage() {
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
-      <div className="bg-[#0D0D0D] border-t border-white/10">
+      {/* ✅ Breadcrumb — مطابق للنافبار تماماً: bg-black/95 + backdrop-blur-xl + border-b border-white/5 */}
+      <div className="bg-black/95 backdrop-blur-xl border-b border-white/5">
         <div className="pt-3 pb-3 px-4 max-w-4xl mx-auto text-[10px] md:text-xs text-gray-500 flex items-center gap-2 overflow-x-auto hide-scrollbar-horizontal whitespace-nowrap" dir="rtl" style={{fontFamily:"Cairo,sans-serif"}}>
-          <span className="hover:text-white cursor-pointer transition-colors">الرئيسية</span> 
-          <span>/</span> 
-          <span className="hover:text-white cursor-pointer transition-colors">{displayCategory}</span> 
-          <span>/</span> 
-          <span className="text-[#F5C518]">{product.title}</span>
+          <Link href="/" className="hover:text-white cursor-pointer transition-colors">الرئيسية</Link>
+          <span className="text-white/20">/</span>
+          {/* ✅ الرابط يوجه للقسم الفعلي للمنتج */}
+          <Link href={`/collections/${encodeURIComponent(displayCategory)}`} className="hover:text-[#F5C518] cursor-pointer transition-colors">{displayCategory}</Link>
+          <span className="text-white/20">/</span>
+          <span className="text-[#F5C518] truncate max-w-[160px]">{product.title}</span>
         </div>
       </div>
 
-      {/* ✅ Hero Image — Ken Burns effect + corner glow */}
-      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer hero-wrap" onClick={() => openGallery(activeIdx)}>
-        <img 
-          src={getImageUrl(activeImage)} 
-          alt={product.title} 
-          decoding="async"
-          onLoad={() => setHeroLoaded(true)}
-          className={`w-full h-full object-cover object-top opacity-85 transition-opacity duration-700 ${heroLoaded ? "hero-ken-burns" : "opacity-0"}`}
-        />
-        
-        {/* Corner glow — top right warm gold */}
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none" style={{background:"radial-gradient(circle at top right, rgba(245,197,24,0.07) 0%, transparent 70%)"}}></div>
+      {/* ✅ Hero + Vertical Filmstrip Layout */}
+      <div className="relative flex" dir="rtl">
 
-        {/* Stronger bottom gradient for drama */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-[#121212]/30 pointer-events-none"></div>
-        
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10" onClick={e => e.stopPropagation()}>
-          {/* ✅ Glow on hover for side buttons */}
-          <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-all drop-shadow-md group/btn">
-            <div className="bg-[#1a1a1a]/80 p-2.5 rounded-full backdrop-blur-md border border-white/10 group-hover/btn:border-[#F5C518]/30 group-hover/btn:shadow-[0_0_14px_rgba(245,197,24,0.22)] transition-all">
-              <ImageIcon size={20} />
+        {/* ── Filmstrip عمودي على اليمين ── */}
+        <div className="relative z-10 flex flex-col gap-2 p-2 bg-black/70 backdrop-blur-sm border-l border-white/5" style={{width:"68px",minWidth:"68px"}}>
+
+          {/* عداد الصور */}
+          <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center justify-center gap-0.5 py-2 text-white/50 hover:text-[#F5C518] transition-all group/count">
+            <div className="bg-white/5 group-hover/count:bg-[#F5C518]/10 border border-white/10 group-hover/count:border-[#F5C518]/30 rounded-lg p-1.5 transition-all group-hover/count:shadow-[0_0_12px_rgba(245,197,24,0.2)]">
+              <ImageIcon size={14} />
             </div>
-            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
+            <span className="text-[9px] font-black tracking-wider">{gallery.length}</span>
           </button>
-          
-          <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-all drop-shadow-md group/btn">
-            <div className="bg-[#1a1a1a]/80 p-2.5 rounded-full backdrop-blur-md border border-white/10 group-hover/btn:border-[#F5C518]/30 group-hover/btn:shadow-[0_0_14px_rgba(245,197,24,0.22)] transition-all">
-              <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
-            </div>
-            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
+
+          <div className="w-full h-px bg-white/5"></div>
+
+          {/* الصور المصغّرة */}
+          <div className="flex flex-col gap-1.5 overflow-y-auto hide-scrollbar-vertical flex-1" style={{maxHeight:"calc(65vh - 80px)"}}>
+            {gallery.filter(Boolean).map((img, idx) => (
+              <button key={idx} onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
+                className={`relative flex-shrink-0 rounded-lg overflow-hidden transition-all duration-300 ${activeImage === img ? "ring-2 ring-[#F5C518] shadow-[0_0_14px_rgba(245,197,24,0.3)]" : "opacity-40 hover:opacity-90 border border-white/5 hover:border-[#F5C518]/25"}`}
+                style={{width:"52px",height:"68px"}}
+              >
+                <img src={getImageUrl(img)} loading="lazy" decoding="async" className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
+                {activeImage === img && <div className="absolute inset-x-0 bottom-0 h-[3px] bg-[#F5C518] rounded-t-sm"></div>}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-full h-px bg-white/5"></div>
+
+          {/* Heart + Share في الأسفل */}
+          <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex flex-col items-center gap-0.5 py-1 text-white/35 hover:text-[#F5C518] transition-all">
+            <Heart size={15} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
+            <span className="text-[8px] font-black">{product.likes || "1.2K"}</span>
           </button>
-          
-          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-all drop-shadow-md group/btn">
-            <div className="bg-[#1a1a1a]/80 p-2.5 rounded-full backdrop-blur-md border border-white/10 group-hover/btn:border-[#F5C518]/30 group-hover/btn:shadow-[0_0_14px_rgba(245,197,24,0.22)] transition-all">
-              <Share2 size={20} />
-            </div>
-            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
+          <button className="flex flex-col items-center gap-0.5 py-1 pb-2 text-white/35 hover:text-[#F5C518] transition-all">
+            <Share2 size={15} />
+            <span className="text-[8px] font-black">شارك</span>
           </button>
         </div>
-      </div>
 
-      {/* ✅ Thumbnails — rounded-xl, taller, shadow on active */}
-      <div className="pt-4 pb-2 px-4 max-w-4xl mx-auto" dir="rtl">
-        <div className="flex gap-3 overflow-x-auto hide-scrollbar-horizontal items-center">
-          {gallery.filter(Boolean).map((img, idx) => (
-            <button 
-              key={idx}
-              onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
-              className={`flex-shrink-0 w-16 h-24 md:w-20 md:h-28 rounded-xl overflow-hidden transition-all duration-300 ${
-                activeImage === img 
-                  ? "ring-2 ring-[#F5C518] scale-105 shadow-[0_4px_20px_rgba(245,197,24,0.25)]" 
-                  : "border border-[#333] opacity-55 hover:opacity-90 hover:border-[#F5C518]/20"
-              }`}
-            >
-              <img src={getImageUrl(img)} loading="lazy" decoding="async" className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
-            </button>
-          ))}
+        {/* ── الصورة الرئيسية ── */}
+        <div className="relative flex-1 h-[65vh] md:h-[75vh] bg-black overflow-hidden cursor-pointer hero-wrap" onClick={() => openGallery(activeIdx)}>
+          <img
+            src={getImageUrl(activeImage)}
+            alt={product.title}
+            decoding="async"
+            onLoad={() => setHeroLoaded(true)}
+            className={`w-full h-full object-cover object-top opacity-85 transition-opacity duration-700 ${heroLoaded ? "hero-ken-burns" : "opacity-0"}`}
+          />
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none" style={{background:"radial-gradient(circle at top right, rgba(245,197,24,0.07) 0%, transparent 70%)"}}></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-[#121212]/30 pointer-events-none"></div>
+          {/* رقم الصورة الحالية */}
+          <div className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm border border-white/10 px-2.5 py-1 rounded-full pointer-events-none">
+            <span className="text-[#F5C518] text-xs font-black">{activeIdx + 1}</span>
+            <span className="text-white/30 text-xs">/</span>
+            <span className="text-white/50 text-xs">{gallery.length}</span>
+          </div>
         </div>
+
       </div>
 
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
@@ -656,6 +661,8 @@ export default function ProductPage() {
         
         .hide-scrollbar-horizontal::-webkit-scrollbar { height: 0px; background: transparent; }
         .hide-scrollbar-horizontal { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar-vertical::-webkit-scrollbar { width: 0px; background: transparent; }
+        .hide-scrollbar-vertical { -ms-overflow-style: none; scrollbar-width: none; }
 
         @keyframes shine {
           0%   { background-position: -200% center; }
