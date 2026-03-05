@@ -241,127 +241,124 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* ✅ CINEMATIC HERO — Full bleed image + glass thumbnail strip */}
-      <div className="relative w-full overflow-hidden" style={{height:"88vw", maxHeight:"92vh", minHeight:"480px"}}>
+      {/* ══════════════════════════════════════════
+           HERO — Full-bleed cinematic image
+           Pattern: Nike / Allbirds / HOKA mobile
+      ══════════════════════════════════════════ */}
+      <div className="relative w-full bg-black overflow-hidden" style={{aspectRatio:"3/4", maxHeight:"92vh"}}>
 
-        {/* ── الصورة الرئيسية ── */}
+        {/* الصورة الرئيسية */}
         <img
           src={getImageUrl(activeImage)}
           alt={product.title}
           decoding="async"
           onLoad={() => setHeroLoaded(true)}
           onClick={() => openGallery(activeIdx)}
-          className={`absolute inset-0 w-full h-full object-cover object-top cursor-pointer transition-opacity duration-700 ${heroLoaded ? "hero-ken-burns opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 w-full h-full object-cover object-top cursor-pointer select-none transition-opacity duration-500 ${heroLoaded ? "opacity-100 hero-ken-burns" : "opacity-0"}`}
         />
 
-        {/* ── Cinematic gradient من الأسفل ── */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{background:"linear-gradient(to top, #121212 0%, rgba(18,18,18,0.85) 22%, rgba(18,18,18,0.3) 50%, rgba(18,18,18,0.15) 75%, transparent 100%)"}}
+        {/* Vignette رفيع من الأسفل فقط — يخلي الألوان تتنفس */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{background:"linear-gradient(to top, rgba(18,18,18,0.72) 0%, rgba(18,18,18,0.18) 28%, transparent 55%)"}}
         />
 
-        {/* ── Top gradient خفيف للأعلى ── */}
-        <div className="absolute top-0 inset-x-0 h-24 pointer-events-none" style={{background:"linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 100%)"}} />
+        {/* Glow ذهبي ناعم في الزاوية العليا اليمنى */}
+        <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full pointer-events-none opacity-60"
+          style={{background:"radial-gradient(circle, rgba(245,197,24,0.07) 0%, transparent 70%)"}}
+        />
 
-        {/* ── Corner glow ذهبي ── */}
-        <div className="absolute top-0 right-0 w-72 h-72 pointer-events-none" style={{background:"radial-gradient(circle at top right, rgba(245,197,24,0.06) 0%, transparent 65%)"}} />
-
-        {/* ── أيقونات اليمين العلوي (Wishlist + Share) ── */}
-        <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
+        {/* ── أيقونات الزاوية اليمنى العليا ── */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
           <button
             onClick={() => setIsWishlisted(!isWishlisted)}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/40 hover:bg-black/60 transition-all group/w"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/50 transition-all"
           >
-            <Heart size={17} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "rgba(255,255,255,0.7)"} className="group-hover/w:scale-110 transition-transform" />
+            <Heart size={15} fill={isWishlisted?"#F5C518":"none"} color={isWishlisted?"#F5C518":"rgba(255,255,255,0.75)"} />
           </button>
-          <button className="flex items-center justify-center w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/40 hover:bg-black/60 transition-all group/s">
-            <Share2 size={17} className="text-white/70 group-hover/s:text-[#F5C518] transition-colors" />
+          <button className="w-9 h-9 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/50 transition-all group/sh">
+            <Share2 size={15} className="text-white/75 group-hover/sh:text-[#F5C518] transition-colors" />
           </button>
         </div>
 
-        {/* ── Counter أعلى اليسار ── */}
-        <div className="absolute top-4 left-4 z-20">
-          <button
-            onClick={() => openGallery(activeIdx)}
-            className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/30 px-3 py-1.5 rounded-full transition-all group/c"
-          >
-            <ImageIcon size={13} className="text-white/60 group-hover/c:text-[#F5C518] transition-colors" />
-            <span className="text-white/70 text-[11px] font-black group-hover/c:text-[#F5C518] transition-colors">{activeIdx + 1} / {gallery.length}</span>
-          </button>
-        </div>
+        {/* ── عداد الصور — زاوية يسرى عليا ── */}
+        <button
+          onClick={() => openGallery(activeIdx)}
+          className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-black/35 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/30 px-2.5 py-1.5 rounded-full transition-all group/cnt"
+        >
+          <ImageIcon size={12} className="text-white/60 group-hover/cnt:text-[#F5C518] transition-colors" />
+          <span className="text-white/70 text-[10px] font-black leading-none group-hover/cnt:text-[#F5C518] transition-colors">{activeIdx+1}/{gallery.length}</span>
+        </button>
 
-        {/* ── شريط الـ thumbnails — مدمج مع الصورة فوق الـ gradient ── */}
-        <div className="absolute bottom-0 inset-x-0 z-10 px-4 pb-5 pt-8" dir="rtl">
-
-          {/* اسم المنتج فوق الـ strip مباشرة */}
-          <div className="flex items-end justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-[#F5C518] text-[9px] font-black tracking-[0.2em] uppercase opacity-80">WIND</span>
-              <span className="text-white/20 text-xs">·</span>
-              <span className="text-white/50 text-[9px] font-bold">{displayCategory}</span>
+        {/* ── اسم المنتج + تقييم فوق الـ thumbnail strip ── */}
+        <div className="absolute bottom-0 inset-x-0 z-10 px-4 pb-3.5" dir="rtl">
+          <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#F5C518] text-[8px] font-black tracking-[0.22em] uppercase">WIND</span>
+              <span className="text-white/20 text-[9px]">·</span>
+              <span className="text-white/45 text-[8px] font-bold">{displayCategory}</span>
             </div>
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_,i) => (
-                <Star key={i} size={10} className={i < Math.round(product.rating||5) ? "text-[#F5C518]" : "text-white/15"} fill={i < Math.round(product.rating||5) ? "#F5C518" : "transparent"} />
+            <div className="flex items-center gap-0.5">
+              {[...Array(5)].map((_,i)=>(
+                <Star key={i} size={9} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/15"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />
               ))}
-              <span className="text-white/40 text-[9px] mr-0.5">{product.rating || "4.9"}</span>
+              <span className="text-white/35 text-[8px] font-bold mr-0.5">{product.rating||"4.9"}</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* الـ thumbnails */}
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar-horizontal items-end pb-1">
-            {gallery.filter(Boolean).map((img, idx) => (
+      {/* ══════════════════════════════════════════
+           THUMBNAIL STRIP — منفصل تماماً تحت الصورة
+           Pattern: Nike PDP thumbnail row
+      ══════════════════════════════════════════ */}
+      <div className="bg-[#0e0e0e] border-b border-white/5 px-3 py-3" dir="rtl">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar-horizontal items-stretch">
+          {gallery.filter(Boolean).map((img, idx) => {
+            const isActive = activeImage === img;
+            return (
               <button
                 key={idx}
                 onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
-                className={`relative flex-shrink-0 overflow-hidden transition-all duration-400 thumb-item ${
-                  activeImage === img
-                    ? "thumb-active"
-                    : "thumb-inactive"
-                }`}
+                className="relative flex-shrink-0 overflow-hidden transition-all duration-300 focus:outline-none"
                 style={{
-                  width:  activeImage === img ? "64px" : "48px",
-                  height: activeImage === img ? "84px" : "64px",
-                  borderRadius: "10px",
-                  border: activeImage === img ? "2px solid #F5C518" : "1.5px solid rgba(255,255,255,0.08)",
-                  boxShadow: activeImage === img
-                    ? "0 0 0 1px rgba(245,197,24,0.15), 0 8px 24px rgba(0,0,0,0.6), 0 0 16px rgba(245,197,24,0.2)"
-                    : "0 4px 12px rgba(0,0,0,0.4)",
-                  opacity: activeImage === img ? 1 : 0.55,
+                  width:        isActive ? "58px" : "48px",
+                  height:       isActive ? "76px" : "64px",
+                  borderRadius: "8px",
+                  border:       isActive ? "2px solid #F5C518" : "1.5px solid rgba(255,255,255,0.07)",
+                  opacity:      isActive ? 1       : 0.5,
+                  boxShadow:    isActive ? "0 0 0 2px rgba(245,197,24,0.12), 0 4px 16px rgba(0,0,0,0.5)" : "0 2px 8px rgba(0,0,0,0.3)",
+                  transition:   "width .3s cubic-bezier(.25,1,.5,1), height .3s cubic-bezier(.25,1,.5,1), opacity .25s, border-color .25s, box-shadow .25s",
                 }}
               >
                 <img
                   src={getImageUrl(img)}
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-full object-cover object-top transition-transform duration-500 hover:scale-110"
+                  className="w-full h-full object-cover object-top"
                   alt={`لقطة ${idx+1}`}
+                  style={{transition:"transform .5s cubic-bezier(.25,1,.5,1)"}}
                 />
                 {/* شريط ذهبي أسفل الـ active */}
-                {activeImage === img && (
-                  <div className="absolute bottom-0 inset-x-0 h-[2.5px] bg-[#F5C518]" style={{borderRadius:"0 0 8px 8px"}} />
-                )}
-                {/* رقم الصورة على غير الـ active */}
-                {activeImage !== img && (
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30">
-                    <span className="text-white text-[10px] font-black">{idx+1}</span>
-                  </div>
+                {isActive && (
+                  <div className="absolute bottom-0 inset-x-0 h-[2px] bg-[#F5C518]" />
                 )}
               </button>
-            ))}
+            );
+          })}
 
-            {/* زر "عرض كل الصور" */}
-            <button
-              onClick={() => openGallery(0)}
-              className="flex-shrink-0 flex flex-col items-center justify-center gap-1 rounded-[10px] border border-white/10 bg-black/40 backdrop-blur-sm hover:border-[#F5C518]/40 hover:bg-black/60 transition-all"
-              style={{width:"48px", height:"64px"}}
-            >
-              <div className="grid grid-cols-2 gap-0.5">
-                {[0,1,2,3].map(i => <div key={i} className="w-2 h-2 rounded-[2px] bg-white/25" />)}
-              </div>
-              <span className="text-[8px] font-black text-white/40">كل</span>
-            </button>
-          </div>
+          {/* زر "كل الصور" */}
+          <button
+            onClick={() => openGallery(0)}
+            className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 rounded-lg border border-white/7 bg-white/3 hover:border-[#F5C518]/30 hover:bg-white/5 transition-all"
+            style={{width:"48px", height:"64px", minWidth:"48px"}}
+          >
+            <div className="grid grid-cols-2 gap-[3px]">
+              {[0,1,2,3].map(i=>(
+                <div key={i} className="w-[7px] h-[7px] rounded-[2px] bg-white/20" />
+              ))}
+            </div>
+            <span className="text-[7px] font-black text-white/30 tracking-wider">ALL</span>
+          </button>
         </div>
       </div>
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
