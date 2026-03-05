@@ -373,117 +373,65 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* ✅ Poster + Info — تصميم جديد كلياً */}
-        <div className="border-t border-[#1e1e1e] pt-5 mt-1">
-
-          {/* ── الصف العلوي: الـ poster + بيانات السعر ── */}
-          <div className="flex gap-0 items-stretch">
-
-            {/* الـ Poster — أكبر، نسبة portrait احترافية، مع لافتة اللون */}
-            <div
-              className="relative flex-shrink-0 cursor-pointer overflow-hidden poster-card"
-              style={{width:"110px", minWidth:"110px", borderRadius:"14px"}}
-              onClick={() => setImageZoomModalOpen(true)}
-            >
-              {/* الصورة */}
-              <img
-                src={getImageUrl(currentColorImage())}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover object-top transition-transform duration-700 poster-img"
-                alt="poster"
-                style={{minHeight:"160px"}}
-              />
-
-              {/* gradient overlay من الأسفل */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none rounded-[14px]"></div>
-
-              {/* اللون المحدد في الأسفل */}
-              {selectedColor && (
-                <div className="absolute bottom-2 inset-x-1.5 flex items-center justify-center">
-                  <span className="text-[9px] font-black text-white/80 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 truncate max-w-full" style={{fontFamily:"Cairo,sans-serif"}}>
-                    {selectedColor}
-                  </span>
-                </div>
-              )}
-
-              {/* أيقونة تكبير — top right */}
-              <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm border border-white/10 rounded-full p-1 opacity-70 hover:opacity-100 hover:border-[#F5C518]/40 transition-all">
-                <Search size={11} className="text-white" />
-              </div>
+        <div className="flex gap-4 items-start border-t border-[#333]/50 pt-5">
+          <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
+            <img src={getImageUrl(currentColorImage())} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
+            <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
+              <Plus size={14} className="text-white" />
             </div>
-
-            {/* ── كارت المعلومات — تصميم panel مميز ── */}
-            <div className="flex-1 mr-3 flex flex-col justify-between bg-[#161616] border border-[#1f1f1f] rounded-2xl px-4 py-3.5 overflow-hidden relative">
-
-              {/* خط ذهبي رفيع في الأعلى */}
-              <div className="absolute top-0 right-0 left-0 h-[2px] rounded-t-2xl" style={{background:"linear-gradient(90deg,transparent,#F5C518 40%,#F5C518 60%,transparent)"}}></div>
-
-              {/* الـ badges */}
-              <div className="flex items-center flex-wrap gap-1.5 mb-2">
-                <span className="text-[#F5C518] text-[8px] font-black tracking-[0.18em] uppercase">WIND</span>
-                <span className="text-white/15 text-[9px]">|</span>
-                <span className="text-gray-400 text-[9px] font-bold">{displayCategory}</span>
-                <span className="mr-auto border border-[#2a2a2a] rounded-md px-1.5 py-0.5 text-[8px] font-black text-white/30 bg-[#111] tracking-widest">W-24</span>
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+              <div className="bg-black/60 p-2.5 rounded-full border border-[#F5C518]/50 text-white shadow-lg">
+                <Search size={20} />
               </div>
-
-              {/* السعر — المحور الرئيسي */}
-              <div className="flex items-baseline gap-1 my-1">
-                <span
-                  className="text-white leading-none"
-                  style={{fontFamily:"Impact,sans-serif", fontSize:"2.6rem", letterSpacing:"1px"}}
-                >
-                  {product.price}
-                </span>
-                <div className="flex flex-col items-start mr-0.5">
-                  <span className="text-[#F5C518] text-xs font-black leading-none">ج.م</span>
-                  {product.compareAtPrice && (
-                    <span className="text-[10px] text-white/30 line-through leading-none mt-0.5">{product.compareAtPrice}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* الخصم لو موجود */}
-              {product.compareAtPrice && (
-                <div className="inline-flex items-center gap-1 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5 mb-2 w-fit">
-                  <span className="text-green-400 text-[9px] font-black">
-                    وفّر {product.compareAtPrice - product.price} ج.م
-                  </span>
-                </div>
-              )}
-
-              {/* الفاصل */}
-              <div className="w-full h-px bg-white/5 my-2"></div>
-
-              {/* المخزون + الوصف */}
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                </span>
-                <span className="text-[10px] font-bold text-green-400" style={{fontFamily:"Cairo,sans-serif"}}>
-                  {product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر" : "غير متوفر"}
-                </span>
-              </div>
-
-              {product.description && (
-                <div className="relative overflow-hidden flex-1 min-h-0">
-                  <p className="text-[10px] leading-relaxed text-white/35 text-right line-clamp-2" style={{fontFamily:"Tajawal,sans-serif"}}>
-                    {shortDescription}
-                  </p>
-                  <button
-                    onClick={() => setDescModalOpen(true)}
-                    className="text-[#F5C518]/80 hover:text-[#F5C518] text-[9px] font-black flex items-center gap-1 mt-1 transition-colors"
-                  >
-                    <Info size={10} />
-                    التفاصيل والخامات
-                  </button>
-                </div>
-              )}
             </div>
           </div>
-        </div>
 
+          <div className="flex-1 flex flex-col h-40 md:h-48 justify-between">
+            <div>
+              <div className="flex items-center flex-wrap gap-1.5 mb-2.5">
+                <span className="text-[#F5C518] text-[9px] md:text-[10px] font-bold tracking-wider">WIND Series</span>
+                <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
+                <span className="text-gray-300 text-[9px] md:text-[10px] font-bold">{displayCategory}</span>
+                <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
+                <span className="border border-[#444] rounded px-1.5 py-0.5 text-[9px] font-bold text-gray-300 bg-[#1a1a1a]">WIND-24</span>
+              </div>
+
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '1px' }} className="text-3xl md:text-4xl font-normal text-white">{product.price}</span>
+                <span className="text-sm font-bold text-[#F5C518]">ج.م</span>
+                {product.compareAtPrice && (
+                  <span className="text-xs text-gray-500 line-through mr-1">{product.compareAtPrice} ج.م</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 mt-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-[11px] font-bold text-green-400">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
+              </div>
+            </div>
+
+            {product.description && (
+              <div className="relative mt-2 flex flex-col justify-end overflow-hidden flex-1">
+                <div className="relative flex-1 overflow-hidden">
+                  <p className="text-[11px] leading-relaxed text-gray-400 text-right pr-1" style={{fontFamily:"Tajawal,sans-serif"}}>
+                    {shortDescription}
+                  </p>
+                  <div className="absolute bottom-0 w-full h-8 bg-gradient-to-t from-[#121212] via-[#121212]/90 to-transparent pointer-events-none"></div>
+                </div>
+                <button 
+                  onClick={() => setDescModalOpen(true)}
+                  className="text-[#F5C518] text-[10px] font-bold flex items-center gap-1 hover:underline underline-offset-4 w-fit pt-1 pr-1"
+                >
+                  <Info size={12} />
+                  عرض تفاصيل المنتج والخامات
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
           {safeColors.length > 0 && (
             <div>
