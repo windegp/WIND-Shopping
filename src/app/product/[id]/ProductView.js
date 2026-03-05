@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link"; // ✅ تم إضافة استيراد Link
+import Link from "next/link";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
@@ -27,14 +27,12 @@ export default function ProductPage() {
   const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); 
   const [isDescModalOpen, setDescModalOpen] = useState(false); 
   
-  // ✅ ستيت المنتجات المشابهة
   const [relatedProducts, setRelatedProducts] = useState([]);
 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const colorsRef   = useRef(null);
 
-  // منع الـ Scroll للصفحة الخلفية عند فتح أي نافذة
   useEffect(() => {
     if (isGalleryOpen || isImageZoomModalOpen || isDescModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -47,6 +45,25 @@ export default function ProductPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
+      
+      // ✅ دالة ذكية تدعم collections (سواء نص أو مصفوفة) و type
+      const getRelated = (currentId, refValue) => {
+        if (!refValue) {
+          return staticProducts.filter(p => p.id.toString() !== currentId.toString()).slice(0, 5);
+        }
+        
+        let related = staticProducts.filter(p => {
+          const matchCol = Array.isArray(p.collections) ? p.collections.includes(refValue) : p.collections === refValue;
+          const matchType = p.type === refValue;
+          return (matchCol || matchType) && p.id.toString() !== currentId.toString();
+        });
+
+        if (related.length === 0) {
+          related = staticProducts.filter(p => p.id.toString() !== currentId.toString());
+        }
+        return related.slice(0, 5);
+      };
+
       const sp = staticProducts.find(p => p.id.toString() === id.toString());
       if (sp) {
         setProduct(sp);
@@ -54,18 +71,14 @@ export default function ProductPage() {
         if (sp.sizes?.length  > 0) setSelectedSize(sp.sizes[0]);
         if (sp.colors?.length > 0) setSelectedColor(sp.colors[0].name || sp.colors[0]);
         
-        // جلب المنتجات المشابهة (Static)
-        const currentCategory = sp.category || sp.type;
-        if (currentCategory) {
-          const related = staticProducts
-            .filter(p => (p.category === currentCategory || p.type === currentCategory) && p.id.toString() !== id.toString())
-            .slice(0, 5);
-          setRelatedProducts(related);
-        }
+        // جلب قيمة الـ collections أو الـ type
+        const spRefValue = (Array.isArray(sp.collections) ? sp.collections[0] : sp.collections) || sp.type;
+        setRelatedProducts(getRelated(id, spRefValue));
         
         setLoading(false);
         return;
       }
+      
       try {
         const snap = await getDoc(doc(db, "products", id));
         if (snap.exists()) {
@@ -85,14 +98,8 @@ export default function ProductPage() {
           if (iC) setSelectedColor(iC);
           else { const a = fb.options?.colors; if (Array.isArray(a) && a.length) setSelectedColor(a[0].name || a[0]); }
           
-          // جلب المنتجات المشابهة (Firebase)
-          const currentCategory = fb.category || fb.type;
-          if (currentCategory) {
-            const related = staticProducts
-              .filter(p => (p.category === currentCategory || p.type === currentCategory) && p.id.toString() !== id.toString())
-              .slice(0, 5);
-            setRelatedProducts(related);
-          }
+          const fbRefValue = (Array.isArray(fb.collections) ? fb.collections[0] : fb.collections) || fb.type;
+          setRelatedProducts(getRelated(id, fbRefValue));
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -100,7 +107,6 @@ export default function ProductPage() {
     fetchProduct();
   }, [id]);
 
-  // حل مشكلة الثقل (Performance Optimization) 
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";
     let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
@@ -175,21 +181,22 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
 
+  // تجهيز قيمة الـ Category/Collection للعرض
+  const displayCategory = (Array.isArray(product.collections) ? product.collections[0] : product.collections) || product.type || 'المنتجات';
+
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
-      {/* 1. مسار الصفحة (Breadcrumbs) */}
       <div className="bg-[#0D0D0D] border-t border-white/10">
         <div className="pt-3 pb-3 px-4 max-w-4xl mx-auto text-[10px] md:text-xs text-gray-500 flex items-center gap-2 overflow-x-auto hide-scrollbar-horizontal whitespace-nowrap" dir="rtl" style={{fontFamily:"Cairo,sans-serif"}}>
           <span className="hover:text-white cursor-pointer transition-colors">الرئيسية</span> 
           <span>/</span> 
-          <span className="hover:text-white cursor-pointer transition-colors">{product.category || 'المنتجات'}</span> 
+          <span className="hover:text-white cursor-pointer transition-colors">{displayCategory}</span> 
           <span>/</span> 
           <span className="text-[#F5C518]">{product.title}</span>
         </div>
       </div>
 
-      {/* 2. القسم السينمائي العلوي (الصورة الرئيسية خالية من أسهم التقليب) */}
       <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer" onClick={() => openGallery(activeIdx)}>
         <img 
           src={getImageUrl(activeImage)} 
@@ -200,7 +207,6 @@ export default function ProductPage() {
         
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-[#121212]/30 pointer-events-none"></div>
         
-        {/* أيقونات التفاعل */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10" onClick={e => e.stopPropagation()}>
           <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
             <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
@@ -225,7 +231,6 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* 3. شريط الصور المنفصلة أسفل الصورة الرئيسية */}
       <div className="pt-4 pb-2 px-4 max-w-4xl mx-auto" dir="rtl">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar-horizontal items-center">
           {gallery.filter(Boolean).map((img, idx) => (
@@ -246,7 +251,6 @@ export default function ProductPage() {
 
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
         
-        {/* 4. اسم المنتج والتقييمات */}
         <div className="mb-4 pt-2">
           <h1 className="text-xl md:text-2xl leading-tight font-black text-white mb-2 tracking-tight">{product.title}</h1>
           <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -257,9 +261,7 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* 5 & 6. البوستر المصغر، السعر، والنبذة المتلاشية */}
         <div className="flex gap-4 items-start border-t border-[#333]/50 pt-5">
-          {/* البوستر المصغر */}
           <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
             <img src={getImageUrl(currentColorImage())} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
             <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
@@ -274,11 +276,10 @@ export default function ProductPage() {
 
           <div className="flex-1 flex flex-col h-40 md:h-48 justify-between">
             <div>
-              {/* التاجات */}
               <div className="flex items-center flex-wrap gap-1.5 mb-2.5">
                 <span className="text-[#F5C518] text-[9px] md:text-[10px] font-bold tracking-wider">WIND Series</span>
                 <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
-                <span className="text-gray-300 text-[9px] md:text-[10px] font-bold">{product.category || product.type || "أزياء"}</span>
+                <span className="text-gray-300 text-[9px] md:text-[10px] font-bold">{displayCategory}</span>
                 <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
                 <span className="border border-[#444] rounded px-1.5 py-0.5 text-[9px] font-bold text-gray-300 bg-[#1a1a1a]">WIND-24</span>
               </div>
@@ -300,7 +301,6 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* النبذة المتلاشية */}
             {product.description && (
               <div className="relative mt-2 flex flex-col justify-end overflow-hidden flex-1">
                 <div className="relative flex-1 overflow-hidden">
@@ -321,7 +321,6 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* الألوان */}
         <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
           {safeColors.length > 0 && (
             <div>
@@ -350,7 +349,6 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* المقاسات */}
           {safeSizes.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -375,7 +373,6 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* زر السلة والعداد */}
           <div className="pt-2">
             <div className="flex gap-2">
               <button onClick={() => addToCart({...product, selectedSize, selectedColor, image: getImageUrl(activeImage), qty: quantity})} className="pay-btn flex-1 text-black font-black text-base py-3.5 rounded-[8px] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,197,24,0.15)] transition-all group/cta" style={{fontFamily:"Cairo,sans-serif"}}>
@@ -392,14 +389,12 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* شريط الثقة للشحن */}
         <div className="mt-5 flex justify-between items-center bg-[#1a1a1a] p-3 rounded-lg border border-[#333]">
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><Truck size={14} className="text-[#F5C518]" /> شحن سريع</div>
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><Eye size={14} className="text-[#F5C518]" /> معاينة قبل الاستلام</div>
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><ShieldCheck size={14} className="text-[#F5C518]" /> استرجاع سهل</div>
         </div>
 
-        {/* بوابات الدفع الآمنة */}
         <div className="mt-3 flex flex-col items-center justify-center bg-[#121212] p-4 rounded-lg border border-[#333] gap-3">
           <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
             <ShieldCheck size={14} className="text-green-500" />
@@ -413,7 +408,6 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* التقييمات */}
         <div className="mt-6 flex flex-col items-center justify-center border-t border-[#333]/50 pt-6 gap-1.5">
           <div className="flex gap-1">
             {[...Array(5)].map((_,i) => <Star key={i} size={16} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
@@ -424,7 +418,6 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* الوصف التفصيلي */}
         {product.description && (
           <div className="py-8 border-t border-[#333]/50 mt-6">
             <div className="flex items-center gap-2 mb-6">
@@ -437,7 +430,6 @@ export default function ProductPage() {
           </div>
         )}
 
-        {/* ✅ قسم منتجات قد تعجبك (الجديد) */}
         {relatedProducts.length > 0 && (
           <div className="py-8 border-t border-[#333]/50 mt-4">
             <div className="flex items-center gap-2 mb-6">
@@ -487,11 +479,6 @@ export default function ProductPage() {
 
       </div>
 
-      {/* ========================================== */}
-      {/* 🎬 المودالات (المعرض، العدسة، المقاسات، الوصف) */}
-      {/* ========================================== */}
-
-      {/* مودال معرض الصور */}
       {isGalleryOpen && (
         <div 
           className="fixed inset-0 z-[99999] bg-black/95 flex flex-col gallery-enter backdrop-blur-md"
@@ -536,7 +523,6 @@ export default function ProductPage() {
         </div>
       )}
 
-      {/* مودال تكبير صورة اللون بالبوستر */}
       {isImageZoomModalOpen && (
         <div 
           className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-[fadeIn_0.3s_ease-out]"
@@ -557,7 +543,6 @@ export default function ProductPage() {
         </div>
       )}
 
-      {/* مودال الوصف التفصيلي */}
       {isDescModalOpen && (
         <div className="fixed inset-0 z-[99999] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
           <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
@@ -579,9 +564,6 @@ export default function ProductPage() {
 
       <SizeChartModal isOpen={isSizeGuideOpen} onClose={() => setSizeGuideOpen(false)} product={product} />
 
-      {/* ========================================== */}
-      {/* 🎨 التنسيقات العامة (CSS) */}
-      {/* ========================================== */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@300;400;500;700&display=swap');
         
@@ -615,7 +597,6 @@ export default function ProductPage() {
         .pay-btn:hover::after { animation: shine 0.7s linear; }
         .pay-btn:hover { background: #e6b800; }
 
-        /* تنسيقات الوصف الداخلي (Dark Mode) */
         .dark-wind-tabs .wind-tabs-container { background:transparent!important }
         .dark-wind-tabs .wind-tabs-container details { background:#161616!important; border-bottom:1px solid #1e1e1e!important; border-radius:10px; margin-bottom:8px; padding:0 16px!important; transition:all .3s }
         .dark-wind-tabs .wind-tabs-container details[open] { border-color:#F5C518!important; background:#181818!important }
