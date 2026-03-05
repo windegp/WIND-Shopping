@@ -22,12 +22,23 @@ export default function ProductPage() {
   const [isWishlisted, setIsWishlisted]     = useState(false);
   const [isGalleryOpen, setGalleryOpen]     = useState(false);
   const [galleryIdx, setGalleryIdx]         = useState(0);
-  const [isZoomed, setIsZoomed]             = useState(false); // لحالة التكبير داخل المعرض
+  const [isZoomed, setIsZoomed]             = useState(false); 
   const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); 
   const [isDescModalOpen, setDescModalOpen] = useState(false); 
 
   const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
   const colorsRef   = useRef(null);
+
+  // ✅ منع الـ Scroll في الصفحة لما أي Modal يكون مفتوح
+  useEffect(() => {
+    if (isGalleryOpen || isImageZoomModalOpen || isDescModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isGalleryOpen, isImageZoomModalOpen, isDescModalOpen]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -95,12 +106,26 @@ export default function ProductPage() {
   const openGallery = idx => { setGalleryIdx(idx); setIsZoomed(false); setGalleryOpen(true); };
   const galleryNext = () => { setGalleryIdx(i => (i + 1) % gallery.length); setIsZoomed(false); };
   const galleryPrev = () => { setGalleryIdx(i => (i - 1 + gallery.length) % gallery.length); setIsZoomed(false); };
-  const onTouchStart = e => { touchStartX.current = e.touches[0].clientX; };
+  
+  // ✅ دعم التمرير وإغلاق المعرض بالسحب لتحت
+  const onTouchStart = e => { 
+    touchStartX.current = e.touches[0].clientX; 
+    touchStartY.current = e.touches[0].clientY; 
+  };
   const onTouchEnd   = e => {
-    if (touchStartX.current === null) return;
+    if (touchStartX.current === null || touchStartY.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(dx) > 50) dx > 0 ? galleryPrev() : galleryNext();
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    
+    if (Math.abs(dy) > 100 && Math.abs(dy) > Math.abs(dx)) {
+      // سحب لأعلى أو لأسفل -> اغلق المعرض
+      setGalleryOpen(false);
+    } else if (Math.abs(dx) > 50) {
+      // سحب يمين وشمال -> قلب الصور
+      dx > 0 ? galleryPrev() : galleryNext();
+    }
     touchStartX.current = null;
+    touchStartY.current = null;
   };
 
   let safeSizes = [], safeColors = [];
@@ -121,6 +146,18 @@ export default function ProductPage() {
     return gallery[1] || activeImage;
   };
 
+  const stripHtml = (html) => {
+    if (!html) return "";
+    let clean = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
+    const doc = new DOMParser().parseFromString(clean, 'text/html');
+    let text = doc.body.textContent || "";
+    const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
+    keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
+    return text.trim();
+  };
+  
+  const shortDescription = stripHtml(product.description).substring(0, 110) + "...";
+
   const getClosedDescriptionHTML = () => {
     if (!product.description) return "";
     return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
@@ -129,78 +166,103 @@ export default function ProductPage() {
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
-      {/* 1. مسار الصفحة (Breadcrumbs) */}
-      <div className="pt-4 pb-2 px-4 max-w-4xl mx-auto text-[10px] md:text-xs text-gray-500 flex items-center gap-2 overflow-x-auto hide-scrollbar-horizontal whitespace-nowrap" dir="rtl" style={{fontFamily:"Cairo,sans-serif"}}>
-        <span className="hover:text-white cursor-pointer transition-colors">الرئيسية</span> 
-        <span>/</span> 
-        <span className="hover:text-white cursor-pointer transition-colors">{product.category || 'المنتجات'}</span> 
-        <span>/</span> 
-        <span className="text-[#F5C518]">{product.title}</span>
+      {/* ========================================== */}
+      {/* 1. مسار الصفحة (Breadcrumbs) بتصميم متناسق مع الهيدر */}
+      {/* ========================================== */}
+      <div className="bg-[#0D0D0D] border-b border-white/10">
+        <div className="pt-3 pb-3 px-4 max-w-4xl mx-auto text-[10px] md:text-xs text-gray-500 flex items-center gap-2 overflow-x-auto hide-scrollbar-horizontal whitespace-nowrap" dir="rtl" style={{fontFamily:"Cairo,sans-serif"}}>
+          <span className="hover:text-white cursor-pointer transition-colors">الرئيسية</span> 
+          <span>/</span> 
+          <span className="hover:text-white cursor-pointer transition-colors">{product.category || 'المنتجات'}</span> 
+          <span>/</span> 
+          <span className="text-[#F5C518]">{product.title}</span>
+        </div>
       </div>
 
-      {/* 2. القسم السينمائي العلوي (الصورة الرئيسية) */}
-      <div className="relative w-full h-[60vh] md:h-[70vh] bg-black group cursor-pointer" onClick={() => openGallery(activeIdx)}>
+      {/* ========================================== */}
+      {/* 2. القسم السينمائي العلوي (الصورة الرئيسية والكروت المتداخلة) */}
+      {/* ========================================== */}
+      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer" onClick={() => openGallery(activeIdx)}>
         <img 
           src={getImageUrl(activeImage)} 
           alt={product.title} 
-          className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
+          className="w-full h-full object-cover object-top opacity-85 transition-all duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-transparent pointer-events-none"></div>
         
-        {/* أيقونات التفاعل */}
+        {/* تدرج لوني علوي للحفاظ على تباين الأيقونات */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-[#121212]/30 pointer-events-none"></div>
+        
+        {/* أيقونات التفاعل (يمين) */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10" onClick={e => e.stopPropagation()}>
           <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
-            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
               <ImageIcon size={20} />
             </div>
             <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
           </button>
           
           <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
-            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
               <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
             </div>
             <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
           </button>
           
           <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
-            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+            <div className="bg-black/50 p-2.5 rounded-full backdrop-blur-md border border-white/20">
               <Share2 size={20} />
             </div>
             <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
           </button>
         </div>
 
+        {/* سهم التقليب (يسار) */}
         <button 
           onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
+          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 p-3 rounded-full backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
         >
           <ChevronLeft size={40} strokeWidth={1.5} />
         </button>
-      </div>
 
-      {/* 3. شريط الكتالوج السينمائي المتداخل */}
-      <div className="relative -mt-14 z-20 px-4 max-w-4xl mx-auto group/strip" dir="rtl">
-        <div className="flex gap-2.5 overflow-x-auto hide-scrollbar-horizontal py-2 px-1 items-end transition-all duration-300 origin-bottom hover:scale-[1.02] hover:-translate-y-1">
-          {gallery.filter(Boolean).map((img, idx) => (
-            <button 
-              key={idx}
-              onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
-              className={`flex-shrink-0 w-16 h-24 md:w-20 md:h-28 rounded-lg overflow-hidden transition-all duration-300 shadow-lg ${activeImage === img ? "ring-2 ring-[#F5C518] scale-105" : "border border-white/10 opacity-60 hover:opacity-100"}`}
-            >
-              <img src={getImageUrl(img)} className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
-            </button>
-          ))}
+        {/* ✅ شريط الكتالوج المتداخل (جزء من الصورة الرئيسية في الأسفل) */}
+        <div 
+          className="absolute bottom-0 inset-x-0 pt-20 pb-4 bg-gradient-to-t from-[#121212] via-[#121212]/80 to-transparent flex flex-col justify-end z-20"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="relative max-w-4xl mx-auto w-full group/strip" dir="rtl">
+            {/* حواف متدرجة يمين ويسار لإخفاء الصور الجانبية بنعومة */}
+            <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[#121212] to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-[#121212] to-transparent z-10 pointer-events-none"></div>
+            
+            {/* شريط الصور المصغرة - يتسع بنعومة عند التمرير */}
+            <div className="flex gap-2.5 overflow-x-auto hide-scrollbar-horizontal py-2 px-6 items-center transition-all duration-500 ease-out group-hover/strip:gap-4">
+              {gallery.filter(Boolean).map((img, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
+                  className={`flex-shrink-0 rounded-lg overflow-hidden transition-all duration-300 shadow-lg ${
+                    activeImage === img 
+                      ? "w-16 h-24 md:w-20 md:h-28 ring-2 ring-[#F5C518] scale-105 z-10" 
+                      : "w-12 h-16 md:w-16 md:h-24 border border-white/10 opacity-50 hover:opacity-100 hover:scale-105"
+                  }`}
+                >
+                  <img src={getImageUrl(img)} className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* ========================================== */}
+      {/* 3. باقي تفاصيل المنتج */}
+      {/* ========================================== */}
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
-        {/* 4. اسم المنتج والتفاصيل */}
+        
+        {/* الاسم والتصنيف (بدون النبذة) */}
         <div className="mb-4 pt-2">
-          {/* تصغير خط اسم المنتج */}
           <h1 className="text-xl md:text-2xl leading-tight font-black text-white mb-2 tracking-tight">{product.title}</h1>
-          
-          <div className="flex items-center gap-3 text-[11px] md:text-xs text-gray-400 font-medium mb-3">
+          <div className="flex items-center gap-3 text-[11px] md:text-xs text-gray-400 font-medium">
             <span className="text-[#F5C518]">WIND Series</span>
             <span>•</span>
             <span>{product.category || product.type || "أزياء"}</span>
@@ -209,8 +271,9 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* البوستر المصغر والسعر */}
+        {/* البوستر المصغر والسعر ومكان النبذة الجديد */}
         <div className="flex gap-4 items-start border-t border-[#333]/50 pt-5">
+          {/* البوستر المصغر */}
           <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-md overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
             <img src={getImageUrl(currentColorImage())} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
             <div className="absolute top-0 left-0 bg-black/70 px-1 py-0.5 rounded-br-md">
@@ -244,17 +307,35 @@ export default function ProductPage() {
               </span>
               <span className="text-[11px] font-bold text-green-400">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
             </div>
+
+            {/* ✅ النبذة عن المنتج وزر التفاصيل في المساحة الفارغة المتبقية */}
+            {product.description && (
+              <div className="mt-4 bg-[#1a1a1a]/50 p-3 rounded-lg border border-[#333]/50">
+                <p className="text-[11px] leading-relaxed text-gray-400 mb-2 line-clamp-2" style={{fontFamily:"Tajawal,sans-serif"}}>
+                  {shortDescription}
+                </p>
+                <button 
+                  onClick={() => setDescModalOpen(true)}
+                  className="text-[#F5C518] text-[10px] font-bold flex items-center gap-1 hover:underline underline-offset-4 w-full justify-end"
+                >
+                  <Info size={12} />
+                  عرض تفاصيل المنتج والخامات
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 5. الألوان والمقاسات وزر أضف للسلة */}
+        {/* الألوان */}
         <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
-          {/* الألوان */}
           {safeColors.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-                <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>اختر اللون</span>
+                {/* ✅ ديناميكية الكلمة للون */}
+                <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>
+                  {safeColors.length > 1 ? "اختر اللون" : "اللون"}
+                </span>
                 {selectedColor && <span className="text-[#F5C518] text-[11px] bg-[#1a1a1a] border border-[#333] px-2.5 py-0.5 rounded" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
               </div>
               <div ref={colorsRef} className="flex flex-wrap gap-4">
@@ -265,7 +346,7 @@ export default function ProductPage() {
                   const isSel = selectedColor === name;
                   return (
                     <button key={i} onClick={() => { setSelectedColor(name); if (isImg) { setActiveImage(hi); setActiveIdx(0); } }} title={name} className="flex flex-col items-center group/c transition-all duration-300 ease-out">
-                      {/* إزالة اسم اللون من تحت الأيقونة والاكتفاء بالمربع الناعم */}
+                      {/* المربع الناعم بدون كتابة تحت */}
                       <div className={`w-11 h-11 rounded-[10px] overflow-hidden transition-all duration-300 ease-out ${isSel ? "ring-2 ring-[#F5C518] ring-offset-2 ring-offset-[#121212] shadow-[0_4px_12px_rgba(245,197,24,0.3)] scale-[1.05]" : "ring-1 ring-white/10 hover:ring-white/30 hover:shadow-[0_4px_10px_rgba(255,255,255,0.08)] hover:-translate-y-1"}`}>
                         {isImg ? <img src={hi} className="w-full h-full object-cover" alt={name} /> : <div style={{backgroundColor:hi}} className="w-full h-full" />}
                       </div>
@@ -282,7 +363,10 @@ export default function ProductPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-                  <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>اختر المقاس</span>
+                  {/* ✅ ديناميكية الكلمة للمقاس */}
+                  <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>
+                    {safeSizes.length > 1 ? "اختر المقاس" : "المقاس"}
+                  </span>
                   {selectedSize && <span className="text-[#F5C518] text-[11px] bg-[#1a1a1a] border border-[#333] px-2.5 py-0.5 rounded" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedSize}</span>}
                 </div>
                 <button onClick={() => setSizeGuideOpen(true)} className="text-[11px] text-[#F5C518] flex items-center gap-1.5 border border-[#F5C518]/20 hover:border-[#F5C518]/50 hover:bg-[#F5C518]/10 px-3 py-1.5 rounded-full transition-all" style={{fontFamily:"Cairo,sans-serif"}}>
@@ -299,31 +383,31 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* زر السلة والعداد في مسار الصفحة (بدون شريط ثابت) */}
+          {/* ✅ زر السلة والعداد (العداد أصغر وزر السلة أكبر وبدون قلب) */}
           <div className="pt-2">
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button onClick={() => addToCart({...product, selectedSize, selectedColor, image: getImageUrl(activeImage), qty: quantity})} className="pay-btn flex-1 text-black font-black text-base py-3.5 rounded-[8px] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,197,24,0.15)] transition-all group/cta" style={{fontFamily:"Cairo,sans-serif"}}>
                 <ShoppingBag size={18} className="transition-transform group-hover/cta:-translate-y-0.5" />
                 أضف إلي السلة — {(product.price * quantity)} ج.م
               </button>
               
-              <div className="flex items-center justify-between bg-[#1a1a1a] border border-[#333] rounded-[8px] px-2 w-[110px] shrink-0 transition-colors hover:border-[#F5C518]/40">
-                <button onClick={() => setQuantity(q => q + 1)} className="text-gray-400 hover:text-[#F5C518] p-2 transition-colors"><Plus size={16} /></button>
-                <span className="text-white font-bold text-base" style={{fontFamily:"Cairo,sans-serif"}}>{quantity}</span>
-                <button onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} className="text-gray-400 hover:text-[#F5C518] p-2 transition-colors"><Minus size={16} /></button>
+              <div className="flex items-center justify-between bg-[#1a1a1a] border border-[#333] rounded-[8px] px-1 w-[80px] shrink-0 transition-colors hover:border-[#F5C518]/40">
+                <button onClick={() => setQuantity(q => q + 1)} className="text-gray-400 hover:text-[#F5C518] p-1.5 transition-colors"><Plus size={16} /></button>
+                <span className="text-white font-bold text-sm" style={{fontFamily:"Cairo,sans-serif"}}>{quantity}</span>
+                <button onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} className="text-gray-400 hover:text-[#F5C518] p-1.5 transition-colors"><Minus size={16} /></button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 6. شريط الثقة للشحن */}
-        <div className="mt-6 flex justify-between items-center bg-[#1a1a1a] p-3 rounded-lg border border-[#333]">
+        {/* شريط الثقة للشحن */}
+        <div className="mt-5 flex justify-between items-center bg-[#1a1a1a] p-3 rounded-lg border border-[#333]">
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><Truck size={14} className="text-[#F5C518]" /> شحن سريع</div>
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><Eye size={14} className="text-[#F5C518]" /> معاينة قبل الاستلام</div>
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold"><ShieldCheck size={14} className="text-[#F5C518]" /> استرجاع سهل</div>
         </div>
 
-        {/* 7. بوابات الدفع الآمنة */}
+        {/* بوابات الدفع الآمنة */}
         <div className="mt-3 flex flex-col items-center justify-center bg-[#121212] p-4 rounded-lg border border-[#333] gap-3">
           <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
             <ShieldCheck size={14} className="text-green-500" />
@@ -332,13 +416,12 @@ export default function ProductPage() {
           <div className="flex items-center gap-4 text-gray-400">
              <CreditCard size={24} className="hover:text-white transition-colors"/>
              <Banknote size={24} className="hover:text-white transition-colors"/>
-             {/* أيقونات تعبيرية للبوابات المتاحة */}
              <div className="flex items-center gap-1 bg-[#1a1a1a] px-2 py-1 rounded text-[10px] border border-[#333] font-bold tracking-wider">INSTAPAY</div>
              <div className="flex items-center gap-1 bg-[#1a1a1a] px-2 py-1 rounded text-[10px] border border-[#333] font-bold tracking-wider">VISA</div>
           </div>
         </div>
 
-        {/* 8. التقييمات */}
+        {/* التقييمات */}
         <div className="mt-6 flex flex-col items-center justify-center border-t border-[#333]/50 pt-6 gap-1.5">
           <div className="flex gap-1">
             {[...Array(5)].map((_,i) => <Star key={i} size={16} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
@@ -367,11 +450,11 @@ export default function ProductPage() {
       {/* 🎬 المودالات (المعرض، العدسة، المقاسات) */}
       {/* ========================================== */}
 
-      {/* مودال معرض الصور (يغلق عند الضغط بالخارج ويدعم التكبير) */}
+      {/* ✅ مودال معرض الصور (z-index عالي جداً + إغلاق عند الضغط بالخارج + سحب للأسفل) */}
       {isGalleryOpen && (
         <div 
-          className="fixed inset-0 z-[100] bg-black/95 flex flex-col gallery-enter backdrop-blur-md"
-          onClick={() => setGalleryOpen(false)} // الإغلاق عند الضغط بالخارج
+          className="fixed inset-0 z-[99999] bg-black/95 flex flex-col gallery-enter backdrop-blur-md"
+          onClick={() => setGalleryOpen(false)} // يغلق عند الضغط خارج الصورة
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
@@ -388,9 +471,9 @@ export default function ProductPage() {
             className="flex-1 relative flex items-center justify-center overflow-hidden" 
             onTouchStart={onTouchStart} 
             onTouchEnd={onTouchEnd}
-            onClick={e => e.stopPropagation()} // منع الإغلاق عند الضغط داخل المنطقة دي إلا لو ضغطت على الصورة نفسها (حسب الرغبة، هنخليه هنا يمنع الإغلاق)
+            onClick={e => e.stopPropagation()} 
           >
-            {/* الصورة - مع دعم التكبير */}
+            {/* الصورة بتأثير التكبير */}
             <img 
               key={galleryIdx} 
               src={getImageUrl(gallery[galleryIdx])} 
@@ -416,7 +499,7 @@ export default function ProductPage() {
       {/* مودال تكبير صورة اللون بالبوستر */}
       {isImageZoomModalOpen && (
         <div 
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-[fadeIn_0.3s_ease-out]"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-[fadeIn_0.3s_ease-out]"
           onClick={() => setImageZoomModalOpen(false)}
         >
           <div className="relative w-full max-w-lg aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -429,6 +512,26 @@ export default function ProductPage() {
             </button>
             <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm border border-[#F5C518]/30">
               <span className="text-[#F5C518] font-bold text-sm">{selectedColor}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال الوصف من زر "عرض تفاصيل المنتج والخامات" */}
+      {isDescModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
+          <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
+            <div className="p-4 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] sticky top-0 z-10">
+              <h3 className="font-black text-lg text-white flex items-center gap-2">
+                <div className="w-1.5 h-5 bg-[#F5C518] rounded-full"></div>
+                معلومات المنتج والتفاصيل
+              </h3>
+              <button onClick={() => setDescModalOpen(false)} className="bg-[#242424] hover:bg-[#333] p-1.5 rounded-full text-gray-400 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto ql-editor-display dark-wind-tabs" dir="rtl">
+              <div dangerouslySetInnerHTML={{ __html: getClosedDescriptionHTML() }} />
             </div>
           </div>
         </div>
@@ -451,6 +554,14 @@ export default function ProductPage() {
         
         .hide-scrollbar-horizontal::-webkit-scrollbar { height: 0px; background: transparent; }
         .hide-scrollbar-horizontal { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* لاين كلامب للنبذة المختصرة إذا لم يدعمها المتصفح افتراضياً */
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;  
+          overflow: hidden;
+        }
 
         /* ✅ تأثير زر الإضافة اللامع */
         @keyframes shine {
