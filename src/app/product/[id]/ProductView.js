@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link"; // ✅ تم إضافة استيراد Link
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
@@ -25,6 +26,9 @@ export default function ProductPage() {
   const [isZoomed, setIsZoomed]             = useState(false); 
   const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); 
   const [isDescModalOpen, setDescModalOpen] = useState(false); 
+  
+  // ✅ ستيت المنتجات المشابهة
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -49,6 +53,16 @@ export default function ProductPage() {
         setActiveImage(sp.mainImage);
         if (sp.sizes?.length  > 0) setSelectedSize(sp.sizes[0]);
         if (sp.colors?.length > 0) setSelectedColor(sp.colors[0].name || sp.colors[0]);
+        
+        // جلب المنتجات المشابهة (Static)
+        const currentCategory = sp.category || sp.type;
+        if (currentCategory) {
+          const related = staticProducts
+            .filter(p => (p.category === currentCategory || p.type === currentCategory) && p.id.toString() !== id.toString())
+            .slice(0, 5);
+          setRelatedProducts(related);
+        }
+        
         setLoading(false);
         return;
       }
@@ -70,6 +84,15 @@ export default function ProductPage() {
           else { const a = fb.options?.sizes || fb.sizes; if (Array.isArray(a) && a.length) setSelectedSize(a[0]); }
           if (iC) setSelectedColor(iC);
           else { const a = fb.options?.colors; if (Array.isArray(a) && a.length) setSelectedColor(a[0].name || a[0]); }
+          
+          // جلب المنتجات المشابهة (Firebase)
+          const currentCategory = fb.category || fb.type;
+          if (currentCategory) {
+            const related = staticProducts
+              .filter(p => (p.category === currentCategory || p.type === currentCategory) && p.id.toString() !== id.toString())
+              .slice(0, 5);
+            setRelatedProducts(related);
+          }
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -77,8 +100,7 @@ export default function ProductPage() {
     fetchProduct();
   }, [id]);
 
-  // ✅ حل مشكلة الثقل (Performance Optimization) 
-  // منعنا الدالة من إنها تشتغل مع كل كليك عن طريق useMemo
+  // حل مشكلة الثقل (Performance Optimization) 
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";
     let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
@@ -169,7 +191,6 @@ export default function ProductPage() {
 
       {/* 2. القسم السينمائي العلوي (الصورة الرئيسية خالية من أسهم التقليب) */}
       <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group overflow-hidden cursor-pointer" onClick={() => openGallery(activeIdx)}>
-        {/* ✅ تحسين الأداء: decoding="async" لتسريع الريندر */}
         <img 
           src={getImageUrl(activeImage)} 
           alt={product.title} 
@@ -217,7 +238,6 @@ export default function ProductPage() {
                   : "border border-[#333] opacity-60 hover:opacity-100"
               }`}
             >
-              {/* ✅ تحسين الأداء: loading="lazy" للصور المصغرة */}
               <img src={getImageUrl(img)} loading="lazy" decoding="async" className="w-full h-full object-cover" alt={`لقطة ${idx+1}`} />
             </button>
           ))}
@@ -393,7 +413,7 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* ✅ تم إرجاع قسم التقييمات هنا */}
+        {/* التقييمات */}
         <div className="mt-6 flex flex-col items-center justify-center border-t border-[#333]/50 pt-6 gap-1.5">
           <div className="flex gap-1">
             {[...Array(5)].map((_,i) => <Star key={i} size={16} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
@@ -404,7 +424,7 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* ✅ تم إرجاع قسم الوصف التفصيلي في نهاية الصفحة */}
+        {/* الوصف التفصيلي */}
         {product.description && (
           <div className="py-8 border-t border-[#333]/50 mt-6">
             <div className="flex items-center gap-2 mb-6">
@@ -412,8 +432,55 @@ export default function ProductPage() {
               <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>تفاصيل المنتج</span>
             </div>
             <div className="ql-editor-display dark-wind-tabs" dir="rtl">
-              {/* استخدام النص المعالج مسبقاً من useMemo لضمان الأداء */}
               <div dangerouslySetInnerHTML={{__html: closedDescriptionHTML}} />
+            </div>
+          </div>
+        )}
+
+        {/* ✅ قسم منتجات قد تعجبك (الجديد) */}
+        {relatedProducts.length > 0 && (
+          <div className="py-8 border-t border-[#333]/50 mt-4">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-[3px] h-6 bg-[#F5C518] rounded-sm" />
+              <h2 className="text-lg md:text-xl font-black text-white tracking-tight" style={{fontFamily:"Cairo,sans-serif"}}>
+                منتجات قد تعجبك
+              </h2>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto hide-scrollbar-horizontal pb-4 pt-2 -mx-4 px-4 md:mx-0 md:px-0">
+              {relatedProducts.map(rp => (
+                <Link 
+                  href={`/product/${rp.id}`} 
+                  key={rp.id} 
+                  className="flex-shrink-0 w-[140px] md:w-[180px] group cursor-pointer block"
+                >
+                  <div className="relative aspect-[3/4] bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#333] shadow-lg mb-3">
+                    <img 
+                      src={rp.mainImage?.startsWith("http") ? rp.mainImage : `/images/products/${rp.folderName}/${rp.mainImage}`} 
+                      alt={rp.title} 
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="bg-[#F5C518] text-black p-2 rounded-full shadow-[0_0_15px_rgba(245,197,24,0.4)]">
+                        <ShoppingBag size={16} />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-xs md:text-sm text-gray-300 font-bold truncate mb-1.5 transition-colors group-hover:text-white" style={{fontFamily:"Cairo,sans-serif"}}>
+                    {rp.title}
+                  </h3>
+                  <div className="flex items-end gap-1">
+                    <span className="text-white font-black text-sm md:text-base" style={{fontFamily:"Impact, sans-serif", letterSpacing:"0.5px"}}>
+                      {rp.price}
+                    </span>
+                    <span className="text-[#F5C518] text-[10px] md:text-xs font-bold mb-0.5">ج.م</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         )}
@@ -490,7 +557,7 @@ export default function ProductPage() {
         </div>
       )}
 
-      {/* مودال الوصف التفصيلي (الذي يُفتح من الزر) */}
+      {/* مودال الوصف التفصيلي */}
       {isDescModalOpen && (
         <div className="fixed inset-0 z-[99999] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-0 md:p-4">
           <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
