@@ -2,47 +2,64 @@
 import React, { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
-// تأكد إن المسار ده متطابق مع مكان ملف سجل التصميمات عندك
+import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
 import { DESIGN_REGISTRY } from "@/lib/designRegistry"; 
+import { SkeletonHero, SkeletonText } from "@/lib/SkeletonLoaders";
 
 export default function Home() {
   const [layout, setLayout] = useState([]); 
   const [heroData, setHeroData] = useState({ slides: [], categories: [] });
-  const [loading, setLoading] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
+  const { signalPageReady } = usePageReady();
+  const { isVisible: loaderActive } = useGlobalLoader();
 
   // --- 1. جلب البيانات (المحرك الذكي) ---
   useEffect(() => {
-    // أ. جلب ترتيب الأقسام والمحتوى (المميز اليوم، وأي قسم هنضيفه مستقبلاً)
+    // أ. جلب ترتيب الأقسام والمحتوى
     const unsubLayout = onSnapshot(doc(db, "homepage", "layout_config"), (docSnap) => {
       if (docSnap.exists()) {
         setLayout(docSnap.data().sections || []);
+        setDataReady(true);
       }
-      setLoading(false);
     });
 
-    // ب. جلب بيانات قسم الهيرو (لأنه محفوظ في ملف منفصل في الداتابيز)
+    // ب. جلب بيانات قسم الهيرو
     const unsubHero = onSnapshot(doc(db, "homepage", "main-hero"), (docSnap) => {
       if (docSnap.exists()) {
         setHeroData(docSnap.data());
       }
     });
 
-    // إغلاق الاتصال بقاعدة البيانات عند خروج العميل من الصفحة
     return () => { 
       unsubLayout(); 
       unsubHero(); 
     };
   }, []);
 
-  if (loading) {
-    return null; // Silent loading - GlobalLoader handles visual feedback
+  // Signal readiness when critical data loads
+  useEffect(() => {
+    if (dataReady && layout.length > 0) {
+      signalPageReady();
+    }
+  }, [dataReady, layout, signalPageReady]);
+
+  // Show skeleton during loader transition
+  if (loaderActive && !dataReady) {
+    return (
+      <main className="bg-[#121212] min-h-screen pt-24">
+        <div className="max-w-[1400px] mx-auto px-4 space-y-16">
+          <SkeletonHero />
+          <SkeletonText lines={4} />
+          <SkeletonText lines={3} />
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className="bg-[#121212] min-h-screen">
       {/* --- 2. محرك العرض الديناميكي (Loop) --- */}
       {layout.map((section, index) => {
-        // البحث عن التصميم المطلوب في سجل التصميمات
         const SectionCategory = DESIGN_REGISTRY[section.category];
         const Component = SectionCategory ? SectionCategory[section.designId] : null;
         
