@@ -1,5 +1,36 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ============================================
+  // 🖼️ IMAGE OPTIMIZATION CONFIGURATION
+  // ============================================
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.imagekit.io',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.firebasestorage.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudinary.com',
+      },
+    ],
+  },
+
+  // ============================================
+  // 🔄 REWRITES FOR DYNAMIC ROUTING
+  // ============================================
   async rewrites() {
     return [
       {
