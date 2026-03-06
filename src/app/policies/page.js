@@ -42,7 +42,7 @@ export default function PoliciesHub() {
     document.title = "مركز السياسات القانونية | WIND Shopping";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute("content", "اطلع على كافة السياسات القانونية لمتجر WIND، بما في ذلك سياسة الشحن، الاسترجاع، وشروط الاستخدام.");
+      metaDesc.setAttribute("content", "اطلع على كافة السياسات القانونية لمتجر WIND Shopping، بما في ذلك سياسة الشحن، الاسترجاع، وشروط الاستخدام.");
     }
   }, []);
 

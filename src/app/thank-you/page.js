@@ -67,7 +67,7 @@ function SuccessContent() {
               تأكيد #{orderId || orderData?.orderId}
             </p>
           )}
-          <h1 className="text-2xl font-black text-gray-900 mb-1">شكراً لثقتك بـ WIND!</h1>
+          <h1 className="text-2xl font-black text-gray-900 mb-1">شكراً لثقتك بـ WIND Shopping!</h1>
           <p className="text-sm text-gray-500 leading-relaxed">
             تم استلام طلبك بنجاح. ستصلك رسالة تأكيد على بريدك الإلكتروني قريباً.
           </p>

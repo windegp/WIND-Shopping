@@ -15,8 +15,8 @@ const cairo = Cairo({
 });
 
 export const metadata = {
-  title: 'WIND | الأناقة والدفء في مكان واحد',
-  description: 'اكتشف مجموعات WIND الفريدة من الشيلان والملابس الراقية المصممة بعناية.',
+  title: 'WIND Shopping | الأناقة والدفء في مكان واحد',
+  description: 'اكتشف مجموعات WIND Shopping الفريدة من الشيلان والملابس الراقية المصممة بعناية.',
 };
 
 export default function RootLayout({ children }) {

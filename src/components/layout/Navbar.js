@@ -160,7 +160,7 @@ export default function Navbar() {
                 </button>
               ) : (
                 <span className="text-[10px] font-black text-white/30 tracking-[0.4em] uppercase italic">
-                  WIND CATALOGUE
+                  WIND Shopping Catalogue
                 </span>
               )}
 

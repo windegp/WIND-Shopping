@@ -22,7 +22,7 @@ export default function SizeChartModal({ isOpen, onClose, product }) {
         {/* Header */}
         <div className="bg-[#121212] p-4 flex justify-between items-center border-b border-[#333]">
           <div className="flex items-center gap-3">
-            <h2 className="text-[#F5C518] font-bold text-lg tracking-wide">WIND <span className="text-white text-xs font-normal">SIZE GUIDE</span></h2>
+            <h2 className="text-[#F5C518] font-bold text-lg tracking-wide">WIND Shopping <span className="text-white text-xs font-normal">SIZE GUIDE</span></h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
         </div>

@@ -1,38 +1,49 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { IMAGE_UPLOAD_CONFIG } from '@/lib/constants';
 
-// السطر ده مهم جداً عشان يمنع فيرسيل من كأشحة الصفحة
+// Important: Force dynamic behavior to prevent Vercel caching
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // السيرفر بيقرا المفاتيح المتخزنة بأمان في فيرسيل
+    // Server securely reads keys from environment variables
     const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
     const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY;
     const urlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT;
 
     if (!privateKey || !publicKey) {
-      return NextResponse.json({ error: "الخزنة مقفولة: المفاتيح مش موجودة في فيرسيل" }, { status: 500 });
+      const response = errorResponse(
+        "Missing ImageKit configuration in environment variables",
+        'MISSING_CONFIG',
+        500
+      );
+      return NextResponse.json(response.body, { status: response.status });
     }
 
+    // Generate ImageKit authentication token
     const token = crypto.randomBytes(20).toString('hex');
-    const expire = Math.floor(Date.now() / 1000) + 2400;
+    const expire = Math.floor(Date.now() / 1000) + IMAGE_UPLOAD_CONFIG.TOKEN_EXPIRY_SECONDS;
     const signature = crypto
       .createHmac('sha1', privateKey)
       .update(token + expire.toString())
       .digest('hex');
 
-    // بنبعت المفتاح العام والـ Endpoint للـ Frontend عشان نريحه
-    return NextResponse.json({
+    // Return public key and endpoint to frontend for image upload
+    const response = successResponse({
       token,
       expire,
       signature,
       publicKey,
       urlEndpoint
-    });
+    }, null, 200);
+    
+    return NextResponse.json(response.body, { status: response.status });
 
   } catch (error) {
-    console.error("❌ API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("❌ ImageKit API Error:", error);
+    const response = errorResponse(error.message, 'IMAGEKIT_ERROR', 500);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }

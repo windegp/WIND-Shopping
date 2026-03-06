@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { auth } from "@/lib/firebase"; 
+import { ADMIN_UID } from "@/lib/constants";
 import { 
   LayoutDashboard, ShoppingBag, PlusCircle, 
   Palette, FolderTree, Menu, 
   FileText, LogOut, ChevronLeft, Lock,
-  Package, Users, Settings // ← أضفت Settings هنا
+  Package, Users, Settings
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
@@ -16,8 +17,6 @@ export default function AdminLayout({ children }) {
   const [isOpen, setIsOpen] = useState(true);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const ADMIN_UID = "jGb9wBMHZfRIQgR9yfbb3rkvzRw2";
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((u) => {

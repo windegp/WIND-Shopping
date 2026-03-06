@@ -20,16 +20,16 @@ export async function generateMetadata({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  if (!product) return { title: "المنتج غير موجود | WIND" };
+  if (!product) return { title: "المنتج غير موجود | WIND Shopping" };
 
   return {
-    title: `${product.title} | WIND`,
+    title: `${product.title} | WIND Shopping`,
     description: product.seo?.description || `تسوقي ${product.title} من WIND. جودة وتصميم عصري.`,
     openGraph: {
-      title: `${product.title} | WIND`,
+      title: `${product.title} | WIND Shopping`,
       description: product.seo?.description || product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160),
       url: `https://www.windeg.com/product/${id}`,
-      siteName: 'WIND',
+      siteName: 'WIND Shopping',
       images: [{ url: product.mainImage || product.images?.[0] }],
       type: 'article',
     },
@@ -52,7 +52,7 @@ export default async function Page({ params }) {
     "description": product.seo?.description || product.description?.replace(/<[^>]*>?/gm, ''),
     "brand": {
       "@type": "Brand",
-      "name": "WIND"
+      "name": "WIND Shopping"
     },
     "offers": {
       "@type": "Offer",

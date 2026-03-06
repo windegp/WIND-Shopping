@@ -1,15 +1,29 @@
 "use client";
+// ============================================
+// 🛒 CART CONTEXT
+// Global cart state management using React Context API
+// Single source of truth for cart data
+// ============================================
 import { createContext, useContext, useState, useEffect } from 'react';
+import { calculateSubtotal, calculateShipping, calculateAllTotals, validatePromoCode } from '@/lib/cartCalculations';
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  // ============================================
+  // STATE
+  // ============================================
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
+  // Promo code handling
   const [appliedPromo, setAppliedPromo] = useState("");
   const [discountError, setDiscountError] = useState("");
 
+  // ============================================
+  // CART OPERATIONS
+  // ============================================
+  
   const toggleCart = () => setIsCartOpen(!isCartOpen);
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
@@ -22,24 +36,25 @@ export function CartProvider({ children }) {
 
   const addToCart = (product) => {
     setCartItems((prev) => {
-      // ✅ إصلاح البق: التطابق على id + selectedSize + selectedColor معاً
-      // قبل كان بيتطابق على id + selectedSize فقط
-      // لو نفس المنتج باللون التاني → selectedColor مختلف → يُضاف كصنف جديد مستقل
+      // Important: Match items by id + selectedSize + selectedColor
+      // This allows adding the same product in different sizes/colors as separate items
       const exist = prev.find(
         (item) =>
           item.id === product.id &&
           item.selectedSize === product.selectedSize &&
-          item.selectedColor === product.selectedColor  // ← الإضافة الوحيدة
+          item.selectedColor === product.selectedColor
       );
       if (exist) {
+        // Item exists: increment quantity
         return prev.map((item) =>
           (item.id === product.id &&
            item.selectedSize === product.selectedSize &&
-           item.selectedColor === product.selectedColor)  // ← نفس الشرط
+           item.selectedColor === product.selectedColor)
             ? { ...item, qty: item.qty + 1 }
             : item
         );
       }
+      // New item: add to cart with qty=1
       return [...prev, { ...product, qty: 1 }];
     });
     openCart();
@@ -48,10 +63,10 @@ export function CartProvider({ children }) {
   const updateQty = (id, selectedSize, delta, selectedColor) => {
     setCartItems((prev) =>
       prev.map((item) => {
-        // ✅ updateQty كمان محتاج يميز اللون عشان يعدّل الصنف الصح
+        // Important: Color must also match for quantity updates
         const matchColor = selectedColor !== undefined
           ? item.selectedColor === selectedColor
-          : true; // لو مفيش color → تشتغل زي الأول (backward compatible)
+          : true; // Backward compatible: works without color param
         if (item.id === id && item.selectedSize === selectedSize && matchColor) {
           const newQty = item.qty + delta;
           return { ...item, qty: newQty > 0 ? newQty : 1 };
@@ -64,7 +79,7 @@ export function CartProvider({ children }) {
   const removeFromCart = (id, selectedSize, selectedColor) => {
     setCartItems((prev) =>
       prev.filter((item) => {
-        // ✅ removeFromCart كمان محتاج يميز اللون عشان يحذف الصنف الصح
+        // Important: Color must also match for removal
         const matchColor = selectedColor !== undefined
           ? item.selectedColor === selectedColor
           : true;
@@ -73,32 +88,48 @@ export function CartProvider({ children }) {
     );
   };
 
-  // الحسابات المالية — لم تتغير
-  const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  const shipping = appliedPromo.toLowerCase() === "free" ? 0 : 70;
-  const total = subtotal + shipping;
+  // ============================================
+  // CALCULATIONS
+  // Uses utility functions from cartCalculations.js
+  // Ensures consistency across cart and API routes
+  // ============================================
+  const { subtotal, shipping, total } = calculateAllTotals(cartItems, appliedPromo);
 
+  // ============================================
+  // PROMO CODE HANDLING
+  // ============================================
   const applyPromoCode = (code) => {
-    if (code.toLowerCase() === "free") {
-      setAppliedPromo("free");
+    const result = validatePromoCode(code);
+    if (result.isValid) {
+      setAppliedPromo(result.code);
       setDiscountError("");
-      return { success: true, message: "تم تفعيل الشحن المجاني بنجاح!" };
+      return { success: true, message: result.message };
     } else {
       setAppliedPromo("");
-      setDiscountError("عذراً، هذا الكود غير صالح");
-      return { success: false, message: "كود خصم غير صحيح" };
+      setDiscountError(result.message);
+      return { success: false, message: result.message };
     }
   };
 
+  // ============================================
+  // PERSISTENCE
+  // LocalStorage is used only for persistence
+  // CartContext is the single source of truth
+  // ============================================
+  
+  // Load cart from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem('wind_cart');
     if (savedCart) {
       try {
         setCartItems(JSON.parse(savedCart));
-      } catch (e) { console.error("Error loading cart"); }
+      } catch (e) { 
+        console.error("Error loading cart from localStorage"); 
+      }
     }
   }, []);
 
+  // Sync cart to localStorage whenever items change
   useEffect(() => {
     localStorage.setItem('wind_cart', JSON.stringify(cartItems));
   }, [cartItems]);

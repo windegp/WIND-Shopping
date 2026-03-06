@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase"; 
 
@@ -53,10 +54,14 @@ export default function HeroSection() {
       <div className="fixed inset-0 z-[999] bg-[#121212] flex items-center justify-center">
         <div className="relative flex flex-col items-center">
           {/* اللوجو الخاص بك مع أنيميشن نبض خفيف */}
-          <img 
+          <Image 
             src="/logo.jpg" 
-            alt="Wind Logo" 
+            alt="WIND Shopping"
+            width={96}
+            height={96}
+            quality={75}
             className="h-24 w-auto object-contain animate-pulse"
+            priority
           />
           {/* شريط تحميل صغير تحت اللوجو لزيادة الفخامة */}
           <div className="mt-5 w-32 h-1 bg-[#222] rounded-full overflow-hidden">
@@ -105,11 +110,13 @@ export default function HeroSection() {
                   key={index}
                   className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
               >
-                  <img 
+                  <Image 
                     src={slide.image} 
                     alt={slide.title}
-                    // إضافة transform-gpu لضمان نعومة الحركة 100%
-                    className={`w-full h-full object-cover transform-gpu ${index === current ? 'zoom-animation' : ''}`} 
+                    fill
+                    quality={80}
+                    priority={index === 0}
+                    className={`w-full h-full object-cover ${index === current ? 'zoom-animation' : ''}`} 
                   />
               </div>
             ))}
@@ -127,9 +134,12 @@ export default function HeroSection() {
             {/* البوستر المصغر - تم إضافة -translate-y لرفعه قليلاً عن مستوى النص */}
             <div className="w-28 md:w-36 flex-shrink-0 rounded-md overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative transition-transform hover:scale-105 bg-[#121212] -translate-y-4 md:-translate-y-6">
               <a href={slide.productLink} className="block w-full h-full">
-                <img 
+                <Image 
                   src={slide.thumbnail} 
                   alt="" 
+                  width={100}
+                  height={150}
+                  quality={75}
                   className="w-full aspect-[2/3] object-cover"
                 />
               </a>

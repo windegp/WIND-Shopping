@@ -1,17 +1,28 @@
-export const runtime = 'nodejs'; // إجبار فيرسيل على استخدام بيئة نود الكاملة
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { Resend } from 'resend'; // استيراد Resend بدلاً من nodemailer
+import { Resend } from 'resend';
+import { 
+  ADMIN_EMAIL, 
+  EMAIL_FROM, 
+  SITE_NAME, 
+  BRAND_COLOR, 
+  CURRENCY, 
+  ORDER_NUMBER_PREFIX,
+  PAYMENT_METHOD_DISPLAY,
+  KASHIER_CONFIG 
+} from '@/lib/constants';
+import { getShippingDisplayText, calculateAllTotals } from '@/lib/cartCalculations';
 
-// تهيئة Resend باستخدام مفتاح الـ API الخاص بك
-const resend = new Resend('re_iNyysf4J_BD7FfZgwCsvBUW7vuY3o3SBw');
+// API key stored in environment variables for security
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// دالة توليد رقم أوردر فريد
+// Generate unique order number with format: WND-YYYYMMDD-TTTT
 function generateOrderNumber() {
   const now = new Date();
   const datePart = now.toISOString().split('T')[0].replace(/-/g, ''); // 20260219
-  const timePart = now.getTime().toString().slice(-4); // آخر 4 أرقام من الوقت
-  return `WND-${datePart}-${timePart}`;
+  const timePart = now.getTime().toString().slice(-4); // Last 4 digits of timestamp
+  return `${ORDER_NUMBER_PREFIX}-${datePart}-${timePart}`;
 }
 
 export async function POST(req) {
@@ -40,8 +51,7 @@ export async function POST(req) {
       const merchantId = process.env.KASHIER_MERCHANT_ID;
       const paymentApiKey = process.env.KASHIER_API_KEY;
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-      const mode = process.env.KASHIER_MODE || 'live';
-      const currency = 'EGP';
+      const mode = KASHIER_CONFIG.MODE;
 
       if (!merchantId || !paymentApiKey || !baseUrl) {
         return NextResponse.json(
@@ -52,14 +62,14 @@ export async function POST(req) {
 
       const amountStr = parseFloat(amount).toFixed(2);
 
-      // توليد الـ hash (HMAC SHA256) — نفس المنطق بالظبط
-      const hashPath = `/?payment=${merchantId}.${orderId}.${amountStr}.${currency}`;
+      // Generate payment hash (HMAC SHA256)
+      const hashPath = `/?payment=${merchantId}.${orderId}.${amountStr}.${CURRENCY}`;
       const hash = crypto
         .createHmac('sha256', paymentApiKey)
         .update(hashPath)
         .digest('hex');
 
-      // ✅ إرجاع بيانات الـ iFrame بدل رابط الـ redirect
+      // Return iframe data instead of redirect URL
       return NextResponse.json({
         success: true,
         iframeData: {
@@ -67,13 +77,13 @@ export async function POST(req) {
           hash,
           orderId,
           amount: amountStr,
-          currency,
+          currency: CURRENCY,
           mode,
           merchantRedirect: `${baseUrl}/thank-you`,
           failureRedirect: `${baseUrl}/failed`,
-          allowedMethods: 'bank_installments,card,wallet',
-          display: 'ar',
-          brandColor: '#F5C518',
+          allowedMethods: KASHIER_CONFIG.ALLOWED_METHODS,
+          display: KASHIER_CONFIG.DISPLAY_LANGUAGE,
+          brandColor: BRAND_COLOR,
         }
       });
     }
@@ -84,29 +94,28 @@ export async function POST(req) {
     const orderNumber = orderId; // 🔥 توحيد رقم الطلب مع اللي اتسجل في الداتا بيز بدل ما نولد واحد جديد للإيميل
 
     // --- تجهيز بيانات الإيميل ---
-    const shippingText = appliedPromo === 'free' ? '0 EGP (شحن مجاني 🎉)' : '70 EGP';
+    const shippingText = getShippingDisplayText(appliedPromo, true);
     
-    let displayPaymentMethod = 'دفع عند الاستلام';
-    if (paymentMethod === 'instapay') displayPaymentMethod = 'إنستا باي';
-    if (paymentMethod === 'card_success') displayPaymentMethod = 'بطاقة ائتمان (مدفوع بنجاح ✅)';
+    // Map payment method to display name
+    const displayPaymentMethod = PAYMENT_METHOD_DISPLAY[paymentMethod?.toUpperCase()?.replace('-', '_')] || paymentMethod;
 
     // --- بناء محتوى الإيميل (htmlContent) ---
     const htmlContent = `
       <div dir="rtl" style="font-family: 'Arial', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #333;">
-        <div style="text-align: center; border-bottom: 2px solid #F5C518; padding-bottom: 20px; margin-bottom: 20px;">
-          <h1 style="color: #F5C518; margin: 0; font-size: 28px; letter-spacing: 2px;">WIND SHOPPING</h1>
+        <div style="text-align: center; border-bottom: 2px solid ${BRAND_COLOR}; padding-bottom: 20px; margin-bottom: 20px;">
+          <h1 style="color: ${BRAND_COLOR}; margin: 0; font-size: 28px; letter-spacing: 2px;">${SITE_NAME}</h1>
           <p style="color: #a1a1a1; font-size: 14px; margin-top: 5px;">طلب جديد رقم #${orderNumber}</p>
         </div>
         
-        <div style="background-color: #1a1a1a; padding: 15px; border-radius: 4px; margin-bottom: 25px; border-right: 4px solid #F5C518;">
-          <h3 style="color: #F5C518; margin-top: 0; font-size: 16px;">بيانات العميل:</h3>
+        <div style="background-color: #1a1a1a; padding: 15px; border-radius: 4px; margin-bottom: 25px; border-right: 4px solid ${BRAND_COLOR};">
+          <h3 style="color: ${BRAND_COLOR}; margin-top: 0; font-size: 16px;">بيانات العميل:</h3>
           <p style="margin: 5px 0; font-size: 14px;"><strong>الاسم:</strong> ${formData.firstName} ${formData.lastName}</p>
           <p style="margin: 5px 0; font-size: 14px;"><strong>الهاتف:</strong> ${formData.phone}</p>
           <p style="margin: 5px 0; font-size: 14px;"><strong>العنوان:</strong> ${formData.address}, ${formData.governorate}</p>
           <p style="margin: 5px 0; font-size: 14px;"><strong>طريقة الدفع:</strong> <span style="color: #10b981; font-weight: bold;">${displayPaymentMethod}</span></p>
         </div>
 
-        <h3 style="color: #F5C518; font-size: 16px; margin-bottom: 10px;">ملخص المشتريات:</h3>
+        <h3 style="color: ${BRAND_COLOR}; font-size: 16px; margin-bottom: 10px;">ملخص المشتريات:</h3>
         <table style="width: 100%; border-collapse: collapse; color: #ffffff;">
           <thead>
             <tr style="background-color: #222;">
@@ -120,10 +129,10 @@ export async function POST(req) {
               <tr>
                 <td style="padding: 12px; border-bottom: 1px solid #222; font-size: 13px;">
                   <span style="font-weight: bold; color: #eee;">${item.title}</span><br/>
-                  <small style="color: #F5C518;">المقاس: ${item.selectedSize}</small>
+                  <small style="color: ${BRAND_COLOR};">المقاس: ${item.selectedSize}</small>
                 </td>
                 <td style="padding: 12px; text-align: center; border-bottom: 1px solid #222;">${item.qty}</td>
-                <td style="padding: 12px; text-align: left; border-bottom: 1px solid #222; font-weight: bold;">${item.price} EGP</td>
+                <td style="padding: 12px; text-align: left; border-bottom: 1px solid #222; font-weight: bold;">${item.price} ${CURRENCY}</td>
               </tr>
             `).join('')}
             <tr>
@@ -133,13 +142,13 @@ export async function POST(req) {
           </tbody>
         </table>
 
-        <div style="margin-top: 30px; padding: 15px; background-color: #F5C518; color: #000; border-radius: 4px; text-align: center;">
+        <div style="margin-top: 30px; padding: 15px; background-color: ${BRAND_COLOR}; color: #000; border-radius: 4px; text-align: center;">
           <span style="font-size: 14px; font-weight: bold;">الإجمالي الكلي المستحق</span>
-          <h2 style="margin: 5px 0 0 0; font-size: 24px; font-weight: 900;">${total} EGP</h2>
+          <h2 style="margin: 5px 0 0 0; font-size: 24px; font-weight: 900;">${total} ${CURRENCY}</h2>
         </div>
         
         <div style="text-align: center; margin-top: 30px; color: #555; font-size: 11px;">
-          <p>© 2026 WIND Shopping. All rights reserved.</p>
+          <p>© 2026 ${SITE_NAME}. All rights reserved.</p>
         </div>
       </div>
     `;
@@ -149,25 +158,31 @@ export async function POST(req) {
     // ============================================
     try {
       await resend.emails.send({
-        from: 'Wind Website <info@windeg.com>', 
-        to: 'info@windeg.com',
+        from: EMAIL_FROM, 
+        to: ADMIN_EMAIL,
         subject: `طلب جديد من ${formData.firstName} #${orderNumber}`,
         html: htmlContent,
       });
       console.log('✅ Email sent successfully via Resend');
     } catch (emailError) {
       console.error('❌ Resend Email Error:', emailError.message);
-      // لا نعطل العملية بالكامل إذا فشل الإيميل، لكن نسجل الخطأ
+      // Don't break the entire operation if email fails, just log the error
     }
 
-    // الرد النهائي بنجاح العملية
-    return NextResponse.json({ orderNumber }, { status: 200 });
+    // Final response with success
+    return NextResponse.json({
+      success: true,
+      data: { orderNumber },
+      message: "Order created successfully"
+    }, { status: 200 });
 
   } catch (error) {
     console.error('Server Error:', error.message);
-    return NextResponse.json(
-      { message: 'Internal Server Error', details: error.message }, 
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Internal Server Error',
+      code: 'INTERNAL_ERROR',
+      details: error.message
+    }, { status: 500 });
   }
 }

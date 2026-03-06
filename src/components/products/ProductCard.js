@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 // استيراد السلة
 import { useCart } from "../../context/CartContext";
 
@@ -53,9 +54,12 @@ export default function ProductCard({ id, handle, title, price, oldPrice, compar
                 %{discount}
               </div>
             )}
-            <img 
+            <Image 
               src={productImage} 
               alt={title}
+              width={300}
+              height={450}
+              quality={75}
               className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
               loading="lazy"
             />
