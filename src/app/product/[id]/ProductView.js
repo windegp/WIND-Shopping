@@ -7,7 +7,8 @@ import { useCart } from "../../../context/CartContext";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore"; 
 import SizeChartModal from "@/components/SizeChartModal";
-import { Plus, Minus, Star, Info, Share2, Heart, ImageIcon, X, Truck, Eye, ShieldCheck, ChevronLeft, ChevronRight, Search, ShoppingBag, CreditCard, Banknote } from "lucide-react";
+// تم دمج جميع الأيقونات المطلوبة للكودين
+import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -137,7 +138,7 @@ export default function ProductPage() {
     let text = doc.body.textContent || "";
     const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
     keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
-    return text.trim().substring(0, 140) + "...";
+    return text.trim().substring(0, 110) + "... ";
   }, [product?.description]);
 
   const closedDescriptionHTML = useMemo(() => {
@@ -147,7 +148,6 @@ export default function ProductPage() {
 
   if (loading) return (
     <div className="h-screen bg-[#0e0e0e] flex flex-col items-center justify-center text-[#F5C518] gap-5">
-      {/* Enhanced spinner — thinner, larger, more elegant */}
       <div className="relative w-16 h-16">
         <div className="absolute inset-0 rounded-full border-[2px] border-[#F5C518]/10"></div>
         <div className="absolute inset-0 rounded-full border-[2px] border-transparent border-t-[#F5C518] animate-spin"></div>
@@ -155,7 +155,6 @@ export default function ProductPage() {
       </div>
       <div className="flex flex-col items-center gap-1">
         <span className="font-black tracking-[0.3em] text-sm text-[#F5C518]" style={{fontFamily:"Cairo,sans-serif"}}>WIND ORIGINALS</span>
-        {/* Animated loading text — fades in after 500ms */}
         <span className="text-[11px] text-gray-500 tracking-widest animate-pulse" style={{fontFamily:"Tajawal,sans-serif"}}>
           جارٍ تحميل المنتج{'.'.repeat(loadingDot)}
         </span>
@@ -188,6 +187,15 @@ export default function ProductPage() {
   const galleryNext = () => { setGalleryIdx(i => (i + 1) % gallery.length); setIsZoomed(false); };
   const galleryPrev = () => { setGalleryIdx(i => (i - 1 + gallery.length) % gallery.length); setIsZoomed(false); };
   
+  // دالة التقليب للصورة التالية الخاصة بالجزء العلوي الجديد
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    const currentIndex = gallery.indexOf(activeImage);
+    const nextIndex = (currentIndex + 1) % gallery.length;
+    setActiveImage(gallery[nextIndex]);
+    setActiveIdx(nextIndex);
+  };
+
   const onTouchStart = e => { 
     touchStartX.current = e.touches[0].clientX; 
     touchStartY.current = e.touches[0].clientY; 
@@ -229,150 +237,90 @@ export default function ProductPage() {
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
-      {/* ✅ Breadcrumb — مطابق للنافبار تماماً: bg-black/95 + backdrop-blur-xl + border-b border-white/5 */}
-      <div className="bg-black/95 backdrop-blur-xl border-b border-white/5">
-        <div className="pt-3 pb-3 px-4 max-w-4xl mx-auto text-[10px] md:text-xs text-gray-500 flex items-center gap-2 overflow-x-auto hide-scrollbar-horizontal whitespace-nowrap" dir="rtl" style={{fontFamily:"Cairo,sans-serif"}}>
-          <Link href="/" className="hover:text-white cursor-pointer transition-colors">الرئيسية</Link>
-          <span className="text-white/20">/</span>
-          {/* ✅ الرابط يوجه للقسم الفعلي للمنتج */}
-          <Link href={`/collections/${encodeURIComponent(displayCategory)}`} className="hover:text-[#F5C518] cursor-pointer transition-colors">{displayCategory}</Link>
-          <span className="text-white/20">/</span>
-          <span className="text-[#F5C518] truncate max-w-[160px]">{product.title}</span>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════
-           HERO — Full-bleed cinematic image
-           Pattern: Nike / Allbirds / HOKA mobile
-      ══════════════════════════════════════════ */}
-      <div className="relative w-full bg-black overflow-hidden" style={{aspectRatio:"3/4", maxHeight:"92vh"}}>
-
-        {/* الصورة الرئيسية */}
-        <img
-          src={getImageUrl(activeImage)}
-          alt={product.title}
-          decoding="async"
-          onLoad={() => setHeroLoaded(true)}
-          onClick={() => openGallery(activeIdx)}
-          className={`absolute inset-0 w-full h-full object-cover object-top cursor-pointer select-none transition-opacity duration-500 ${heroLoaded ? "opacity-100 hero-ken-burns" : "opacity-0"}`}
+      {/* ============================================================== */}
+      {/* 🟢 الجزء العلوي المنسوخ من الكود الثاني (Hero + النبذة) */}
+      {/* ============================================================== */}
+      
+      {/* 1. القسم السينمائي (Hero Section) */}
+      <div className="relative w-full h-[65vh] md:h-[75vh] bg-black group" onClick={() => openGallery(activeIdx)}>
+        <img 
+          src={getImageUrl(activeImage)} 
+          alt={product.title} 
+          className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
         />
-
-        {/* Vignette رفيع من الأسفل فقط — يخلي الألوان تتنفس */}
-        <div className="absolute inset-0 pointer-events-none"
-          style={{background:"linear-gradient(to top, rgba(18,18,18,0.72) 0%, rgba(18,18,18,0.18) 28%, transparent 55%)"}}
-        />
-
-        {/* Glow ذهبي ناعم في الزاوية العليا اليمنى */}
-        <div className="absolute -top-10 -right-10 w-56 h-56 rounded-full pointer-events-none opacity-60"
-          style={{background:"radial-gradient(circle, rgba(245,197,24,0.07) 0%, transparent 70%)"}}
-        />
-
-        {/* ── أيقونات الزاوية اليمنى العليا ── */}
-        <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
-          <button
-            onClick={() => setIsWishlisted(!isWishlisted)}
-            className="w-9 h-9 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/50 transition-all"
-          >
-            <Heart size={15} fill={isWishlisted?"#F5C518":"none"} color={isWishlisted?"#F5C518":"rgba(255,255,255,0.75)"} />
-          </button>
-          <button className="w-9 h-9 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/50 transition-all group/sh">
-            <Share2 size={15} className="text-white/75 group-hover/sh:text-[#F5C518] transition-colors" />
-          </button>
-        </div>
-
-        {/* ── عداد الصور — زاوية يسرى عليا ── */}
-        <button
-          onClick={() => openGallery(activeIdx)}
-          className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-black/35 backdrop-blur-md border border-white/10 hover:border-[#F5C518]/30 px-2.5 py-1.5 rounded-full transition-all group/cnt"
-        >
-          <ImageIcon size={12} className="text-white/60 group-hover/cnt:text-[#F5C518] transition-colors" />
-          <span className="text-white/70 text-[10px] font-black leading-none group-hover/cnt:text-[#F5C518] transition-colors">{activeIdx+1}/{gallery.length}</span>
-        </button>
-
-        {/* ── اسم المنتج + تقييم فوق الـ thumbnail strip ── */}
-        <div className="absolute bottom-0 inset-x-0 z-10 px-4 pb-3.5" dir="rtl">
-          <div className="flex items-center justify-between mb-0.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#F5C518] text-[8px] font-black tracking-[0.22em] uppercase">WIND</span>
-              <span className="text-white/20 text-[9px]">·</span>
-              <span className="text-white/45 text-[8px] font-bold">{displayCategory}</span>
-            </div>
-            <div className="flex items-center gap-0.5">
-              {[...Array(5)].map((_,i)=>(
-                <Star key={i} size={9} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/15"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />
-              ))}
-              <span className="text-white/35 text-[8px] font-bold mr-0.5">{product.rating||"4.9"}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════
-           THUMBNAIL STRIP — منفصل تماماً تحت الصورة
-           Pattern: Nike PDP thumbnail row
-      ══════════════════════════════════════════ */}
-      <div className="bg-[#0e0e0e] border-b border-white/5 px-3 py-3" dir="rtl">
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar-horizontal items-stretch">
-          {gallery.filter(Boolean).map((img, idx) => {
-            const isActive = activeImage === img;
-            return (
-              <button
-                key={idx}
-                onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
-                className="relative flex-shrink-0 overflow-hidden transition-all duration-300 focus:outline-none"
-                style={{
-                  width:        isActive ? "58px" : "48px",
-                  height:       isActive ? "76px" : "64px",
-                  borderRadius: "8px",
-                  border:       isActive ? "2px solid #F5C518" : "1.5px solid rgba(255,255,255,0.07)",
-                  opacity:      isActive ? 1       : 0.5,
-                  boxShadow:    isActive ? "0 0 0 2px rgba(245,197,24,0.12), 0 4px 16px rgba(0,0,0,0.5)" : "0 2px 8px rgba(0,0,0,0.3)",
-                  transition:   "width .3s cubic-bezier(.25,1,.5,1), height .3s cubic-bezier(.25,1,.5,1), opacity .25s, border-color .25s, box-shadow .25s",
-                }}
-              >
-                <img
-                  src={getImageUrl(img)}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover object-top"
-                  alt={`لقطة ${idx+1}`}
-                  style={{transition:"transform .5s cubic-bezier(.25,1,.5,1)"}}
-                />
-                {/* شريط ذهبي أسفل الـ active */}
-                {isActive && (
-                  <div className="absolute bottom-0 inset-x-0 h-[2px] bg-[#F5C518]" />
-                )}
-              </button>
-            );
-          })}
-
-          {/* زر "كل الصور" */}
-          <button
-            onClick={() => openGallery(0)}
-            className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 rounded-lg border border-white/7 bg-white/3 hover:border-[#F5C518]/30 hover:bg-white/5 transition-all"
-            style={{width:"48px", height:"64px", minWidth:"48px"}}
-          >
-            <div className="grid grid-cols-2 gap-[3px]">
-              {[0,1,2,3].map(i=>(
-                <div key={i} className="w-[7px] h-[7px] rounded-[2px] bg-white/20" />
-              ))}
-            </div>
-            <span className="text-[7px] font-black text-white/30 tracking-wider">ALL</span>
-          </button>
-        </div>
-      </div>
-      <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
+        {/* تدرج لوني يعطي تأثير دمج مع الخلفية زي نتفليكس */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
         
-        <div className="mb-4 pt-2">
-          <h1 className="text-xl md:text-2xl leading-tight font-black text-white mb-2 tracking-tight">{product.title}</h1>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <div className="flex gap-0.5">
-              {[...Array(5)].map((_,i) => <Star key={i} size={14} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
+        {/* التعديل الأول والثالث: أيقونات التفاعل بشكل طولي داخل الصورة + سهم التقليب */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10" onClick={e => e.stopPropagation()}>
+          <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <ImageIcon size={20} />
             </div>
-            <span style={{fontFamily:"Tajawal,sans-serif"}}>{product.rating || "4.9"} ({product.reviewsCount || "490K"} تقييم)</span>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
+          </button>
+          
+          <button 
+            onClick={() => setIsWishlisted(!isWishlisted)} 
+            className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md"
+          >
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
+            </div>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
+          </button>
+          
+          <button className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md">
+            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
+              <Share2 size={20} />
+            </div>
+            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
+          </button>
+        </div>
+
+        {/* سهم التقليب الكبير على اليسار */}
+        <button 
+          onClick={handleNextImage}
+          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
+        >
+          <ChevronLeft size={40} strokeWidth={1.5} />
+        </button>
+      </div>
+
+      {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
+      <div className="px-4 py-6 max-w-4xl mx-auto" dir="rtl">
+        {/* التعديل الثاني: العناصر الثلاثة تحت اسم المنتج + نبذة الوصف */}
+        <div className="mb-4 pt-2">
+          {/* تصغير الخط لـ 26px وتقليل المسافة السفلية لرفعه لفوق */}
+          <h1 className="text-[26px] leading-tight font-black text-white mb-1.5 tracking-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
+          
+          {/* العناصر التلاتة */}
+          <div className="flex items-center gap-3 text-sm text-gray-300 font-medium mb-3">
+            <span className="text-[#F5C518]">WIND Series</span>
+            <span>•</span>
+            <span>{product.category || product.type || "أزياء"}</span>
+            <span>•</span>
+            <span className="border border-gray-500 px-1.5 rounded text-xs bg-[#1a1a1a]">WIND-24</span>
+          </div>
+
+          {/* نبذة الوصف مع التدرج اللوني والزرار في نفس السطر */}
+          <div className="relative text-sm leading-relaxed pr-2 border-r-2 border-[#333]">
+            <span className="bg-gradient-to-l from-gray-400 via-gray-400 to-[#121212] bg-clip-text text-transparent" style={{fontFamily:"Tajawal,sans-serif"}}>
+              {shortDescription}
+            </span>
+            <button 
+              onClick={() => setDescModalOpen(true)}
+              className="inline-flex items-center gap-1 text-[#F5C518] font-bold mr-1 hover:underline decoration-1 underline-offset-4 whitespace-nowrap align-bottom"
+            >
+              المزيد عن المنتج <span className="w-3.5 h-3.5 rounded-full border border-[#F5C518] flex items-center justify-center text-[9px] font-black">!</span>
+            </button>
           </div>
         </div>
 
+      {/* ============================================================== */}
+      {/* 🔴 الجزء السفلي منسوخ من كودك الأول بدون تعديل حرف واحد */}
+      {/* ============================================================== */}
+      
         <div className="flex gap-4 items-start border-t border-[#333]/50 pt-5">
           <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer" onClick={() => setImageZoomModalOpen(true)}>
             <img src={getImageUrl(currentColorImage())} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="poster" />
@@ -588,11 +536,11 @@ export default function ProductPage() {
                   <h3 className="text-xs md:text-sm text-gray-300 font-bold truncate mb-1.5 transition-colors group-hover:text-white" style={{fontFamily:"Cairo,sans-serif"}}>
                     {rp.title}
                   </h3>
-                  <div className="flex items-baseline gap-1">
+                  <div className="flex items-end gap-1">
                     <span className="text-white font-black text-sm md:text-base" style={{fontFamily:"Impact, sans-serif", letterSpacing:"1px"}}>
                       {rp.price}
                     </span>
-                    <span className="text-[#F5C518] text-[10px] md:text-xs font-bold">ج.م</span>
+                    <span className="text-[#F5C518] text-[10px] md:text-xs font-bold mb-0.5">ج.م</span>
                   </div>
                 </Link>
               ))}
