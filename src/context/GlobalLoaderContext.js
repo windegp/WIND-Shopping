@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const GlobalLoaderContext = createContext();
 
@@ -9,7 +9,6 @@ export function GlobalLoaderProvider({ children }) {
   const [isReceding, setIsReceding] = useState(false);
   const [loaderType, setLoaderType] = useState("standard");
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   // Handle initial page load
   useEffect(() => {
@@ -44,7 +43,7 @@ export function GlobalLoaderProvider({ children }) {
     }, isKashierPayment ? 1200 : 600);
 
     return () => clearTimeout(timer);
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   const value = {
     isVisible,
