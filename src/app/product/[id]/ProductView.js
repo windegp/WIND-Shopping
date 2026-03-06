@@ -15,7 +15,6 @@ export default function ProductPage() {
   const { id } = useParams();
   const [product, setProduct]               = useState(null);
   const [loading, setLoading]               = useState(true);
-  const [loadingDot, setLoadingDot]         = useState(0);
   const { addToCart }                       = useCart();
   const [activeImage, setActiveImage]       = useState("");
   const [activeIdx, setActiveIdx]           = useState(0);
@@ -36,13 +35,6 @@ export default function ProductPage() {
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const colorsRef   = useRef(null);
-
-  // Loading dots animation
-  useEffect(() => {
-    if (!loading) return;
-    const interval = setInterval(() => setLoadingDot(d => (d + 1) % 4), 400);
-    return () => clearInterval(interval);
-  }, [loading]);
 
   useEffect(() => {
     if (isGalleryOpen || isImageZoomModalOpen || isDescModalOpen) {
@@ -147,25 +139,9 @@ export default function ProductPage() {
     return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
   }, [product?.description]);
 
-  if (loading) return (
-    <div className="h-screen bg-[#0e0e0e] flex flex-col items-center justify-center text-[#F5C518] gap-5">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full border-[2px] border-[#F5C518]/10"></div>
-        <div className="absolute inset-0 rounded-full border-[2px] border-transparent border-t-[#F5C518] animate-spin"></div>
-        <div className="absolute inset-[5px] rounded-full border-[1px] border-transparent border-t-[#F5C518]/40 animate-spin" style={{animationDuration:"1.5s", animationDirection:"reverse"}}></div>
-      </div>
-      <div className="flex flex-col items-center gap-1">
-        <span className="font-black tracking-[0.3em] text-sm text-[#F5C518]" style={{fontFamily:"Cairo,sans-serif"}}>WIND ORIGINALS</span>
-        <span className="text-[11px] text-gray-500 tracking-widest animate-pulse" style={{fontFamily:"Tajawal,sans-serif"}}>
-          جارٍ تحميل المنتج{'.'.repeat(loadingDot)}
-        </span>
-      </div>
-    </div>
-  );
+  if (loading) return null; // Silent loading - GlobalLoader handles visual feedback
   
-  if (!product) return (
-    <div className="bg-[#121212] min-h-screen flex items-center justify-center text-gray-500" style={{fontFamily:"Cairo,sans-serif"}}>المنتج غير موجود</div>
-  );
+  if (!product) return null; // Silent fallback - GlobalLoader handles initial load
 
   const getImageUrl = img => {
     if (!img) return "";

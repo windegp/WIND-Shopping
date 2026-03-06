@@ -41,7 +41,7 @@ export default async function Page({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  if (!product) return <div className="text-white text-center py-20">المنتج غير موجود</div>;
+  if (!product) return null; // Silent fallback - GlobalLoader handles initial page load
 
   // البيانات المنظمة JSON-LD
   const jsonLd = {

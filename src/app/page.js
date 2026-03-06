@@ -35,11 +35,7 @@ export default function Home() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center text-[#F5C518] font-bold text-xl">
-        جاري تحميل WIND...
-      </div>
-    );
+    return null; // Silent loading - GlobalLoader handles visual feedback
   }
 
   return (

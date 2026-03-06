@@ -87,25 +87,20 @@ export default function CategoryPage() {
         </div>
 
         {/* النتائج */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5C518]"></div>
-            <p className="mt-4 text-[#F5C518] font-bold tracking-widest text-xs uppercase">جاري التحميل...</p>
-          </div>
-        ) : products.length > 0 ? (
+        {!loading && products.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
             {products.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
-        ) : (
+        ) : !loading ? (
           <div className="text-center py-32 border border-[#333] rounded-3xl bg-[#1a1a1a]/50">
             <p className="text-gray-400 mb-8 text-lg font-bold">لا توجد قطع متوفرة في "{categoryData.name}" حالياً.</p>
             <Link href="/" className="bg-[#F5C518] text-black px-10 py-4 font-black text-sm hover:bg-white transition-all rounded-full active:scale-95">
               اكتشف باقي المجموعات
             </Link>
           </div>
-        )}
+        ) : null}
 
         {/* سكشن الـ SEO السفلي (يظهر فقط لو فيه داتا) */}
         {categoryData.bottomDescription && products.length > 0 && (

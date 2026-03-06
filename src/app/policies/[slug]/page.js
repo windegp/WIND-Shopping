@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { Loader2 } from "lucide-react";
 
 export default function DynamicPolicyPage() {
   const { slug } = useParams();
@@ -26,11 +25,7 @@ export default function DynamicPolicyPage() {
     if (slug) fetchPolicy();
   }, [slug]);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <Loader2 className="animate-spin text-[#F5C518]" size={40} />
-    </div>
-  );
+  if (loading) return null; // Silent loading - GlobalLoader handles visual feedback
 
   return (
     <div className="policy-wrapper" dir="rtl">
