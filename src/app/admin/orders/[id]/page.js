@@ -11,7 +11,6 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const [order, setOrder] = useState(null);
   const [productsList, setProductsList] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (id) fetchOrderDetails(); }, [id]);
 
@@ -55,7 +54,6 @@ export default function OrderDetailsPage() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  if (loading) return <div className="p-20 text-center text-[#008060] font-bold animate-pulse">جاري بناء الفاتورة...</div>;
   if (!order) return <div className="p-20 text-center text-red-500 font-bold">الطلب غير موجود. <button onClick={()=>router.back()} className="underline text-blue-500">عودة</button></div>;
 
   return (

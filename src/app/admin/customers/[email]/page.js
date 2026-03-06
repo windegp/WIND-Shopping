@@ -10,7 +10,6 @@ export default function CustomerDetailsPage() {
   const { email } = useParams(); 
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
 
   useEffect(() => { if (email) fetchAllData(); }, [email]);

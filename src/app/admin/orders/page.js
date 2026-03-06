@@ -12,7 +12,6 @@ import {
 export default function OrdersListPage() {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
  const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,7 +96,6 @@ export default function OrdersListPage() {
   }, [search, activeTab, orders]);
 
   const fetchOrders = async () => {
-    setLoading(true);
     try {
       // هنجيب كل الطلبات، والـ useEffect اللي فوق هيتولى مهمة الترتيب الدقيق والفلترة
       const q = query(collection(db, "Orders"));
@@ -106,8 +104,6 @@ export default function OrdersListPage() {
       setOrders(docs);
     } catch (err) {
       console.error("Error fetching orders:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -206,9 +202,7 @@ export default function OrdersListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 font-sans">
-                {loading ? (
-                  <tr><td colSpan="7" className="text-center py-24 text-[#008060] font-black animate-pulse">جاري تحميل السجلات...</td></tr>
-                ) : currentOrders.length === 0 ? (
+                {currentOrders.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="text-center py-24 text-gray-400">
                       <Archive size={40} className="mx-auto mb-3 opacity-20"/>
@@ -271,8 +265,7 @@ export default function OrdersListPage() {
                           <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center mx-auto group-hover:border-[#008060] group-hover:bg-green-50 transition-colors"><ChevronLeft size={16} className="text-gray-400 group-hover:text-[#008060]" /></div>
                         </td>
                       </tr>
-                    );
-                  })
+                    })
                 )}
               </tbody>
             </table>
@@ -313,7 +306,7 @@ export default function OrdersListPage() {
             )}
           </div>
 
-          {!loading && filteredOrders.length > 0 && (
+          {filteredOrders.length > 0 && (
             <div className="p-4 sm:p-6 bg-white border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-xs font-bold text-gray-500">عرض <span className="text-black">{indexOfFirstItem + 1}</span> إلى <span className="text-black">{Math.min(indexOfLastItem, filteredOrders.length)}</span> من أصل <span className="text-black">{filteredOrders.length}</span> طلب</p>
               <div className="flex items-center gap-2">

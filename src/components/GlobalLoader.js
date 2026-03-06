@@ -4,11 +4,19 @@ import { usePathname } from "next/navigation";
 
 export default function GlobalLoader() {
   const [isVisible, setIsVisible] = useState(true);
-  const [isClosing, setIsClosing] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [loaderType, setLoaderType] = useState("standard"); // "standard" or "secure-vault"
   const pathname = usePathname();
 
   useEffect(() => {
+    // Global double-loading prevention: Only run if document is initially loading
+    if (document.readyState === "complete") {
+      // Page already loaded before component mounted
+      setIsExiting(true);
+      setTimeout(() => setIsVisible(false), 800);
+      return;
+    }
+
     // Detect if user is redirecting to Kashier Payment Gateway
     const isKashierPayment = pathname?.includes("kashier") || window.location.href.includes("kashier");
     
@@ -18,25 +26,21 @@ export default function GlobalLoader() {
         setLoaderType("secure-vault");
         // For secure vault, use longer animation for security perception
         setTimeout(() => {
-          setIsClosing(true);
+          setIsExiting(true);
           setTimeout(() => setIsVisible(false), 800); // Match animation duration
         }, 1200);
       } else {
         setLoaderType("standard");
         // Anticipatory timing: Start zoom-out/fade during final 200ms of loading
         setTimeout(() => {
-          setIsClosing(true);
+          setIsExiting(true);
           setTimeout(() => setIsVisible(false), 800); // Match animation duration (cubic-bezier)
         }, 600);
       }
     };
 
-    if (document.readyState === "complete") {
-      handleLoad();
-    } else {
-      window.addEventListener("load", handleLoad);
-      return () => window.removeEventListener("load", handleLoad);
-    }
+    window.addEventListener("load", handleLoad);
+    return () => window.removeEventListener("load", handleLoad);
   }, [pathname]);
 
   if (!isVisible) return null;
@@ -45,17 +49,17 @@ export default function GlobalLoader() {
     return (
       <div 
         className={`fixed inset-0 z-[9999] bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] flex items-center justify-center ${
-          isClosing ? "closing-vault" : ""
+          isExiting ? "closing-vault" : ""
         }`}
       >
         <div className="relative flex flex-col items-center gap-6">
           {/* Secure Shield/Lock Icon with Pulsing Animation */}
           <div className="relative w-24 h-24 md:w-28 md:h-28">
-            <div className={`absolute inset-0 bg-[#F5C518]/20 rounded-full ${isClosing ? "" : "animate-pulse-ring"}`}></div>
+            <div className={`absolute inset-0 bg-[#F5C518]/20 rounded-full ${isExiting ? "" : "animate-pulse-ring"}`}></div>
             
             {/* Shield Icon */}
             <svg 
-              className={`w-full h-full text-[#F5C518] ${isClosing ? "" : "animate-pulse-shield"}`}
+              className={`w-full h-full text-[#F5C518] ${isExiting ? "" : "animate-pulse-shield"}`}
               fill="currentColor" 
               viewBox="0 0 24 24"
             >
@@ -84,7 +88,7 @@ export default function GlobalLoader() {
 
           {/* Security Status Indicator */}
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full bg-[#F5C518] ${isClosing ? "" : "animate-pulse"}`}></div>
+            <div className={`w-2 h-2 rounded-full bg-[#F5C518] ${isExiting ? "" : "animate-pulse"}`}></div>
             <span className="text-gray-400 text-xs">اتصال آمن</span>
           </div>
         </div>
@@ -143,7 +147,7 @@ export default function GlobalLoader() {
   return (
     <div 
       className={`fixed inset-0 z-[9999] bg-[#121212] flex items-center justify-center ${
-        isClosing ? "closing-standard" : ""
+        isExiting ? "closing-standard" : ""
       }`}
     >
       <div className="relative flex flex-col items-center">
@@ -151,12 +155,12 @@ export default function GlobalLoader() {
         <img 
           src="/logo.jpg" 
           alt="WIND" 
-          className={`h-24 md:h-28 w-auto object-contain ${isClosing ? "" : "animate-pulse"}`}
+          className={`h-24 md:h-28 w-auto object-contain ${isExiting ? "" : "animate-pulse"}`}
         />
         
         {/* شريط تحميل ناعم باللون الأصفر المميّز */}
         <div className="mt-8 w-32 h-[1px] bg-[#333] relative overflow-hidden rounded-full">
-          <div className={`absolute inset-0 bg-[#F5C518] ${isClosing ? "" : "animate-loading"}`}></div>
+          <div className={`absolute inset-0 bg-[#F5C518] ${isExiting ? "" : "animate-loading"}`}></div>
         </div>
       </div>
 

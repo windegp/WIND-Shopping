@@ -10,7 +10,6 @@ import {
 
 export default function ProductsList() {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -20,8 +19,6 @@ export default function ProductsList() {
         setProducts(list);
       } catch (error) {
         console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
       }
     };
     fetchProducts();
@@ -37,15 +34,6 @@ export default function ProductsList() {
       alert("حدث خطأ أثناء الحذف");
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f4f6f8] flex flex-col items-center justify-center text-[#202223]">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#008060] mb-4"></div>
-        <p className="font-bold text-sm text-gray-500">جاري تحميل منتجات متجرك...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] text-[#202223] font-sans p-4 sm:p-6 lg:p-8" dir="rtl">

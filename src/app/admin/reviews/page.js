@@ -11,8 +11,7 @@ import {
 export default function ReviewsAdminPage() {
   const [reviews, setReviews] = useState([]);
   const [filteredReviews, setFilteredReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('all'); // all, pending, approved, rejected
+  const [activeFilter, setActiveFilter] = useState('all');// all, pending, approved, rejected
   const [searchQuery, setSearchQuery] = useState('');
   
   // متغيرات إضافة تقييم يدوي
@@ -46,19 +45,15 @@ export default function ReviewsAdminPage() {
   }, [activeFilter, searchQuery, reviews]);
 
   const fetchReviews = async () => {
-    setLoading(true);
     try {
       const q = query(collection(db, "Reviews"));
       const snap = await getDocs(q);
       const fetchedReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // ترتيب زمني: الأحدث أولاً
       fetchedReviews.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setReviews(fetchedReviews);
     } catch (error) {
       console.error("Error fetching reviews:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -170,12 +165,7 @@ export default function ReviewsAdminPage() {
         </div>
 
         {/* قائمة التقييمات */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <span className="animate-spin h-8 w-8 border-4 border-[#008060] border-t-transparent rounded-full mb-4"></span>
-            <p className="text-gray-500 font-bold text-sm">جاري تحميل التقييمات...</p>
-          </div>
-        ) : filteredReviews.length === 0 ? (
+        {filteredReviews.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-20 text-center flex flex-col items-center shadow-sm">
             <MessageSquare size={48} className="text-gray-200 mb-4" />
             <h3 className="text-lg font-black text-gray-800 mb-1">لا توجد تقييمات</h3>

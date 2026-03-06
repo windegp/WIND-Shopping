@@ -162,7 +162,6 @@ const RenderMenuTree = ({ list, path = [], depth = 0, availableCollections, expa
 export default function ProfessionalMenuManager() {
   const [items, setItems] = useState([]);
   const [availableCollections, setAvailableCollections] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedItems, setExpandedItems] = useState(new Set()); 
 
@@ -183,8 +182,7 @@ export default function ProfessionalMenuManager() {
           const data = menuSnap.data().menuItems || [];
           setItems(sanitizeData(data));
         }
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
+      } catch (err) { console.error(err); }
     };
     fetchData();
   }, []);
@@ -326,17 +324,6 @@ export default function ProfessionalMenuManager() {
         </div>
 
       </div>
-
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }

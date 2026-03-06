@@ -7,7 +7,6 @@ import { db } from "@/lib/firebase";
 export default function HeroSection() {
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const scrollContainerRef = useRef(null);
 
@@ -24,9 +23,6 @@ export default function HeroSection() {
         }
       } catch (error) {
         console.error("خطأ في جلب البيانات:", error);
-      } finally {
-        // تأخير بسيط لضمان أن كل شيء جاهز قبل إخفاء اللوجو
-        setTimeout(() => setLoading(false), 800);
       }
     };
 
@@ -48,35 +44,7 @@ export default function HeroSection() {
     }
   };
 
-  // --- شاشة اللوجو (Preloader) بدلاً من النص ---
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-[999] bg-[#121212] flex items-center justify-center">
-        <div className="relative flex flex-col items-center">
-          {/* اللوجو الخاص بك مع أنيميشن نبض خفيف */}
-          <Image 
-            src="/logo.jpg" 
-            alt="WIND Shopping"
-            width={96}
-            height={96}
-            quality={75}
-            className="h-24 w-auto object-contain animate-pulse"
-            priority
-          />
-          {/* شريط تحميل صغير تحت اللوجو لزيادة الفخامة */}
-          <div className="mt-5 w-32 h-1 bg-[#222] rounded-full overflow-hidden">
-            <div className="h-full bg-[#F5C518] animate-[loading_1.5s_infinite] ease-in-out"></div>
-          </div>
-        </div>
-        <style jsx>{`
-          @keyframes loading {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-        `}</style>
-      </div>
-    );
-  }
+  // --- Removed local loading state - GlobalLoader handles all page loads ---
 
   if (slides.length === 0) {
     return <div className="w-full aspect-[21/9] bg-[#121212] flex items-center justify-center text-gray-500 font-sans">لم يتم إضافة عروض بعد.</div>;
