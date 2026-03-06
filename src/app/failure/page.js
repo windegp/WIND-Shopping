@@ -1,6 +1,19 @@
+"use client";
+
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { usePageReady, useGlobalLoader } from '@/context/GlobalLoaderContext';
 
 export default function FailedPage() {
+    const { signalPageReady } = usePageReady();
+    const { isVisible: loaderActive } = useGlobalLoader();
+
+    // Signal readiness for GlobalLoader (failure page is ready immediately)
+    useEffect(() => {
+        signalPageReady();
+    }, [signalPageReady]);
+    }, [signalPageReady]);
+
     return (
         <div className="text-center mt-20">
             <div className="text-red-500 text-6xl mb-4">✘</div>

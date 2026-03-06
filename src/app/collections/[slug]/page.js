@@ -3,18 +3,21 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { db } from "../../../lib/firebase"; 
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { usePageReady, useGlobalLoader } from "../../../context/GlobalLoaderContext";
 import ProductCard from "../../../components/products/ProductCard";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react"; // تأكد من استيراد الأيقونة
+import { ChevronDown } from "lucide-react";
 
 export default function CategoryPage() {
   const params = useParams();
   const currentSlug = params.slug || params.categorySlug; 
+  const { signalPageReady } = usePageReady();
+  const { isVisible: loaderActive } = useGlobalLoader();
   
   const [products, setProducts] = useState([]);
   const [categoryData, setCategoryData] = useState({ name: "", subtitle: "", description: "", bottomDescription: "" });
   const [loading, setLoading] = useState(true);
-  const [isSeoExpanded, setIsSeoExpanded] = useState(false); // للتحكم في فتح وقفل وصف الـ SEO
+  const [isSeoExpanded, setIsSeoExpanded] = useState(false);
 
   useEffect(() => {
     const fetchEverything = async () => {
@@ -52,16 +55,22 @@ export default function CategoryPage() {
         snap2.forEach(doc => productsMap.set(doc.id, { id: doc.id, ...doc.data() }));
         
         setProducts(Array.from(productsMap.values()));
-
+        setLoading(false);
       } catch (error) {
         console.error("WIND Fetch Error:", error);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchEverything();
   }, [currentSlug]);
+
+  // Signal readiness when critical data loads (INSTANT no-delay trigger)
+  useEffect(() => {
+    if (!loading && (products.length > 0 || categoryData.name)) {
+      signalPageReady();
+    }
+  }, [loading, products, categoryData.name, signalPageReady]);
 
   return (
     <main className="min-h-screen bg-[#121212] pt-24 pb-12" dir="rtl">

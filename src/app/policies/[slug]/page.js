@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function DynamicPolicyPage() {
   const { slug } = useParams();
+  const { signalPageReady } = usePageReady();
+  const { isVisible: loaderActive } = useGlobalLoader();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -24,6 +27,13 @@ export default function DynamicPolicyPage() {
     };
     if (slug) fetchPolicy();
   }, [slug]);
+
+  // Signal readiness when policy data loads
+  useEffect(() => {
+    if (!loading && data) {
+      signalPageReady();
+    }
+  }, [loading, data, signalPageReady]);
 
   if (loading) return null; // Silent loading - GlobalLoader handles visual feedback
 

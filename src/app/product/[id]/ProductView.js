@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
+import { usePageReady, useGlobalLoader } from "../../../context/GlobalLoaderContext";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore"; 
 import SizeChartModal from "@/components/SizeChartModal";
@@ -13,6 +14,9 @@ import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X
 
 export default function ProductPage() {
   const { id } = useParams();
+  const { signalPageReady } = usePageReady();
+  const { isVisible: loaderActive } = useGlobalLoader();
+  
   const [product, setProduct]               = useState(null);
   const [loading, setLoading]               = useState(true);
   const { addToCart }                       = useCart();
@@ -123,6 +127,13 @@ export default function ProductPage() {
     };
     fetchProduct();
   }, [id]);
+
+  // Signal readiness when critical data (product) loads (INSTANT no-delay trigger)
+  useEffect(() => {
+    if (!loading && product) {
+      signalPageReady();
+    }
+  }, [loading, product, signalPageReady]);
 
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";

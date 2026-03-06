@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from "../../context/CartContext";
+import { usePageReady, useGlobalLoader } from "../../context/GlobalLoaderContext";
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
 // 🔥 استدعاء الفايربيس
@@ -117,6 +118,9 @@ export default function CheckoutPage() {
     discountError, 
     appliedPromo 
   } = useCart();
+  
+  const { signalPageReady } = usePageReady();
+  const { isVisible: loaderActive } = useGlobalLoader();
 
   const SHIPPING_COST = shipping;
   const finalTotal = total;
@@ -145,6 +149,11 @@ export default function CheckoutPage() {
   });
 
   const [errors, setErrors] = useState({});
+
+  // Signal readiness for GlobalLoader (checkout is ready immediately upon load)
+  useEffect(() => {
+    signalPageReady();
+  }, [signalPageReady]);
 
   // 🔥 توليد مُعرف جلسة ثابت (Session ID) لمنع استنساخ الطلبات مع كل حرف يكتبه العميل
   const sessionIdRef = useRef(null);

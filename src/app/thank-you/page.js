@@ -2,6 +2,7 @@
 
 import { useEffect, Suspense, useState } from 'react';
 import { useCart } from "@/context/CartContext";
+import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, ShoppingBag, Phone, Truck, Shield, Package, CreditCard, Banknote, Smartphone } from 'lucide-react';
@@ -15,6 +16,8 @@ const PAYMENT_LABELS = {
 
 function SuccessContent() {
   const { clearCart } = useCart();
+  const { signalPageReady } = usePageReady();
+  const { isVisible: loaderActive } = useGlobalLoader();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [orderData, setOrderData] = useState(null);
@@ -36,6 +39,11 @@ function SuccessContent() {
       .catch(err => console.error("Error:", err));
     }
   }, []);
+
+  // Signal readiness for GlobalLoader (thank you page is ready immediately)
+  useEffect(() => {
+    signalPageReady();
+  }, [signalPageReady]);
 
   const paymentInfo = PAYMENT_LABELS[orderData?.paymentMethod] || PAYMENT_LABELS['card'];
 
