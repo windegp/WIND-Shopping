@@ -12,14 +12,15 @@ A sophisticated, data-driven page loading system that handles all network condit
 - ✅ GlobalLoader waits for `signalPageReady()` signal, NOT timers
 - ✅ Pages control when loader recedes (after critical data loads)
 - ✅ On slow connections: loader stays visible with pulsing animations while data loads
-- ✅ On fast connections: minimal 600ms display time (for premium feel)
+- ✅ On fast connections: loader recedes IMMEDIATELY when data ready (NO artificial delays!)
+- ✅ Instant performance: Cached routes exit loader in ~1.0 second total
 
 **How it works:**
 ```javascript
 // In your page component:
 useEffect(() => {
   if (criticalDataLoaded && imagesLoaded) {
-    signalPageReady(); // Tell GlobalLoader to start receding
+    signalPageReady(); // Tell GlobalLoader to start receding IMMEDIATELY
   }
 }, [criticalDataLoaded, imagesLoaded]);
 ```
@@ -73,11 +74,11 @@ return (
 **Timeline:**
 ```
 0s → Route change, loader shows
-0.6s → Minimum display time reached
-0-8s → Waiting for signalPageReady()
-8s → TIMEOUT: Force recede regardless
-8.9s → GlobalLoader completely hidden
+0-Xs → Waiting for signalPageReady() (actual load time)
+Xs → Data ready, loader IMMEDIATELY starts receding (NO forced delay!)
+X+0.9s → GlobalLoader completely hidden (900ms animation)
 ```
+**No artificial waiting - only actual load time!**
 
 ---
 
@@ -92,9 +93,9 @@ return (
 
 **Key additions:**
 - `pageReady` state for data-driven transitions
-- `signalPageReady` callback exported to pages
-- `MAX_LOADER_TIME` constant (8000ms)
-- Dependency tracking for `loaderType`
+- `signalPageReady` callback exported to pages (triggers immediately, no delays)
+- `MAX_LOADER_TIME` constant (8000ms fail-safe only)
+- Removed artificial 600ms/1200ms minimum display times
 
 ### 2. **SkeletonLoaders.jsx** (NEW)
 Reusable skeleton components:

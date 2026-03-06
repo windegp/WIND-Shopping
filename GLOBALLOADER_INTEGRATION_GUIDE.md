@@ -109,26 +109,41 @@ import Image from "next/image";
 
 ---
 
-## How It Works
+## Three Speed Tiers
 
-### Fast Connection (≤ 1 second)
+### ⚡⚡⚡ Lightning Fast (< 200ms)
 ```
-Route Change
+Route change
     ↓
-GlobalLoader shows (600ms minimum)
+GlobalLoader shows
     ↓
-Page data loads instantly
+Page data loads instantly (< 200ms)
+    ↓
+signalPageReady() called IMMEDIATELY
+    ↓
+GlobalLoader recedes INSTANTLY (no waiting!)
+    ↓
+Page fully visible in ~1.0 second
+```
+
+### ⚡⚡ Fast (200-800ms)
+```
+Route change
+    ↓
+GlobalLoader shows (visible 100-800ms)
+    ↓
+Page data loads (takes 200-800ms)
     ↓
 signalPageReady() called
     ↓
-GlobalLoader recedes (900ms animation)
+GlobalLoader recedes IMMEDIATELY
     ↓
-Page fully visible
+Page visible in ~1.0-1.8 seconds
 ```
 
-### Slow Connection (3-5 seconds)
+### ⚡ Normal/Slow (800ms+)
 ```
-Route Change
+Route change
     ↓
 GlobalLoader shows with pulse animation
     ↓
@@ -140,22 +155,24 @@ Images load progressively
     ↓
 signalPageReady() called when ready
     ↓
-GlobalLoader recedes, skeletons replaced with real content
+GlobalLoader recedes IMMEDIATELY (no forced delay!)
+    ↓
+Page visible with real content + skeletons
 ```
 
-### Very Slow / Failed Load (> 8 seconds)
+### ⏱️ Very Slow / Failed Load (8+ seconds)
 ```
-Route Change
+Route change
     ↓
 GlobalLoader shows with pulse
     ↓
-Fail-safe timeout triggers after 8 seconds
+Data loading stuck/failed...
     ↓
-GlobalLoader recedes automatically
+8-SECOND TIMEOUT TRIGGERS
     ↓
-Page visible with whatever loaded (skeletons remain visible)
+GlobalLoader recedes automatically (fail-safe)
     ↓
-User can see partial content or try again
+Page visible with whatever loaded (skeletons may remain)
 ```
 
 ---

@@ -53,18 +53,14 @@ export function GlobalLoaderProvider({ children }) {
     return () => clearTimeout(timeoutTimer);
   }, [pathname]);
 
-  // Handle page readiness: Trigger recede only when page is ready OR timeout expires
+  // Handle page readiness: Trigger recede immediately when page is ready
   useEffect(() => {
     if (pageReady && isVisible && !isReceding) {
-      // Page has signaled it's ready - start recede animation
-      const recededTimer = setTimeout(() => {
-        setIsReceding(true);
-        setTimeout(() => setIsVisible(false), 900);
-      }, loaderType === "secure-vault" ? 1200 : 600); // Minimum display time
-
-      return () => clearTimeout(recededTimer);
+      // Page is ready - start receding IMMEDIATELY (no artificial delays)
+      setIsReceding(true);
+      setTimeout(() => setIsVisible(false), 900); // Receding animation duration
     }
-  }, [pageReady, isVisible, isReceding, loaderType]);
+  }, [pageReady, isVisible, isReceding]);
 
   // Expose setPageReady for pages to signal data readiness
   const signalPageReady = useCallback(() => {
