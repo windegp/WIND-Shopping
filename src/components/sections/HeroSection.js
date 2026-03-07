@@ -1,33 +1,15 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase"; 
 
-export default function HeroSection() {
-  const [slides, setSlides] = useState([]);
-  const [categories, setCategories] = useState([]);
+// 1. نستقبل الـ data كـ Prop من الـ page.js لتجنب التكرار في التحميل
+export default function HeroSection({ data }) {
   const [current, setCurrent] = useState(0);
   const scrollContainerRef = useRef(null);
 
-  // جلب البيانات من Firebase
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const docRef = doc(db, "homepage", "main-hero");
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setSlides(docSnap.data().slides || []);
-          setCategories(docSnap.data().categories || []);
-        }
-      } catch (error) {
-        console.error("خطأ في جلب البيانات:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
+  // 2. نأخذ البيانات مباشرة من الـ props
+  const slides = data?.slides || [];
+  const categories = data?.categories || [];
 
   // مؤقت تقليب الصور
   useEffect(() => {
@@ -44,10 +26,11 @@ export default function HeroSection() {
     }
   };
 
-  // --- Removed local loading state - GlobalLoader handles all page loads ---
+// --- Removed local loading state - GlobalLoader handles all page loads ---
 
   if (slides.length === 0) {
-    return <div className="w-full aspect-[21/9] bg-[#121212] flex items-center justify-center text-gray-500 font-sans">لم يتم إضافة عروض بعد.</div>;
+    // حجز مساحة الهيرو بالكامل لمنع القفزة البصرية (CLS) أثناء رسم الصفحة في الخلفية
+    return <div className="w-full aspect-[3/4] md:aspect-[21/9] bg-[#121212]"></div>;
   }
 
   return (

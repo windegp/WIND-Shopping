@@ -37,12 +37,16 @@ export default function Home() {
     };
   }, []);
 
-  // Signal readiness when critical data loads (FIX: add pathname to ensure re-trigger on navigation)
+ // Signal readiness when critical data loads (FIX: wait for both layout and hero data)
   useEffect(() => {
-    if (dataReady && layout.length > 0) {
-      signalPageReady();
+    const isHeroReady = heroData && heroData.slides && heroData.slides.length > 0;
+    
+    // لن يتم سحب اللودر إلا عندما تكتمل بيانات الـ layout وبيانات الـ Hero معاً
+    if (dataReady && layout.length > 0 && isHeroReady) {
+      // تأخير بسيط 50ms لضمان رسم المتصفح للعناصر قبل سحب اللودر
+      setTimeout(() => signalPageReady(), 50); 
     }
-  }, [dataReady, layout, pathname, signalPageReady]);
+  }, [dataReady, layout, heroData, pathname, signalPageReady]);
 
   return (
     <main className="bg-[#121212] min-h-screen">
