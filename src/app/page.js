@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
@@ -7,6 +8,7 @@ import { DESIGN_REGISTRY } from "@/lib/designRegistry";
 import { SkeletonHero, SkeletonText } from "@/lib/SkeletonLoaders";
 
 export default function Home() {
+  const pathname = usePathname();
   const [layout, setLayout] = useState([]); 
   const [heroData, setHeroData] = useState({ slides: [], categories: [] });
   const [dataReady, setDataReady] = useState(false);
@@ -36,12 +38,12 @@ export default function Home() {
     };
   }, []);
 
-  // Signal readiness when critical data loads
+  // Signal readiness when critical data loads (FIX: add pathname to ensure re-trigger on navigation)
   useEffect(() => {
     if (dataReady && layout.length > 0) {
       signalPageReady();
     }
-  }, [dataReady, layout, signalPageReady]);
+  }, [dataReady, layout, pathname, signalPageReady]);
 
   // Show skeleton during loader transition
   if (loaderActive && !dataReady) {

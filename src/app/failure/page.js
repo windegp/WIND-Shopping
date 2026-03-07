@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { usePageReady, useGlobalLoader } from '@/context/GlobalLoaderContext';
 
 export default function FailedPage() {
+    const pathname = usePathname();
     const { signalPageReady } = usePageReady();
     const { isVisible: loaderActive } = useGlobalLoader();
 
     // Signal readiness for GlobalLoader (failure page is ready immediately)
     useEffect(() => {
         signalPageReady();
-    }, [signalPageReady]);
-    }, [signalPageReady]);
+    }, [pathname, signalPageReady]);
 
     return (
         <div className="text-center mt-20">

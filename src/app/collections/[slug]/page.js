@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { db } from "../../../lib/firebase"; 
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { usePageReady, useGlobalLoader } from "../../../context/GlobalLoaderContext";
@@ -10,6 +10,7 @@ import { ChevronDown } from "lucide-react";
 
 export default function CategoryPage() {
   const params = useParams();
+  const pathname = usePathname();
   const currentSlug = params.slug || params.categorySlug; 
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
@@ -65,12 +66,12 @@ export default function CategoryPage() {
     fetchEverything();
   }, [currentSlug]);
 
-  // Signal readiness when critical data loads (INSTANT no-delay trigger)
+  // Signal readiness when critical data loads (FIX: add pathname to ensure re-trigger on navigation)
   useEffect(() => {
     if (!loading && (products.length > 0 || categoryData.name)) {
       signalPageReady();
     }
-  }, [loading, products, categoryData.name, signalPageReady]);
+  }, [loading, products, categoryData.name, pathname, signalPageReady]);
 
   return (
     <main className="min-h-screen bg-[#121212] pt-24 pb-12" dir="rtl">

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function DynamicPolicyPage() {
   const { slug } = useParams();
+  const pathname = usePathname();
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
   const [data, setData] = useState(null);
@@ -28,12 +29,12 @@ export default function DynamicPolicyPage() {
     if (slug) fetchPolicy();
   }, [slug]);
 
-  // Signal readiness when policy data loads
+  // Signal readiness when policy data loads (FIX: add pathname to ensure re-trigger on navigation)
   useEffect(() => {
     if (!loading && data) {
       signalPageReady();
     }
-  }, [loading, data, signalPageReady]);
+  }, [loading, data, pathname, signalPageReady]);
 
   if (loading) return null; // Silent loading - GlobalLoader handles visual feedback
 

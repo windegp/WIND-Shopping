@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, Suspense, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useCart } from "@/context/CartContext";
 import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
 import { useSearchParams } from 'next/navigation';
@@ -15,6 +16,7 @@ const PAYMENT_LABELS = {
 };
 
 function SuccessContent() {
+  const pathname = usePathname();
   const { clearCart } = useCart();
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
@@ -43,7 +45,7 @@ function SuccessContent() {
   // Signal readiness for GlobalLoader (thank you page is ready immediately)
   useEffect(() => {
     signalPageReady();
-  }, [signalPageReady]);
+  }, [pathname, signalPageReady]);
 
   const paymentInfo = PAYMENT_LABELS[orderData?.paymentMethod] || PAYMENT_LABELS['card'];
 

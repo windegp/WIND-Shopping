@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { products as staticProducts } from "../../../lib/products";
@@ -14,6 +14,7 @@ import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X
 
 export default function ProductPage() {
   const { id } = useParams();
+  const pathname = usePathname();
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
   
@@ -128,12 +129,12 @@ export default function ProductPage() {
     fetchProduct();
   }, [id]);
 
-  // Signal readiness when critical data (product) loads (INSTANT no-delay trigger)
+  // Signal readiness when critical data (product) loads (FIX: add pathname to ensure re-trigger on navigation)
   useEffect(() => {
     if (!loading && product) {
       signalPageReady();
     }
-  }, [loading, product, signalPageReady]);
+  }, [loading, product, pathname, signalPageReady]);
 
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";

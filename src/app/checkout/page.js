@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from "../../context/CartContext";
+import { usePathname } from 'next/navigation';
 import { usePageReady, useGlobalLoader } from "../../context/GlobalLoaderContext";
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
@@ -108,6 +109,7 @@ function KashierIframeModal({ iframeData, onClose }) {
 // الصفحة الرئيسية — CheckoutPage
 // ============================================================
 export default function CheckoutPage() {
+  const pathname = usePathname();
   const { 
     cartItems, 
     clearCart, 
@@ -150,10 +152,10 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = useState({});
 
-  // Signal readiness for GlobalLoader (checkout is ready immediately upon load)
+  // Signal readiness for GlobalLoader (FIX: add pathname to ensure re-trigger on navigation)
   useEffect(() => {
     signalPageReady();
-  }, [signalPageReady]);
+  }, [pathname, signalPageReady]);
 
   // 🔥 توليد مُعرف جلسة ثابت (Session ID) لمنع استنساخ الطلبات مع كل حرف يكتبه العميل
   const sessionIdRef = useRef(null);

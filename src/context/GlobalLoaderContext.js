@@ -38,7 +38,12 @@ export function GlobalLoaderProvider({ children }) {
     // Reset loader state for new route
     setIsVisible(true);
     setIsReceding(false);
-    setPageReady(false);
+    
+    // Use a timeout to reset pageReady AFTER the component tree has time to detect the pathname change
+    // This prevents the race condition where setPageReady(false) overwrites signalPageReady() calls
+    const resetReadyTimer = setTimeout(() => {
+      setPageReady(false);
+    }, 0);
 
     // Detect if navigating to Kashier Payment Gateway
     const isKashierPayment = pathname?.includes("kashier") || pathname?.includes("checkout");
@@ -50,7 +55,10 @@ export function GlobalLoaderProvider({ children }) {
       setTimeout(() => setIsVisible(false), 900);
     }, MAX_LOADER_TIME);
 
-    return () => clearTimeout(timeoutTimer);
+    return () => {
+      clearTimeout(resetReadyTimer);
+      clearTimeout(timeoutTimer);
+    };
   }, [pathname]);
 
   // Handle page readiness: Trigger recede immediately when page is ready
