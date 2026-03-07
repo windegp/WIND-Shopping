@@ -323,16 +323,9 @@ export default function ProductPage() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col h-40 md:h-48 justify-between">
+          <div className="flex-1 flex flex-col h-40 md:h-48 justify-center gap-3">
             <div>
-              <div className="flex items-center flex-wrap gap-1.5 mb-2.5">
-                <span className="text-[#F5C518] text-[9px] md:text-[10px] font-bold tracking-wider">WIND Series</span>
-                <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
-                <span className="text-gray-300 text-[9px] md:text-[10px] font-bold">{displayCategory}</span>
-                <span className="text-gray-500 text-[9px] md:text-[10px]">•</span>
-                <span className="border border-[#444] rounded px-1.5 py-0.5 text-[9px] font-bold text-gray-300 bg-[#1a1a1a]">WIND-24</span>
-              </div>
-
+              {/* [تعديل جراحي 1] إزالة البادجات المكررة (WIND Series) لإعطاء السعر مساحة للتنفس */}
               <div className="flex items-baseline gap-1.5 mt-1">
                 <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '1px' }} className="text-3xl md:text-4xl font-normal text-white">{product.price}</span>
                 <span className="text-sm font-bold text-[#F5C518]">ج.م</span>
@@ -369,15 +362,16 @@ export default function ProductPage() {
             )}
           </div>
         </div>
-        <div className="mt-6 space-y-6 border-t border-[#333]/50 pt-5">
+        {/* [تعديل جراحي 2] زيادة المسافات (mt-8, pt-8, space-y-8) وإبراز الخطوط */}
+        <div className="mt-8 space-y-8 border-t border-[#333]/50 pt-8">
           {safeColors.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-                <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>
-                  {safeColors.length > 1 ? "اختر اللون" : "اللون"}
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-1 h-5 bg-[#F5C518] rounded-sm shadow-[0_0_8px_rgba(245,197,24,0.4)]" />
+                <span className="text-[14px] font-bold text-white tracking-wide" style={{fontFamily:"Cairo,sans-serif"}}>
+                  {safeColors.length > 1 ? "اختر اللون :" : "اللون :"}
                 </span>
-                {selectedColor && <span className="text-[#F5C518] text-[11px] bg-[#1a1a1a] border border-[#333] px-2.5 py-0.5 rounded" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
+                {selectedColor && <span className="text-[#F5C518] text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-1 rounded-md shadow-sm" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
               </div>
               <div ref={colorsRef} className="flex flex-wrap gap-4">
                 {safeColors.map((ci, i) => {
@@ -399,16 +393,16 @@ export default function ProductPage() {
 
           {safeSizes.length > 0 && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm" />
-                  <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>
-                    {safeSizes.length > 1 ? "اختر المقاس" : "المقاس"}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-1 h-5 bg-[#F5C518] rounded-sm shadow-[0_0_8px_rgba(245,197,24,0.4)]" />
+                  <span className="text-[14px] font-bold text-white tracking-wide" style={{fontFamily:"Cairo,sans-serif"}}>
+                    {safeSizes.length > 1 ? "اختر المقاس :" : "المقاس :"}
                   </span>
-                  {selectedSize && <span className="text-[#F5C518] text-[11px] bg-[#1a1a1a] border border-[#333] px-2.5 py-0.5 rounded" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedSize}</span>}
+                  {selectedSize && <span className="text-[#F5C518] text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-1 rounded-md shadow-sm" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedSize}</span>}
                 </div>
-                <button onClick={() => setSizeGuideOpen(true)} className="text-[11px] text-[#F5C518] flex items-center gap-1.5 border border-[#F5C518]/20 hover:border-[#F5C518]/50 hover:bg-[#F5C518]/10 px-3 py-1.5 rounded-full transition-all" style={{fontFamily:"Cairo,sans-serif"}}>
-                  <Info size={12} /> دليل القياسات
+                <button onClick={() => setSizeGuideOpen(true)} className="text-xs text-[#F5C518] font-bold flex items-center gap-1.5 border border-[#F5C518]/20 hover:border-[#F5C518]/60 hover:bg-[#F5C518]/10 px-3.5 py-1.5 rounded-full transition-all" style={{fontFamily:"Cairo,sans-serif"}}>
+                  <Info size={14} /> دليل القياسات
                 </button>
               </div>
               {safeSizes.length > 1 && (
@@ -422,8 +416,9 @@ export default function ProductPage() {
             </div>
           )}
 
-          <div className="pt-2">
-            <div className="flex gap-2">
+          {/* [تعديل جراحي 3] إعطاء مساحة تنفس واسعة فوق زر الإضافة للسلة ليبرز بشكل مستقل */}
+          <div className="pt-6">
+            <div className="flex gap-3">
               {/* ✅ Add to cart — continuous shimmer + larger padding */}
               <button onClick={() => addToCart({...product, selectedSize, selectedColor, image: getImageUrl(activeImage), qty: quantity})} className="pay-btn flex-1 text-black font-black text-base py-4 rounded-[8px] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,197,24,0.15)] transition-all group/cta tracking-wide" style={{fontFamily:"Cairo,sans-serif"}}>
                 <ShoppingBag size={18} className="transition-transform group-hover/cta:-translate-y-0.5" />
@@ -439,18 +434,21 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* ✅ Trust strip — dividers between items + bigger icons */}
-        <div className="mt-5 flex justify-between items-center bg-[#1a1a1a] p-3 rounded-lg border border-[#333]">
-          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
-            <Truck size={16} className="text-[#F5C518] flex-shrink-0" /> شحن سريع
+        {/* [تعديل جراحي 4] شريط الثقة: مساحات أكبر، خطوط أوضح، وتوزيع بريميوم للأيقونات */}
+        <div className="mt-8 flex justify-between items-center bg-[#1a1a1a]/80 p-4 md:p-5 rounded-xl border border-[#333] shadow-md">
+          <div className="flex flex-col md:flex-row items-center gap-2 text-[11px] md:text-sm text-gray-200 font-bold flex-1 justify-center text-center">
+            <Truck size={20} strokeWidth={2.5} className="text-[#F5C518] flex-shrink-0" />
+            <span>شحن سريع</span>
           </div>
-          <div className="w-px h-5 bg-[#333]"></div>
-          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
-            <Eye size={16} className="text-[#F5C518] flex-shrink-0" /> معاينة قبل الاستلام
+          <div className="w-px h-8 bg-[#333]"></div>
+          <div className="flex flex-col md:flex-row items-center gap-2 text-[11px] md:text-sm text-gray-200 font-bold flex-1 justify-center text-center">
+            <Eye size={20} strokeWidth={2.5} className="text-[#F5C518] flex-shrink-0" />
+            <span>معاينة قبل الاستلام</span>
           </div>
-          <div className="w-px h-5 bg-[#333]"></div>
-          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
-            <ShieldCheck size={16} className="text-[#F5C518] flex-shrink-0" /> استرجاع سهل
+          <div className="w-px h-8 bg-[#333]"></div>
+          <div className="flex flex-col md:flex-row items-center gap-2 text-[11px] md:text-sm text-gray-200 font-bold flex-1 justify-center text-center">
+            <ShieldCheck size={20} strokeWidth={2.5} className="text-[#F5C518] flex-shrink-0" />
+            <span>استرجاع سهل</span>
           </div>
         </div>
 
