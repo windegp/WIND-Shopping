@@ -30,6 +30,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className={`${cairo.className} bg-[#121212] text-white antialiased overflow-x-hidden`}>
+        {/* [تعديل جراحي] حاجز SSR الأسود الصلب: يغطي الشاشة في اللحظة صفر لمنع ظهور النافبار */}
+        <div id="ssr-preloader" className="fixed inset-0 z-[10000] bg-[#121212]"></div>
+        
         <GlobalLoaderProvider>
           {/* شاشة التحميل (اللوجو) */}
           <GlobalLoader />
