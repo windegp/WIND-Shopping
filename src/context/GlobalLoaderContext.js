@@ -18,10 +18,10 @@ export function GlobalLoaderProvider({ children }) {
   // لأنه كان يقوم بسحب اللودر فوراً قبل انتظار بيانات Firebase (وهذا هو سبب ظهور النافبار مبكراً)
   // الاعتماد الآن سيكون 100% على signalPageReady القادم من الصفحة نفسها
 
-  // Handle route changes: Reset state and scroll to top
+  // Handle route changes: Reset state
   useEffect(() => {
-    // Scroll to top immediately on route change (before loader animation)
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    // [تعديل جراحي] تم إزالة window.scrollTo للسماح لـ Next.js بإدارة السكرول بذكاء
+    // (الذهاب للأعلى في الروابط الجديدة، والعودة لنفس المكان عند الضغط على زر الرجوع)
 
     // Reset loader state for new route
     setIsVisible(true);

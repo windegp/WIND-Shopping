@@ -1,6 +1,7 @@
 import "./globals.css"; 
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
+import ScrollToTop from "../components/layout/ScrollToTop";
 import { CartProvider } from "../context/CartContext";
 import { GlobalLoaderProvider } from "../context/GlobalLoaderContext";
 import CartDrawer from "../components/layout/CartDrawer";
@@ -38,11 +39,13 @@ export default function RootLayout({ children }) {
             <Navbar />
             <CartDrawer /> 
 
-            <main className="min-h-screen">
+          <main className="min-h-screen">
               {children}
             </main>
 
             <Footer />
+            {/* زر العودة للأعلى يظهر فوق الفوتر */}
+            <ScrollToTop />
           </CartProvider>
         </GlobalLoaderProvider>
       </body>
