@@ -82,31 +82,31 @@ export function GlobalLoaderProvider({ children }) {
     };
   }, [pathname]);
 
-  // Handle page readiness: Trigger recede immediately when page is ready
+  // Handle page readiness: Trigger recede strictly AFTER DOM has painted
   useEffect(() => {
     if (pageReady && isVisible && !isReceding) {
       
-  // [تعديل جراحي 3] استعادة السكرول بذكاء يفرق بين الروابط وسهم الرجوع
-      if (typeof window !== "undefined") {
-        const navType = sessionStorage.getItem('wind_nav_type');
-        const savedScroll = sessionStorage.getItem(`wind_scroll_${pathname}`);
+      // [تعديل جراحي جذري] إعطاء المتصفح 50 ملي ثانية ليرسم المنتجات ويأخذ الارتفاع الفعلي
+      // هذا يمنع اللجلجة ويضمن دقة السكرول 100% لأن الصفحة ستكون مكتملة البناء تحت اللودر
+      setTimeout(() => {
+        if (typeof window !== "undefined") {
+          const navType = sessionStorage.getItem('wind_nav_type');
+          const savedScroll = sessionStorage.getItem(`wind_scroll_${pathname}`);
 
-        if (navType === 'link_click') {
-          // 1. لو العميل داس على رابط أو اللوجو: دايماً افتح الصفحة من فوق خالص
-          window.scrollTo({ top: 0, behavior: "auto" });
-          sessionStorage.removeItem('wind_nav_type'); // تصفير الحساس للمرة القادمة
-        } else if (savedScroll !== null) {
-          // 2. لو مفيش ضغطة رابط (يعني العميل استخدم سهم الرجوع Back): رجعه لمكانه بالملّي
-          window.scrollTo({ top: parseInt(savedScroll, 10), behavior: "auto" });
-        } else {
-          // 3. أي حالة تانية (زيارة أولى): افتح من فوق
-          window.scrollTo({ top: 0, behavior: "auto" });
+          if (navType === 'link_click') {
+            window.scrollTo({ top: 0, behavior: "instant" });
+            sessionStorage.removeItem('wind_nav_type');
+          } else if (savedScroll !== null) {
+            window.scrollTo({ top: parseInt(savedScroll, 10), behavior: "instant" });
+          } else {
+            window.scrollTo({ top: 0, behavior: "instant" });
+          }
         }
-      }
 
-      // Page is ready - start receding IMMEDIATELY (no artificial delays)
-      setIsReceding(true);
-      setTimeout(() => setIsVisible(false), 900); // Receding animation duration
+        // بعد استقرار السكرول تماماً، نأمر اللودر بالانسحاب الناعم
+        setIsReceding(true);
+        setTimeout(() => setIsVisible(false), 900);
+      }, 50); // هدنة الرسم (50ms)
     }
   }, [pageReady, isVisible, isReceding, pathname]);
 
