@@ -4,8 +4,7 @@ import { usePathname } from 'next/navigation';
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePageReady, useGlobalLoader } from "@/context/GlobalLoaderContext";
-import { DESIGN_REGISTRY } from "@/lib/designRegistry"; 
-import { SkeletonHero, SkeletonText } from "@/lib/SkeletonLoaders";
+import { DESIGN_REGISTRY } from "@/lib/designRegistry";
 
 export default function Home() {
   const pathname = usePathname();
@@ -44,19 +43,6 @@ export default function Home() {
       signalPageReady();
     }
   }, [dataReady, layout, pathname, signalPageReady]);
-
-  // Show skeleton during loader transition
-  if (loaderActive && !dataReady) {
-    return (
-      <main className="bg-[#121212] min-h-screen pt-24">
-        <div className="max-w-[1400px] mx-auto px-4 space-y-16">
-          <SkeletonHero />
-          <SkeletonText lines={4} />
-          <SkeletonText lines={3} />
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="bg-[#121212] min-h-screen">
