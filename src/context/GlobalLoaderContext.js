@@ -14,21 +14,9 @@ export function GlobalLoaderProvider({ children }) {
   // Maximum timeout: 8 seconds fail-safe
   const MAX_LOADER_TIME = 8000;
 
-  // Handle initial page load
-  useEffect(() => {
-    const handleInitialLoad = () => {
-      if (document.readyState === "complete") {
-        // Page already loaded before component mounted
-        setIsReceding(true);
-        setTimeout(() => setIsVisible(false), 900);
-        return;
-      }
-    };
-
-    handleInitialLoad();
-    window.addEventListener("load", handleInitialLoad);
-    return () => window.removeEventListener("load", handleInitialLoad);
-  }, []);
+  // [تعديل جراحي] تم إزالة useEffect الخاص بـ document.readyState بالكامل
+  // لأنه كان يقوم بسحب اللودر فوراً قبل انتظار بيانات Firebase (وهذا هو سبب ظهور النافبار مبكراً)
+  // الاعتماد الآن سيكون 100% على signalPageReady القادم من الصفحة نفسها
 
   // Handle route changes: Reset state and scroll to top
   useEffect(() => {

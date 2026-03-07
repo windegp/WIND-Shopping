@@ -1,15 +1,8 @@
 "use client";
-import { useEffect } from "react";
 import { useGlobalLoader } from "@/context/GlobalLoaderContext";
 
 export default function GlobalLoader() {
   const { isVisible, isReceding, loaderType } = useGlobalLoader();
-
-  // [تعديل جراحي] إزالة الحاجز الأسود فوراً بمجرد تفعيل الرياكت، ليستلم اللودر القيادة بسلاسة
-  useEffect(() => {
-    const preloader = document.getElementById("ssr-preloader");
-    if (preloader) preloader.remove();
-  }, []);
 
   if (!isVisible) return null;
 
