@@ -191,19 +191,20 @@ export default function ProductPage() {
     if (Math.abs(dx) > 40) {
       const currentIndex = gallery.indexOf(activeImage);
       if (dx > 0) {
-        // Swipe Right -> Prev
         const prevIndex = (currentIndex - 1 + gallery.length) % gallery.length;
         setActiveImage(gallery[prevIndex]);
         setActiveIdx(prevIndex);
       } else {
-        // Swipe Left -> Next
         const nextIndex = (currentIndex + 1) % gallery.length;
         setActiveImage(gallery[nextIndex]);
         setActiveIdx(nextIndex);
       }
     }
     heroTouchStartX.current = null;
-    setIsSwipingHero(false);
+    // تأخير بسيط قبل إظهار الأيقونات لضمان النعومة وعدم التشتيت أثناء التقليب المستمر
+    setTimeout(() => {
+      setIsSwipingHero(false);
+    }, 150);
   };
 
   const onTouchStart = e => { 
@@ -298,30 +299,25 @@ export default function ProductPage() {
       {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
         <div className="mb-8 pt-2">
-          {/* تصغير الخط لـ 22px/24px لمظهر Minimalist */}
-          <h1 className="text-[22px] md:text-2xl font-black text-white mb-3 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
+          <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* نقاط البيع الأساسية المباشرة */}
-          <ul className="text-[13px] text-gray-400 font-medium space-y-2 mb-1 pr-1" style={{fontFamily:"Tajawal,sans-serif"}}>
-            <li className="flex items-center gap-2">
-              <div className="w-1 h-1 bg-[#3b82f6] rounded-full"></div> 
-              خامة بريميوم عالية الجودة وناعمة الملمس
-            </li>
-            <li className="flex items-center gap-2">
-              <div className="w-1 h-1 bg-[#3b82f6] rounded-full"></div> 
-              قصة مريحة وعملية تناسب مختلف المقاسات
-            </li>
-            <li className="flex items-center gap-2">
-              <div className="w-1 h-1 bg-[#3b82f6] rounded-full"></div> 
-              تصميم شتوي فخم لإطلالة محتشمة وأنيقة
-            </li>
-          </ul>
+          {/* التاجات الديناميكية المتجددة سنوياً */}
+          <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
+            <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
+            <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
+            <span>منتجات ويند</span>
+            {((Array.isArray(product?.categories) ? product.categories[0] : product?.categories) || product?.type) && (
+              <>
+                <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
+                <span>{(Array.isArray(product?.categories) ? product.categories[0] : product?.categories) || product?.type}</span>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-4 md:gap-5 items-start border-t border-[#333]/50 pt-6">
-          {/* البوستر المصغر - تحميل مسبق بـ Pre-load لسرعة فائقة (0 تأخير) */}
-          <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer hover:border-[#3b82f6]/50 transition-colors" onClick={() => setImageZoomModalOpen(true)}>
-            {/* عرض كل صور الألوان فوق بعض والتحكم بالشفافية فقط */}
+          {/* البوستر المصغر - استخدام priority لضمان التحميل الفوري وعدم التأخير للصور المكدسة */}
+          <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer hover:border-white/20 transition-colors" onClick={() => setImageZoomModalOpen(true)}>
             {safeColors.map((ci, i) => {
               const name  = typeof ci === "string" ? ci : ci.name;
               const hi    = product.colorSwatches?.[name] || (typeof ci === "object" ? ci.swatch : "#333");
@@ -329,17 +325,17 @@ export default function ProductPage() {
               if (!isImg) return null;
               const isSel = selectedColor === name;
               return (
-                <Image key={i} src={getImageUrl(hi)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" className={`object-cover transition-opacity duration-150 ${isSel ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt={name} />
+                <Image key={i} src={getImageUrl(hi)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" priority={true} className={`object-cover transition-opacity duration-150 ${isSel ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt={name} />
               );
             })}
-            {/* الصورة الافتراضية في حال لم يتم اختيار لون */}
-            <Image src={getImageUrl(gallery[1] || activeImage)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" className={`object-cover transition-opacity duration-150 ${(!selectedColor || !product.colorSwatches?.[selectedColor]) ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt="poster default" />
+            <Image src={getImageUrl(gallery[1] || activeImage)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" priority={true} className={`object-cover transition-opacity duration-150 ${(!selectedColor || !product.colorSwatches?.[selectedColor]) ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt="poster default" />
 
+            {/* أيقونة العدسة للمؤشر المصغر */}
             <div className="absolute top-0 left-0 bg-black/70 px-1.5 py-1 rounded-br-md z-20 border-b border-r border-[#333]">
-              <Search size={12} className="text-[#3b82f6]" />
+              <Search size={13} className="text-white" />
             </div>
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-30">
-              <div className="bg-black/60 p-2.5 rounded-full border border-[#3b82f6]/50 text-white shadow-lg">
+              <div className="bg-black/60 p-2.5 rounded-full border border-white/50 text-white shadow-lg">
                 <Search size={20} />
               </div>
             </div>
@@ -349,18 +345,18 @@ export default function ProductPage() {
             <div>
               <div className="flex items-baseline gap-1.5 mt-1">
                 <span style={{ fontFamily: 'Impact, sans-serif', letterSpacing: '1px' }} className="text-3xl md:text-4xl font-normal text-white">{product.price}</span>
-                <span className="text-sm font-bold text-[#3b82f6]">ج.م</span>
+                <span className="text-sm font-bold text-gray-400">ج.م</span>
                 {product.compareAtPrice && (
-                  <span className="text-xs text-gray-500 line-through mr-1">{product.compareAtPrice} ج.م</span>
+                  <span className="text-xs text-gray-600 line-through mr-1">{product.compareAtPrice} ج.م</span>
                 )}
               </div>
 
               <div className="flex items-center gap-2 mt-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3b82f6]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22c55e]"></span>
                 </span>
-                <span className="text-[11px] font-bold text-[#3b82f6]">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
+                <span className="text-[11px] font-bold text-[#22c55e]">{product?.quantity > 0 || product?.sellOutOfStock === "Yes" ? "متوفر في المخزون" : "غير متوفر"}</span>
               </div>
             </div>
 
@@ -374,7 +370,7 @@ export default function ProductPage() {
                 </div>
                 <button 
                   onClick={() => setDescModalOpen(true)}
-                  className="text-[#3b82f6] text-[10px] font-bold flex items-center gap-1 hover:underline underline-offset-4 w-fit pt-1 pr-1"
+                  className="text-white text-[10px] font-bold flex items-center gap-1 hover:underline underline-offset-4 w-fit pt-1 pr-1 transition-colors hover:text-[#F5C518]"
                 >
                   <Info size={12} />
                   عرض تفاصيل المنتج والخامات
@@ -389,12 +385,12 @@ export default function ProductPage() {
           
           {safeColors.length > 0 && (
             <div>
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-1 h-4 bg-[#3b82f6] rounded-sm shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+              <div className="flex items-baseline gap-2 mb-5">
+                <div className="w-1 h-4 bg-[#F5C518] rounded-sm self-center shadow-[0_0_8px_rgba(245,197,24,0.4)]" />
                 <span className="text-xs font-bold text-gray-400 tracking-widest uppercase" style={{fontFamily:"Cairo,sans-serif"}}>
-                  {safeColors.length > 1 ? "اختر اللون" : "اللون"}
+                  {safeColors.length > 1 ? "اختر اللون :" : "اللون :"}
                 </span>
-                {selectedColor && <span className="text-white text-[11px] font-bold bg-[#1a1a1a] border border-[#3b82f6]/40 px-2.5 py-0.5 rounded shadow-sm ml-1" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
+                {selectedColor && <span className="text-white text-[13px] font-bold capitalize ml-1" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedColor}</span>}
               </div>
               <div ref={colorsRef} className="flex flex-wrap gap-4">
                 {safeColors.map((ci, i) => {
@@ -404,7 +400,7 @@ export default function ProductPage() {
                   const isSel = selectedColor === name;
                   return (
                     <button key={i} onClick={() => { setSelectedColor(name); if (isImg) { setActiveImage(hi); setActiveIdx(0); } }} title={name} className="flex flex-col items-center group/c transition-all duration-300 ease-out">
-                      <div className={`w-11 h-11 rounded-[10px] overflow-hidden transition-all duration-300 ease-out ${isSel ? "ring-2 ring-[#3b82f6] ring-offset-2 ring-offset-[#121212] shadow-[0_4px_16px_rgba(59,130,246,0.35)] scale-[1.08]" : "ring-1 ring-white/10 hover:ring-white/30 hover:shadow-[0_4px_10px_rgba(255,255,255,0.08)] hover:-translate-y-1"}`}>
+                      <div className={`w-11 h-11 rounded-[10px] overflow-hidden transition-all duration-300 ease-out ${isSel ? "ring-2 ring-white ring-offset-2 ring-offset-[#121212] shadow-[0_4px_16px_rgba(255,255,255,0.2)] scale-[1.08]" : "ring-1 ring-white/10 hover:ring-white/30 hover:shadow-[0_4px_10px_rgba(255,255,255,0.08)] hover:-translate-y-1"}`}>
                         {isImg ? <Image src={hi} alt={name} width={60} height={80} quality={75} className="w-full h-full object-cover" /> : <div style={{backgroundColor:hi}} className="w-full h-full" />}
                       </div>
                     </button>
@@ -417,21 +413,21 @@ export default function ProductPage() {
           {safeSizes.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-1 h-4 bg-[#3b82f6] rounded-sm shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                <div className="flex items-baseline gap-2">
+                  <div className="w-1 h-4 bg-[#F5C518] rounded-sm self-center shadow-[0_0_8px_rgba(245,197,24,0.4)]" />
                   <span className="text-xs font-bold text-gray-400 tracking-widest uppercase" style={{fontFamily:"Cairo,sans-serif"}}>
-                    {safeSizes.length > 1 ? "اختر المقاس" : "المقاس"}
+                    {safeSizes.length > 1 ? "اختر المقاس :" : "المقاس :"}
                   </span>
-                  {selectedSize && <span className="text-white text-[11px] font-bold bg-[#1a1a1a] border border-[#3b82f6]/40 px-2.5 py-0.5 rounded shadow-sm ml-1" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedSize}</span>}
+                  {selectedSize && <span className="text-white text-[13px] font-bold capitalize ml-1" style={{fontFamily:"Tajawal,sans-serif"}}>{selectedSize}</span>}
                 </div>
-                <button onClick={() => setSizeGuideOpen(true)} className="text-[11px] text-[#3b82f6] font-bold flex items-center gap-1.5 border border-[#3b82f6]/20 hover:border-[#3b82f6]/60 hover:bg-[#3b82f6]/10 px-3 py-1.5 rounded-full transition-all" style={{fontFamily:"Cairo,sans-serif"}}>
+                <button onClick={() => setSizeGuideOpen(true)} className="text-[11px] text-white font-bold flex items-center gap-1.5 border border-white/20 hover:border-white/60 hover:bg-white/10 px-3 py-1.5 rounded-full transition-all" style={{fontFamily:"Cairo,sans-serif"}}>
                   <Info size={13} /> دليل القياسات
                 </button>
               </div>
               {safeSizes.length > 1 && (
                 <div className="flex flex-wrap gap-2.5">
                   {safeSizes.map(sz => (
-                    <button key={sz} onClick={() => setSelectedSize(sz)} className={`min-w-[58px] h-10 text-sm font-black rounded-xl border transition-all duration-200 ${selectedSize===sz ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.15)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-[#3b82f6]/40 hover:text-gray-200 hover:shadow-[0_0_10px_rgba(59,130,246,0.1)]"}`} style={{fontFamily:"Cairo,sans-serif"}}>{sz}</button>
+                    <button key={sz} onClick={() => setSelectedSize(sz)} className={`min-w-[58px] h-10 text-sm font-black rounded-xl border transition-all duration-200 capitalize ${selectedSize===sz ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.15)] scale-105" : "bg-[#1a1a1a] text-gray-400 border-[#333] hover:border-white/40 hover:text-gray-200 hover:shadow-[0_0_10px_rgba(255,255,255,0.05)]"}`} style={{fontFamily:"Cairo,sans-serif"}}>{sz}</button>
                   ))}
                 </div>
               )}
@@ -445,10 +441,10 @@ export default function ProductPage() {
                 أضف إلي السلة — {(product.price * quantity)} ج.م
               </button>
               
-              <div className="flex items-center justify-between bg-[#1a1a1a] border border-[#333] rounded-[8px] px-1 w-[80px] shrink-0 transition-colors hover:border-[#3b82f6]/40">
-                <button onClick={() => setQuantity(q => q + 1)} className="text-gray-400 hover:text-[#3b82f6] p-1.5 transition-colors"><Plus size={16} /></button>
+              <div className="flex items-center justify-between bg-[#1a1a1a] border border-[#333] rounded-[8px] px-1 w-[80px] shrink-0 transition-colors hover:border-[#F5C518]/40">
+                <button onClick={() => setQuantity(q => q + 1)} className="text-gray-400 hover:text-[#F5C518] p-1.5 transition-colors"><Plus size={16} /></button>
                 <span className="text-white font-bold text-sm" style={{fontFamily:"Cairo,sans-serif"}}>{quantity}</span>
-                <button onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} className="text-gray-400 hover:text-[#3b82f6] p-1.5 transition-colors"><Minus size={16} /></button>
+                <button onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} className="text-gray-400 hover:text-[#F5C518] p-1.5 transition-colors"><Minus size={16} /></button>
               </div>
             </div>
           </div>
@@ -457,17 +453,17 @@ export default function ProductPage() {
         {/* شريط الثقة النحيف والأنيق (Slim Banner) */}
         <div className="mt-8 flex justify-between items-center bg-[#1a1a1a]/50 py-3 px-2 md:px-4 rounded-lg border border-[#333] shadow-sm">
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
-            <Truck size={14} className="text-[#3b82f6]" />
+            <Truck size={14} className="text-[#F5C518]" />
             <span>شحن سريع</span>
           </div>
           <div className="w-px h-4 bg-[#333]"></div>
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
-            <Eye size={14} className="text-[#3b82f6]" />
+            <Eye size={14} className="text-[#F5C518]" />
             <span>معاينة للطلب</span>
           </div>
           <div className="w-px h-4 bg-[#333]"></div>
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
-            <ShieldCheck size={14} className="text-[#3b82f6]" />
+            <ShieldCheck size={14} className="text-[#F5C518]" />
             <span>استرجاع سهل</span>
           </div>
         </div>
@@ -498,7 +494,7 @@ export default function ProductPage() {
         {product.description && (
           <div className="py-8 border-t border-[#333]/50 mt-6">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-1 h-5 bg-[#3b82f6] rounded-sm" />
+              <div className="w-1 h-5 bg-[#F5C518] rounded-sm" />
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>تفاصيل المنتج</span>
             </div>
             <div className="ql-editor-display dark-wind-tabs" dir="rtl">
@@ -510,7 +506,7 @@ export default function ProductPage() {
         {relatedProducts.length > 0 && (
           <div className="py-8 border-t border-[#333]/50 mt-4">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-1 h-6 bg-[#3b82f6] rounded-sm" />
+              <div className="w-1 h-6 bg-[#F5C518] rounded-sm" />
               <h2 className="text-lg md:text-xl font-black text-white tracking-tight" style={{fontFamily:"Cairo,sans-serif"}}>
                 منتجات قد تعجبك
               </h2>
@@ -546,7 +542,7 @@ export default function ProductPage() {
                     <span className="text-white font-black text-sm md:text-base" style={{fontFamily:"Impact, sans-serif", letterSpacing:"1px"}}>
                       {rp.price}
                     </span>
-                    <span className="text-[#3b82f6] text-[10px] md:text-xs font-bold mb-0.5">ج.م</span>
+                    <span className="text-gray-400 text-[10px] md:text-xs font-bold mb-0.5">ج.م</span>
                   </div>
                 </Link>
               ))}
