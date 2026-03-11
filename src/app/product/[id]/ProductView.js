@@ -11,7 +11,7 @@ import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/
 import SizeChartModal from "@/components/SizeChartModal";
 import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
-// 1. تغيير اسم الدالة واستقبال الخواص من السيرفر (initialProduct و sourceCategory)
+// 1. استقبال الخواص من السيرفر (initialProduct و sourceCategory)
 export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
   const pathname = usePathname();
@@ -132,11 +132,9 @@ export default function ProductView({ initialProduct, sourceCategory }) {
       setLoading(false);
     };
     
-    // إذا لم يكن المنتج ممرر من السيرفر، قم بجلبه
     if (!initialProduct) {
       fetchProduct();
     } else {
-      // فقط لتجهيز المنتجات ذات الصلة إذا كان المنتج ممرر مسبقاً
       fetchProduct(); 
     }
   }, [id, initialProduct]);
@@ -147,11 +145,11 @@ export default function ProductView({ initialProduct, sourceCategory }) {
     }
   }, [loading, product, pathname, signalPageReady]);
 
+  // --- الحل الجذري لمشكلة الكراش (استبدال DOMParser بطريقة متوافقة مع السيرفر) ---
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";
     let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
-    const doc = new DOMParser().parseFromString(clean, 'text/html');
-    let text = doc.body.textContent || "";
+    let text = clean.replace(/<[^>]+>/g, '') || ""; // إزالة الـ HTML بدون استخدام DOMParser
     const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
     keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
     return text.trim().substring(0, 110) + "... ";
@@ -186,7 +184,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   const galleryNext = () => { setGalleryIdx(i => (i + 1) % gallery.length); setIsZoomed(false); };
   const galleryPrev = () => { setGalleryIdx(i => (i - 1 + gallery.length) % gallery.length); setIsZoomed(false); };
   
-  // Hero Touch Logic (Swipe left/right)
   const handleHeroTouchStart = (e) => {
     heroTouchStartX.current = e.touches[0].clientX;
     setIsSwipingHero(true);
@@ -210,7 +207,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
       }
     }
     heroTouchStartX.current = null;
-    // تأخير بسيط قبل إظهار الأيقونات لضمان النعومة وعدم التشتيت أثناء التقليب المستمر
     setTimeout(() => {
       setIsSwipingHero(false);
     }, 150);
@@ -238,8 +234,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   if (product.options && Array.isArray(product.options)) {
     product.options.forEach(opt => {
       const n = (opt.name || "").toLowerCase();
-      if (n.includes("size") || n === "المقاس" || n === "مقاس") safeSizes  = opt.values.split(",").map(s => s.trim()).filter(Boolean);
-      if (n.includes("color")|| n === "اللون"  || n === "لون")  safeColors = opt.values.split(",").map(c => c.trim()).filter(Boolean);
+      if (n.includes("size") || n === "المقاس" || n === "مقاس") safeSizes  = opt.values?.split(",").map(s => s.trim()).filter(Boolean) || [];
+      if (n.includes("color")|| n === "اللون"  || n === "لون")  safeColors = opt.values?.split(",").map(c => c.trim()).filter(Boolean) || [];
     });
   }
   if (!safeSizes.length)  safeSizes  = Array.isArray(product.options?.sizes)  ? product.options.sizes  : (Array.isArray(product.sizes)  ? product.sizes  : []);
@@ -255,7 +251,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#3b82f6] selection:text-white">
 
-      {/* 1. القسم السينمائي (Hero Section) مع دعم السحب */}
       <div 
         className="relative w-full h-[65vh] md:h-[75vh] bg-black group" 
         onClick={() => openGallery(activeIdx)}
@@ -270,7 +265,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
         
-        {/* إخفاء الأيقونات بسلاسة أثناء السحب */}
         <div className={`absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10 transition-opacity duration-300 ${isSwipingHero ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.stopPropagation()}>
           <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#3b82f6] transition-colors drop-shadow-md">
             <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
@@ -297,7 +291,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           </button>
         </div>
 
-        {/* مؤشر الصور الأنيق بالأسفل */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 text-white/50 text-[10px] md:text-xs font-bold font-sans tracking-[0.2em] pointer-events-none z-10">
           <span>&lt;</span>
           <span>{activeIdx + 1} / {gallery.length}</span>
@@ -305,31 +298,39 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         </div>
       </div>
 
-      {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* 3. التاجات الديناميكية الذكية (متوافقة 100% مع حقول Firebase) */}
+          {/* --- الحل الذكي للتاجات (بدون مسافات أو شرط وبدون Type) --- */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
             <span>منتجات ويند</span>
             
-            {/* استخدام sourceCategory أو البحث في حقول فايربيز البديلة (productCategory, category, type, tags) */}
-            {(sourceCategory || product?.productCategory || product?.category || product?.type || (Array.isArray(product?.tags) && product.tags[0])) && (
-              <>
-                <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
-                <span className="capitalize">
-                  {String(sourceCategory || product?.productCategory || product?.category || product?.type || (Array.isArray(product?.tags) ? product.tags[0] : "") || "").split('/')[0].trim()}
-                </span>
-              </>
-            )}
+            {(() => {
+              const displayCategory = sourceCategory 
+                || (Array.isArray(product?.collections) && product.collections.find(c => !c.startsWith('/'))) 
+                || (Array.isArray(product?.categories) && product.categories.find(c => !c.startsWith('/'))) 
+                || (typeof product?.category === 'string' ? product.category : null)
+                || "";
+
+              if (displayCategory) {
+                return (
+                  <>
+                    <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
+                    <span className="capitalize">
+                      {String(displayCategory).split('/')[0].replace(/-/g, ' ').trim()}
+                    </span>
+                  </>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
 
         <div className="flex gap-4 md:gap-5 items-start border-t border-[#333]/50 pt-6">
-          {/* البوستر المصغر - استخدام priority لضمان التحميل الفوري وعدم التأخير للصور المكدسة */}
           <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer hover:border-white/20 transition-colors" onClick={() => setImageZoomModalOpen(true)}>
             {safeColors.map((ci, i) => {
               const name  = typeof ci === "string" ? ci : ci.name;
@@ -343,7 +344,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
             })}
             <Image src={getImageUrl(gallery[1] || activeImage)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" priority={true} className={`object-cover transition-opacity duration-150 ${(!selectedColor || !product.colorSwatches?.[selectedColor]) ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt="poster default" />
 
-            {/* أيقونة العدسة للمؤشر المصغر */}
             <div className="absolute top-0 left-0 bg-black/70 px-1.5 py-1 rounded-br-md z-20 border-b border-r border-[#333]">
               <Search size={13} className="text-white" />
             </div>
@@ -393,7 +393,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           </div>
         </div>
 
-        {/* مساحات تنفس أكبر بين الأقسام */}
         <div className="mt-10 space-y-10 border-t border-[#333]/50 pt-8">
           
           {safeColors.length > 0 && (
@@ -463,7 +462,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           </div>
         </div>
 
-        {/* شريط الثقة النحيف والأنيق (Slim Banner) */}
         <div className="mt-8 flex justify-between items-center bg-[#1a1a1a]/50 py-3 px-2 md:px-4 rounded-lg border border-[#333] shadow-sm">
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
             <Truck size={14} className="text-[#F5C518]" />
