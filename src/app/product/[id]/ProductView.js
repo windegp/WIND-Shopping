@@ -11,16 +11,18 @@ import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/
 import SizeChartModal from "@/components/SizeChartModal";
 import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
-export default function ProductPage() {
+// 1. تغيير اسم الدالة واستقبال الخواص من السيرفر (initialProduct و sourceCategory)
+export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
   const pathname = usePathname();
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
   
-  const [product, setProduct]               = useState(null);
-  const [loading, setLoading]               = useState(true);
+  // 2. استخدام المنتج الممرر من السيرفر كقيمة افتراضية لسرعة العرض
+  const [product, setProduct]               = useState(initialProduct || null);
+  const [loading, setLoading]               = useState(!initialProduct);
   const { addToCart }                       = useCart();
-  const [activeImage, setActiveImage]       = useState("");
+  const [activeImage, setActiveImage]       = useState(initialProduct?.images?.[0] || initialProduct?.mainImage || "");
   const [activeIdx, setActiveIdx]           = useState(0);
   const [selectedSize, setSelectedSize]     = useState("");
   const [selectedColor, setSelectedColor]   = useState("");
@@ -129,8 +131,15 @@ export default function ProductPage() {
       } catch(e) { console.error(e); }
       setLoading(false);
     };
-    fetchProduct();
-  }, [id]);
+    
+    // إذا لم يكن المنتج ممرر من السيرفر، قم بجلبه
+    if (!initialProduct) {
+      fetchProduct();
+    } else {
+      // فقط لتجهيز المنتجات ذات الصلة إذا كان المنتج ممرر مسبقاً
+      fetchProduct(); 
+    }
+  }, [id, initialProduct]);
 
   useEffect(() => {
     if (!loading && product) {
@@ -153,7 +162,7 @@ export default function ProductPage() {
     return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
   }, [product?.description]);
 
-  if (loading) return null; 
+  if (loading && !product) return null; 
   if (!product) return null;
 
   const getImageUrl = img => {
@@ -288,7 +297,7 @@ export default function ProductPage() {
           </button>
         </div>
 
-        {/* مؤشر الصور الأنيق بالأسفل (يظهر للعين فقط ولا يؤثر على الضغط) */}
+        {/* مؤشر الصور الأنيق بالأسفل */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 text-white/50 text-[10px] md:text-xs font-bold font-sans tracking-[0.2em] pointer-events-none z-10">
           <span>&lt;</span>
           <span>{activeIdx + 1} / {gallery.length}</span>
@@ -301,15 +310,18 @@ export default function ProductPage() {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* التاجات الديناميكية المتجددة سنوياً */}
+          {/* 3. التاجات الديناميكية الذكية (تعرض اسم القسم القادم منه العميل) */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
             <span>منتجات ويند</span>
-            {((Array.isArray(product?.categories) ? product.categories[0] : product?.categories) || product?.type) && (
+            
+            {(sourceCategory || ((Array.isArray(product?.categories) ? product.categories.find(c => c.includes('/')) || product.categories[0] : product?.categories) || product?.type)) && (
               <>
                 <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
-                <span>{(Array.isArray(product?.categories) ? product.categories[0] : product?.categories) || product?.type}</span>
+                <span className="capitalize">
+                  {sourceCategory || ((Array.isArray(product?.categories) ? product.categories.find(c => c.includes('/')) || product.categories[0] : product?.categories) || product?.type || "").split('/')[0].trim()}
+                </span>
               </>
             )}
           </div>

@@ -37,9 +37,12 @@ export async function generateMetadata({ params }) {
 }
 
 // 2. الصفحة الرئيسية
-export default async function Page({ params }) {
+export default async function Page({ params, searchParams }) {
   const { id } = params;
   const product = await getProductData(id);
+
+  // استخراج اسم القسم من الرابط (إن وُجد)
+  const sourceCategory = searchParams?.source || null;
 
   if (!product) return null; // Silent fallback - GlobalLoader handles initial page load
 
@@ -74,8 +77,8 @@ export default async function Page({ params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      {/* نمرر الـ sanitizedProduct بدل الـ product الأصلي */}
-      <ProductView initialProduct={sanitizedProduct} /> 
+      {/* نمرر الـ sanitizedProduct والـ sourceCategory لملف العرض */}
+      <ProductView initialProduct={sanitizedProduct} sourceCategory={sourceCategory} /> 
     </>
   );
 }
