@@ -1,40 +1,60 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ComingSoon() {
+  const touchStartY = useRef(null);
+
   useEffect(() => {
-    // منع scroll عادي لكن السماح بـ pull-to-reload
     const html = document.documentElement;
     const body = document.body;
 
-    const prevBodyOverflow = body.style.overflow;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyHeight = body.style.height;
-    const prevHtmlHeight = html.style.height;
-
-    // نمنع الـscroll بمنع height من تجاوز viewport
     body.style.overflow = "hidden";
     body.style.height = "100%";
     html.style.overflow = "hidden";
     html.style.height = "100%";
 
+    // pull-to-reload من أي مكان في الصفحة
+    const THRESHOLD = 90; // px للسحب قبل الريلود
+
+    const onTouchStart = (e) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchEnd = (e) => {
+      if (touchStartY.current === null) return;
+      const delta = e.changedTouches[0].clientY - touchStartY.current;
+      if (delta > THRESHOLD) {
+        window.location.reload();
+      }
+      touchStartY.current = null;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+
     return () => {
-      body.style.overflow = prevBodyOverflow;
-      body.style.height = prevBodyHeight;
-      html.style.overflow = prevHtmlOverflow;
-      html.style.height = prevHtmlHeight;
+      body.style.overflow = "";
+      body.style.height = "";
+      html.style.overflow = "";
+      html.style.height = "";
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Scheherazade+New:wght@700&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeDown {
+          from { opacity: 0; transform: translateY(-16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes lineGrow {
@@ -61,8 +81,8 @@ export default function ComingSoon() {
           font-family: 'Cairo', sans-serif;
           overflow: hidden;
           -webkit-font-smoothing: antialiased;
-          /* لا نضع touch-action: none حتى يشتغل pull-to-reload */
-          overscroll-behavior-x: none;
+          overscroll-behavior: none;
+          user-select: none;
         }
 
         .ws-root::before {
@@ -74,7 +94,6 @@ export default function ComingSoon() {
           pointer-events: none;
         }
 
-        /* corner marks */
         .ws-corner {
           position: absolute;
           width: 16px;
@@ -86,7 +105,6 @@ export default function ComingSoon() {
         .ws-corner-bl { bottom: 28px; left: 28px;    border-bottom: 1px solid #F5C518; border-left: 1px solid #F5C518; }
         .ws-corner-br { bottom: 28px; right: 28px;   border-bottom: 1px solid #F5C518; border-right: 1px solid #F5C518; }
 
-        /* center block */
         .ws-center {
           display: flex;
           flex-direction: column;
@@ -96,23 +114,33 @@ export default function ComingSoon() {
           padding: 0 24px;
         }
 
-        /* brand name */
+        /* قريباً — خط signature */
+        .ws-soon {
+          font-family: 'Scheherazade New', serif;
+          font-size: clamp(38px, 8vw, 64px);
+          font-weight: 700;
+          color: #F5C518;
+          direction: rtl;
+          line-height: 1;
+          margin-bottom: 28px;
+          opacity: 0;
+          animation: fadeDown 1s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
+          /* تأثير خفيف يوحي بالكتابة اليدوية */
+          letter-spacing: 0.05em;
+          filter: drop-shadow(0 0 18px rgba(245,197,24,0.18));
+        }
+
         .ws-brand-wrap {
           display: flex;
           flex-direction: column;
           align-items: center;
           opacity: 0;
-          animation: fadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+          animation: fadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
         }
         .ws-wind {
           font-size: clamp(44px, 9vw, 82px);
           font-weight: 700;
           letter-spacing: 0.4em;
-          /*
-            letter-spacing يضيف مسافة بعد آخر حرف فيبدو النص مائلاً يساراً.
-            margin-left بمقدار نصف قيمة letter-spacing يعيد التوازن البصري تماماً
-            بدون أن يكسر الـ flex centering.
-          */
           margin-left: 0.4em;
           color: #ffffff;
           line-height: 1;
@@ -128,7 +156,6 @@ export default function ComingSoon() {
           line-height: 1;
         }
 
-        /* gold divider */
         .ws-line {
           width: 36px;
           height: 1px;
@@ -140,7 +167,6 @@ export default function ComingSoon() {
           animation: lineGrow 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.9s forwards;
         }
 
-        /* Arabic text block */
         .ws-text {
           display: flex;
           flex-direction: column;
@@ -165,7 +191,6 @@ export default function ComingSoon() {
           animation: fadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.3s forwards;
         }
 
-        /* dots */
         .ws-dots {
           display: flex;
           gap: 8px;
@@ -191,6 +216,10 @@ export default function ComingSoon() {
         <span className="ws-corner ws-corner-br" />
 
         <div className="ws-center">
+
+          {/* قريباً فوق البراند */}
+          <span className="ws-soon">قريباً</span>
+
           <div className="ws-brand-wrap">
             <span className="ws-wind">WIND</span>
             <span className="ws-shopping">Shopping</span>
