@@ -95,7 +95,7 @@ export default function ComingSoon() {
           font-size: clamp(44px, 9vw, 82px);
           font-weight: 700;
           letter-spacing: 0.4em;
-          padding-right: 0.4em; /* optical centering for letter-spacing */
+          text-indent: 0.4em; /* optical centering: shifts text right to visually center it */
           color: #ffffff;
           line-height: 1;
         }
@@ -103,7 +103,7 @@ export default function ComingSoon() {
           font-size: clamp(11px, 1.8vw, 15px);
           font-weight: 400;
           letter-spacing: 0.55em;
-          padding-right: 0.55em; /* optical centering */
+          text-indent: 0.55em; /* optical centering */
           color: rgba(255,255,255,0.35);
           text-transform: uppercase;
           margin-top: 10px;
