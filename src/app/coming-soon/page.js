@@ -3,13 +3,26 @@ import { useEffect } from "react";
 
 export default function ComingSoon() {
   useEffect(() => {
-    // منع أي scroll في الصفحة
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
+    // منع scroll عادي لكن السماح بـ pull-to-reload
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyHeight = body.style.height;
+    const prevHtmlHeight = html.style.height;
+
+    // نمنع الـscroll بمنع height من تجاوز viewport
+    body.style.overflow = "hidden";
+    body.style.height = "100%";
+    html.style.overflow = "hidden";
+    html.style.height = "100%";
+
     return () => {
-      document.body.style.overflow = original;
-      document.documentElement.style.overflow = "";
+      body.style.overflow = prevBodyOverflow;
+      body.style.height = prevBodyHeight;
+      html.style.overflow = prevHtmlOverflow;
+      html.style.height = prevHtmlHeight;
     };
   }, []);
 
@@ -48,8 +61,8 @@ export default function ComingSoon() {
           font-family: 'Cairo', sans-serif;
           overflow: hidden;
           -webkit-font-smoothing: antialiased;
-          touch-action: none;
-          overscroll-behavior: none;
+          /* لا نضع touch-action: none حتى يشتغل pull-to-reload */
+          overscroll-behavior-x: none;
         }
 
         .ws-root::before {
@@ -83,7 +96,7 @@ export default function ComingSoon() {
           padding: 0 24px;
         }
 
-        /* brand name — two lines stacked */
+        /* brand name */
         .ws-brand-wrap {
           display: flex;
           flex-direction: column;
@@ -95,7 +108,12 @@ export default function ComingSoon() {
           font-size: clamp(44px, 9vw, 82px);
           font-weight: 700;
           letter-spacing: 0.4em;
-          text-indent: 0.4em; /* optical centering: shifts text right to visually center it */
+          /*
+            letter-spacing يضيف مسافة بعد آخر حرف فيبدو النص مائلاً يساراً.
+            margin-left بمقدار نصف قيمة letter-spacing يعيد التوازن البصري تماماً
+            بدون أن يكسر الـ flex centering.
+          */
+          margin-left: 0.4em;
           color: #ffffff;
           line-height: 1;
         }
@@ -103,7 +121,7 @@ export default function ComingSoon() {
           font-size: clamp(11px, 1.8vw, 15px);
           font-weight: 400;
           letter-spacing: 0.55em;
-          text-indent: 0.55em; /* optical centering */
+          margin-left: 0.55em;
           color: rgba(255,255,255,0.35);
           text-transform: uppercase;
           margin-top: 10px;
