@@ -310,17 +310,18 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* 3. التاجات الديناميكية الذكية (تعرض اسم القسم القادم منه العميل) */}
+          {/* 3. التاجات الديناميكية الذكية (متوافقة 100% مع حقول Firebase) */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
             <span>منتجات ويند</span>
             
-            {(sourceCategory || ((Array.isArray(product?.categories) ? product.categories.find(c => c.includes('/')) || product.categories[0] : product?.categories) || product?.type)) && (
+            {/* استخدام sourceCategory أو البحث في حقول فايربيز البديلة (productCategory, category, type, tags) */}
+            {(sourceCategory || product?.productCategory || product?.category || product?.type || (Array.isArray(product?.tags) && product.tags[0])) && (
               <>
                 <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
                 <span className="capitalize">
-                  {sourceCategory || ((Array.isArray(product?.categories) ? product.categories.find(c => c.includes('/')) || product.categories[0] : product?.categories) || product?.type || "").split('/')[0].trim()}
+                  {String(sourceCategory || product?.productCategory || product?.category || product?.type || (Array.isArray(product?.tags) ? product.tags[0] : "") || "").split('/')[0].trim()}
                 </span>
               </>
             )}
