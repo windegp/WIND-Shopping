@@ -287,7 +287,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   };
 
   return (
-    <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#3b82f6] selection:text-white">
+    <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
       <div 
         className="relative w-full h-[65vh] md:h-[75vh] bg-black group" 
@@ -296,15 +296,15 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         onTouchMove={handleHeroTouchMove}
         onTouchEnd={handleHeroTouchEnd}
       >
+        {/* ✅ حل مشكلة النزول من الفريم: تم تغيير الأنيميشن من fadeIn إلى simpleFade */}
         <img 
           key={activeImage}
           src={getImageUrl(activeImage)} 
           alt={product.title} 
-          className="w-full h-full object-cover object-top opacity-90 transition-opacity duration-300 animate-[fadeIn_0.3s_ease-out]"
+          className="w-full h-full object-cover object-top opacity-90 transition-opacity duration-300 animate-[simpleFade_0.35s_ease-out]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-transparent pointer-events-none"></div>
 
-        {/* ✅ أيقونة العدسة المكبرة أعلى اليمين (في الواجهة العربي left-4 بتبقى يمين عشان الـ direction) */}
         <button 
           onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }} 
           className="absolute top-4 left-4 z-10 bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20 text-white hover:text-[#F5C518] transition-colors drop-shadow-md cursor-zoom-in"
@@ -312,26 +312,25 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           <Search size={18} />
         </button>
 
-        {/* ✅ الأيقونات التفاعلية والعداد في أسفل الصورة (أقل من عرض الشاشة ومدمجة في التدرج) */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md flex items-center justify-between z-10">
+        {/* ✅ الأيقونات التفاعلية (بدون إطارات نهائياً، بظل قوي جداً وموزعة بشياكة) */}
+        <div className="absolute bottom-5 left-0 w-full px-5 md:px-8 flex items-end justify-between z-10 pointer-events-none">
           
-          <button onClick={handleShare} className="flex items-center gap-1.5 text-white/90 hover:text-[#3b82f6] transition-colors drop-shadow-md bg-black/40 px-3 py-2 rounded-full backdrop-blur-md border border-white/10">
-            <Share2 size={16} />
-            <span className="text-[11px] font-bold" style={{fontFamily:"Cairo,sans-serif"}}>مشاركة</span>
+          {/* يمين: زر المشاركة */}
+          <button onClick={handleShare} className="pointer-events-auto flex items-center gap-1.5 text-white/95 hover:text-[#F5C518] transition-colors drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] px-2 py-1">
+            <Share2 size={24} />
           </button>
 
-          <div className="flex items-center gap-3 text-white/80 text-[11px] font-bold font-sans tracking-[0.2em] bg-black/40 px-4 py-2 rounded-full backdrop-blur-md border border-white/10" onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }}>
-            <ImageIcon size={14} className="text-white/60" />
-            <div className="flex items-center gap-2">
-              <span>&lt;</span>
-              <span>{activeIdx + 1} / {gallery.length}</span>
-              <span>&gt;</span>
-            </div>
+          {/* المنتصف: العداد */}
+          <div className="pointer-events-auto flex items-center gap-3 text-white/95 text-[14px] font-bold font-sans tracking-[0.2em] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] cursor-pointer px-4 py-2" onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }}>
+            <span className="opacity-70">&lt;</span>
+            <span>{activeIdx + 1} / {gallery.length}</span>
+            <span className="opacity-70">&gt;</span>
           </div>
 
-          <button onClick={handleWishlistToggle} className="flex items-center gap-1.5 text-white/90 hover:text-[#F5C518] transition-colors drop-shadow-md bg-black/40 px-3 py-2 rounded-full backdrop-blur-md border border-white/10">
-            <span className="text-[11px] font-bold" style={{fontFamily:"Cairo,sans-serif"}}>{product.likes || "1.2K"}</span>
-            <Heart size={16} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
+          {/* يسار: زر الإعجاب */}
+          <button onClick={handleWishlistToggle} className="pointer-events-auto flex items-center gap-1.5 text-white/95 hover:text-[#F5C518] transition-colors drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] px-2 py-1">
+            <span className="text-[13px] font-bold pt-1" style={{fontFamily:"Cairo,sans-serif"}}>{product.likes || "1.2K"}</span>
+            <Heart size={24} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
           </button>
 
         </div>
@@ -341,7 +340,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* ✅ التاجات الذكية (بمسافة بسيطة تحت العنوان) */}
           <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mt-3 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
             
             <span className="border border-gray-600 rounded-[4px] px-2 py-0.5 text-gray-300">
@@ -579,9 +577,9 @@ export default function ProductView({ initialProduct, sourceCategory }) {
                 <Link 
                   href={`/product/${rp.id}`} 
                   key={rp.id} 
-                  className="flex-shrink-0 w-[140px] md:w-[180px] group cursor-pointer block transition-all duration-300 hover:shadow-[0_8px_32px_rgba(59,130,246,0.10)] rounded-2xl"
+                  className="flex-shrink-0 w-[140px] md:w-[180px] group cursor-pointer block transition-all duration-300 hover:shadow-[0_8px_32px_rgba(245,197,24,0.10)] rounded-2xl"
                 >
-                  <div className="relative aspect-[3/4] bg-[#1a1a1a] rounded-2xl overflow-hidden border border-[#333] shadow-lg mb-3 group-hover:border-[#3b82f6]/30 transition-colors duration-300">
+                  <div className="relative aspect-[3/4] bg-[#1a1a1a] rounded-2xl overflow-hidden border border-[#333] shadow-lg mb-3 group-hover:border-[#F5C518]/30 transition-colors duration-300">
                     <img 
                       src={getRelatedImageUrl(rp)} 
                       alt={rp.title} 
@@ -621,7 +619,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <div className="w-[3px] h-5 bg-[#3b82f6] rounded-sm" />
+              {/* ✅ توحيد اللون الذهبي هنا */}
+              <div className="w-[3px] h-5 bg-[#F5C518] rounded-sm shadow-[0_0_8px_rgba(245,197,24,0.4)]" />
               <span className="text-white font-black text-sm" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</span>
             </div>
             <div className="flex items-center gap-3">
@@ -646,8 +645,9 @@ export default function ProductView({ initialProduct, sourceCategory }) {
             
             {!isZoomed && (
               <>
-                <button onClick={galleryPrev} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#3b82f6]/40 text-white/60 hover:text-[#3b82f6] p-3 rounded-full transition-all hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]"><ChevronRight size={22} strokeWidth={1.5} /></button>
-                <button onClick={galleryNext} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#3b82f6]/40 text-white/60 hover:text-[#3b82f6] p-3 rounded-full transition-all hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]"><ChevronLeft size={22} strokeWidth={1.5} /></button>
+                {/* ✅ توحيد اللون الذهبي هنا */}
+                <button onClick={galleryPrev} className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/40 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all hover:shadow-[0_0_12px_rgba(245,197,24,0.2)]"><ChevronRight size={22} strokeWidth={1.5} /></button>
+                <button onClick={galleryNext} className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 backdrop-blur-sm border border-white/10 hover:border-[#F5C518]/40 text-white/60 hover:text-[#F5C518] p-3 rounded-full transition-all hover:shadow-[0_0_12px_rgba(245,197,24,0.2)]"><ChevronLeft size={22} strokeWidth={1.5} /></button>
               </>
             )}
             
@@ -671,7 +671,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
             >
               <X size={24} />
             </button>
-            <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm border border-[#3b82f6]/40">
+            <div className="absolute bottom-4 right-4 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm border border-[#F5C518]/40">
               <span className="text-white font-bold text-sm">{selectedColor}</span>
             </div>
           </div>
@@ -683,7 +683,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           <div className="bg-[#121212] w-full md:max-w-xl rounded-t-2xl md:rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-[fadeIn_0.3s_ease-out]">
             <div className="p-4 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a] sticky top-0 z-10">
               <h3 className="font-black text-lg text-white flex items-center gap-2">
-                <div className="w-1.5 h-5 bg-[#3b82f6] rounded-full"></div>
+                {/* ✅ توحيد اللون الذهبي هنا */}
+                <div className="w-1.5 h-5 bg-[#F5C518] rounded-full shadow-[0_0_8px_rgba(245,197,24,0.4)]"></div>
                 معلومات المنتج والتفاصيل
               </h3>
               <button onClick={() => setDescModalOpen(false)} className="bg-[#242424] hover:bg-[#333] p-1.5 rounded-full text-gray-400 transition-colors">
@@ -703,8 +704,11 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@300;400;500;700&display=swap');
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        /* ✅ أنيميشن التلاشي الجديد البسيط لحل مشكلة قفزة الصورة */
+        @keyframes simpleFade { from { opacity: 0.5; } to { opacity: 1; } }
         @keyframes galleryIn { from{opacity:0} to{opacity:1} }
-        @keyframes imgIn { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
+        /* ✅ إزالة السكيل لتجنب الإزعاج البصري والاعتماد على التلاشي الناعم */
+        @keyframes imgIn { from{opacity:0.4} to{opacity:1} } 
 
         @keyframes kenBurns {
           0%   { transform: scale(1);    transform-origin: center top; }
@@ -728,10 +732,10 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         .hide-scrollbar-vertical { -ms-overflow-style: none; scrollbar-width: none; }
 
         .thumb-item { transition: width 0.35s cubic-bezier(0.25,1,0.5,1), height 0.35s cubic-bezier(0.25,1,0.5,1), opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
-        .thumb-inactive:hover { opacity: 0.85 !important; border-color: rgba(59,130,246,0.25) !important; }
+        .thumb-inactive:hover { opacity: 0.85 !important; border-color: rgba(245,197,24,0.25) !important; }
 
         .poster-card { transition: transform 0.4s cubic-bezier(0.25,1,0.5,1), box-shadow 0.4s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-        .poster-card:hover { transform: scale(1.03) translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,0.7), 0 0 24px rgba(59,130,246,0.15); }
+        .poster-card:hover { transform: scale(1.03) translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,0.7), 0 0 24px rgba(245,197,24,0.15); }
         .poster-card:hover .poster-img { transform: scale(1.08); }
         .poster-img { transition: transform 0.7s cubic-bezier(0.25,1,0.5,1); }
 
@@ -757,15 +761,16 @@ export default function ProductView({ initialProduct, sourceCategory }) {
 
         .dark-wind-tabs .wind-tabs-container { background:transparent!important }
         .dark-wind-tabs .wind-tabs-container details { background:#161616!important; border-bottom:1px solid #1e1e1e!important; border-radius:10px; margin-bottom:8px; padding:0 16px!important; transition:all .3s }
-        .dark-wind-tabs .wind-tabs-container details[open] { border-color:#3b82f6!important; background:#181818!important }
+        /* ✅ توحيد الألوان الذهبية */
+        .dark-wind-tabs .wind-tabs-container details[open] { border-color:#F5C518!important; background:#181818!important }
         .dark-wind-tabs .wind-tabs-container summary { color:#e5e7eb!important; border:none!important; padding:14px 0!important; font-family:'Cairo',sans-serif; font-weight:700 }
         .dark-wind-tabs .wind-tabs-container summary::-webkit-details-marker { display:none }
-        .dark-wind-tabs .wind-tabs-container summary svg path { stroke:#3b82f6!important }
+        .dark-wind-tabs .wind-tabs-container summary svg path { stroke:#F5C518!important }
         .dark-wind-tabs .wind-tabs-container div { color:#9ca3af!important; font-family:'Tajawal',sans-serif; line-height:1.8 }
-        .dark-wind-tabs .wind-tabs-container span[style*="color: #800020"] { color:#3b82f6!important }
+        .dark-wind-tabs .wind-tabs-container span[style*="color: #800020"] { color:#F5C518!important }
         .dark-wind-tabs .wind-tabs-container div[style*="border-bottom: 1px solid #f3f4f6"] { border-bottom:1px solid #1e1e1e!important }
         .dark-wind-tabs .wind-tabs-container div[style*="color: #111827"], .dark-wind-tabs .wind-tabs-container strong[style*="color: #111827"] { color:#f3f4f6!important }
-        .dark-wind-tabs .wind-tabs-container button, .dark-wind-tabs .wind-tabs-container .read-more-wrapper summary { color:#3b82f6!important }
+        .dark-wind-tabs .wind-tabs-container button, .dark-wind-tabs .wind-tabs-container .read-more-wrapper summary { color:#F5C518!important }
         .dark-wind-tabs .wind-tabs-container summary:hover { background-color:transparent!important }
         
         .ql-editor-display ul { list-style-type:disc!important; padding-right:20px!important; margin-bottom:10px }
