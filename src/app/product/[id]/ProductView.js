@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image"; // رجعنا أداة الصور بتاعتك الأصلية
+import Image from "next/image";
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { usePageReady, useGlobalLoader } from "../../../context/GlobalLoaderContext";
@@ -142,7 +142,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
     }
   }, [loading, product, pathname, signalPageReady]);
 
-  // حل آمن للوصف بدون استخدام DOMParser اللي بيكراش السيرفر
+  // ✅ التعديل السحري لإصلاح كراش السيرفر (شيلنا DOMParser)
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";
     let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
@@ -160,21 +160,19 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   if (loading && !product) return null; 
   if (!product) return null;
 
-  // درع الحماية للصور: تجاهل أي رابط قديم من شوبيفاي عشان Next.js ميكراشش
   const getImageUrl = img => {
-    if (!img) return "/placeholder.png";
+    if (!img) return "";
     if (img.startsWith("http")) return img;
-    if (img.startsWith("/cdn/")) return "/placeholder.png"; // بقايا شوبيفاي المرفوضة
-    return `/images/products/${product.folderName || 'default'}/${img}`;
+    return `/images/products/${product.folderName}/${img}`;
   };
 
   const getRelatedImageUrl = (rp) => {
-    let img = rp.mainImage || rp.image || rp.images?.[0];
-    if (!img) return "/placeholder.png";
-    if (img.startsWith("http")) return img;
-    if (img.startsWith("/cdn/")) return "/placeholder.png"; // بقايا شوبيفاي المرفوضة
-    if (rp.folderName) return `/images/products/${rp.folderName}/${img}`;
-    return "/placeholder.png";
+    if (rp.mainImage?.startsWith("http")) return rp.mainImage;
+    if (rp.mainImage && rp.folderName) return `/images/products/${rp.folderName}/${rp.mainImage}`;
+    if (rp.images && rp.images.length > 0) return rp.images[0];
+    if (rp.mainImageUrl) return rp.mainImageUrl;
+    if (rp.image) return rp.image;
+    return "";
   };
 
   const gallery = product.images || [product.mainImage, ...Array.from({length: product.imagesCount || 0}, (_, i) => `${i+1}.webp`)];
@@ -301,7 +299,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* التاجات النظيفة بدون الـ Type */}
+          {/* ✅ التاجات الديناميكية (أولوية للكولكشنز بدون type) */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
@@ -309,8 +307,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
             
             {(() => {
               const displayCategory = sourceCategory 
-                || (Array.isArray(product?.collections) && product.collections.find(c => !c.startsWith('/'))) 
-                || (Array.isArray(product?.categories) && product.categories.find(c => !c.startsWith('/'))) 
+                || (Array.isArray(product?.collections) && product.collections.find(c => typeof c === 'string' && !c.startsWith('/'))) 
+                || (Array.isArray(product?.categories) && product.categories.find(c => typeof c === 'string' && !c.startsWith('/'))) 
                 || (typeof product?.category === 'string' ? product.category : null)
                 || "";
 
