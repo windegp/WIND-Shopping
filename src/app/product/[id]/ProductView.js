@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 // 👇 التعديل الجديد: إضافة useSearchParams عشان نعرف نقرأ لو العميل جاي من قسم معين
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { products as staticProducts } from "../../../lib/products";
@@ -15,9 +15,6 @@ import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X
 export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
   const pathname = usePathname();
-  // 👇 التعديل الجديد: قراءة البارامتر 'cat' من الرابط
-  const searchParams = useSearchParams();
-  const urlCategory = searchParams.get('cat');
 
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
@@ -302,18 +299,18 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-        {/* ✅ التاجات الذكية (Breadcrumbs) مطابقة لتصميم الصورة تماماً بدون كراش */}
+        {/* ✅ التاجات الذكية (Breadcrumbs) مطابقة لتصميم الصورة */}
           <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
             
-            {/* 1. ويند-السنة (جوا مربع بحواف زي WIND-24) */}
+            {/* 1. ويند-السنة (جوا مربع بحواف) */}
             <span className="border border-gray-600 rounded-[4px] px-2 py-0.5 text-gray-300">
               ويند-{new Date().getFullYear().toString().slice(-2)}
             </span>
             
             {/* فاصل مربع صغير */}
-            <span className="w-1 h-1 bg-gray-500"></span>
+            <span className="w-1.5 h-1.5 bg-gray-500 rounded-sm"></span>
             
-            {/* 2. منتجات ويند (نص عادي) */}
+            {/* 2. منتجات ويند */}
             <span className="text-gray-300">منتجات ويند</span>
             
             {(() => {
@@ -326,6 +323,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
               }
               
               let displayCategory = sourceCategory;
+              
               if (!displayCategory && validPaths.length > 0) {
                 const generalTerms = ['shop-all', 'best-sellers', 'new-arrivals', 'sale', 'womens-clothing'];
                 const specificPaths = validPaths.filter(c => !generalTerms.some(term => c.includes(term)));
@@ -337,8 +335,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
                 return (
                   <>
                     {/* فاصل مربع صغير */}
-                    <span className="w-1 h-1 bg-gray-500"></span>
-                    {/* 3. اسم القسم (باللون الأصفر زي WIND Series) */}
+                    <span className="w-1.5 h-1.5 bg-gray-500 rounded-sm"></span>
+                    {/* 3. اسم القسم (باللون الأصفر) */}
                     <span className="capitalize text-[#F5C518] font-bold">{cleanName}</span>
                   </>
                 );

@@ -65,8 +65,9 @@ export async function generateMetadata({ params }) {
 }
 
 // 2. الصفحة الرئيسية
-export default async function Page({ params }) {
+export default async function Page({ params, searchParams }) {
   const { id } = params;
+  const sourceCat = searchParams?.cat;
   const product = await getProductData(id);
 
   if (!product) return null; // Silent fallback
@@ -107,7 +108,7 @@ export default async function Page({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductView initialProduct={sanitizedProduct} /> 
+      <ProductView initialProduct={sanitizedProduct} sourceCategory={sourceCat} /> 
     </>
   );
 }
