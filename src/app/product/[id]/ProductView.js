@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "next/image"; // رجعنا أداة الصور بتاعتك الأصلية
 import { products as staticProducts } from "../../../lib/products";
 import { useCart } from "../../../context/CartContext";
 import { usePageReady, useGlobalLoader } from "../../../context/GlobalLoaderContext";
@@ -11,14 +11,12 @@ import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/
 import SizeChartModal from "@/components/SizeChartModal";
 import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
-// 1. استقبال الخواص من السيرفر (initialProduct و sourceCategory)
 export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
   const pathname = usePathname();
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
   
-  // 2. استخدام المنتج الممرر من السيرفر كقيمة افتراضية لسرعة العرض
   const [product, setProduct]               = useState(initialProduct || null);
   const [loading, setLoading]               = useState(!initialProduct);
   const { addToCart }                       = useCart();
@@ -38,7 +36,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   
   const [relatedProducts, setRelatedProducts] = useState([]);
 
-  // Swipe States for Hero Image
   const [isSwipingHero, setIsSwipingHero]   = useState(false);
   const heroTouchStartX                     = useRef(null);
 
@@ -145,11 +142,11 @@ export default function ProductView({ initialProduct, sourceCategory }) {
     }
   }, [loading, product, pathname, signalPageReady]);
 
-  // --- الحل الجذري لمشكلة الكراش (استبدال DOMParser بطريقة متوافقة مع السيرفر) ---
+  // حل آمن للوصف بدون استخدام DOMParser اللي بيكراش السيرفر
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";
     let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
-    let text = clean.replace(/<[^>]+>/g, '') || ""; // إزالة الـ HTML بدون استخدام DOMParser
+    let text = clean.replace(/<[^>]+>/g, '') || "";
     const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
     keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
     return text.trim().substring(0, 110) + "... ";
@@ -163,19 +160,21 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   if (loading && !product) return null; 
   if (!product) return null;
 
+  // درع الحماية للصور: تجاهل أي رابط قديم من شوبيفاي عشان Next.js ميكراشش
   const getImageUrl = img => {
-    if (!img) return "";
+    if (!img) return "/placeholder.png";
     if (img.startsWith("http")) return img;
-    return `/images/products/${product.folderName}/${img}`;
+    if (img.startsWith("/cdn/")) return "/placeholder.png"; // بقايا شوبيفاي المرفوضة
+    return `/images/products/${product.folderName || 'default'}/${img}`;
   };
 
   const getRelatedImageUrl = (rp) => {
-    if (rp.mainImage?.startsWith("http")) return rp.mainImage;
-    if (rp.mainImage && rp.folderName) return `/images/products/${rp.folderName}/${rp.mainImage}`;
-    if (rp.images && rp.images.length > 0) return rp.images[0];
-    if (rp.mainImageUrl) return rp.mainImageUrl;
-    if (rp.image) return rp.image;
-    return "";
+    let img = rp.mainImage || rp.image || rp.images?.[0];
+    if (!img) return "/placeholder.png";
+    if (img.startsWith("http")) return img;
+    if (img.startsWith("/cdn/")) return "/placeholder.png"; // بقايا شوبيفاي المرفوضة
+    if (rp.folderName) return `/images/products/${rp.folderName}/${img}`;
+    return "/placeholder.png";
   };
 
   const gallery = product.images || [product.mainImage, ...Array.from({length: product.imagesCount || 0}, (_, i) => `${i+1}.webp`)];
@@ -234,8 +233,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   if (product.options && Array.isArray(product.options)) {
     product.options.forEach(opt => {
       const n = (opt.name || "").toLowerCase();
-      if (n.includes("size") || n === "المقاس" || n === "مقاس") safeSizes  = opt.values?.split(",").map(s => s.trim()).filter(Boolean) || [];
-      if (n.includes("color")|| n === "اللون"  || n === "لون")  safeColors = opt.values?.split(",").map(c => c.trim()).filter(Boolean) || [];
+      if (n.includes("size") || n === "المقاس" || n === "مقاس") safeSizes  = opt.values.split(",").map(s => s.trim()).filter(Boolean);
+      if (n.includes("color")|| n === "اللون"  || n === "لون")  safeColors = opt.values.split(",").map(c => c.trim()).filter(Boolean);
     });
   }
   if (!safeSizes.length)  safeSizes  = Array.isArray(product.options?.sizes)  ? product.options.sizes  : (Array.isArray(product.sizes)  ? product.sizes  : []);
@@ -302,7 +301,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* --- الحل الذكي للتاجات (بدون مسافات أو شرط وبدون Type) --- */}
+          {/* التاجات النظيفة بدون الـ Type */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
