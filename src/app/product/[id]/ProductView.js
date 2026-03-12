@@ -302,14 +302,21 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* 👇 التعديل الجديد: التاجات الذكية (Breadcrumbs) اللي بتختار القسم الأدق */}
-          <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
-            <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
-            <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
-            <span>منتجات ويند</span>
+        {/* ✅ التاجات الذكية (Breadcrumbs) مطابقة لتصميم الصورة تماماً بدون كراش */}
+          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
+            
+            {/* 1. ويند-السنة (جوا مربع بحواف زي WIND-24) */}
+            <span className="border border-gray-600 rounded-[4px] px-2 py-0.5 text-gray-300">
+              ويند-{new Date().getFullYear().toString().slice(-2)}
+            </span>
+            
+            {/* فاصل مربع صغير */}
+            <span className="w-1 h-1 bg-gray-500"></span>
+            
+            {/* 2. منتجات ويند (نص عادي) */}
+            <span className="text-gray-300">منتجات ويند</span>
             
             {(() => {
-              // 1. تجميع كل المسارات اللي بتبدأ بـ سلاش (الصح)
               let validPaths = [];
               if (Array.isArray(product?.collections)) {
                 validPaths = [...validPaths, ...product.collections.filter(c => typeof c === 'string' && c.startsWith('/'))];
@@ -318,28 +325,21 @@ export default function ProductView({ initialProduct, sourceCategory }) {
                 validPaths = [...validPaths, ...product.categories.filter(c => typeof c === 'string' && c.startsWith('/'))];
               }
               
-              let displayCategory = "";
-
-              // 2. لو العميل جاي من قسم معين (مربوط بالرابط بـ ?cat=)
-              if (urlCategory && validPaths.includes(`/${urlCategory}`)) {
-                displayCategory = `/${urlCategory}`;
-              } 
-              // 3. لو العميل داخل مباشر، نستبعد الأقسام العامة ونجيب أدق قسم
-              else if (validPaths.length > 0) {
+              let displayCategory = sourceCategory;
+              if (!displayCategory && validPaths.length > 0) {
                 const generalTerms = ['shop-all', 'best-sellers', 'new-arrivals', 'sale', 'womens-clothing'];
                 const specificPaths = validPaths.filter(c => !generalTerms.some(term => c.includes(term)));
-                
-                // لو لقينا قسم محدد ناخده، لو ملقيناش ناخد أول حاجة تقابلنا
                 displayCategory = specificPaths[0] || validPaths[0];
               }
 
               if (displayCategory) {
-                // تنظيف الاسم: إزالة السلاش، استبدال الشرط بمسافات
                 const cleanName = String(displayCategory).replace(/^\//, '').replace(/-/g, ' ').trim();
                 return (
                   <>
-                    <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
-                    <span className="capitalize">{cleanName}</span>
+                    {/* فاصل مربع صغير */}
+                    <span className="w-1 h-1 bg-gray-500"></span>
+                    {/* 3. اسم القسم (باللون الأصفر زي WIND Series) */}
+                    <span className="capitalize text-[#F5C518] font-bold">{cleanName}</span>
                   </>
                 );
               }
