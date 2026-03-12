@@ -4,14 +4,30 @@ import { doc, getDoc } from "firebase/firestore";
 import { products as staticProducts } from "@/lib/products";
 import ProductView from "./ProductView"; 
 
-// دالة جلب البيانات موحدة للسيرفر
+// دالة جلب البيانات موحدة للسيرفر (مع تأمين ضد كراش الـ Timestamps)
 async function getProductData(id) {
   const staticProduct = staticProducts.find((p) => p.id.toString() === id.toString());
   if (staticProduct) return staticProduct;
 
-  const docRef = doc(db, "products", id);
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
+  try {
+    const docRef = doc(db, "products", id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      
+      // السحر هنا: تحويل الـ Timestamps لنصوص عشان Next.js ميكراشش وهو بيبعتها للـ Client Component
+      if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+        data.createdAt = data.createdAt.toDate().toISOString();
+      }
+      if (data.updatedAt && typeof data.updatedAt.toDate === 'function') {
+        data.updatedAt = data.updatedAt.toDate().toISOString();
+      }
+      
+      return { id: docSnap.id, ...data };
+    }
+  } catch (error) {
+    console.error("Error fetching product:", error);
+  }
   return null;
 }
 
@@ -20,17 +36,27 @@ export async function generateMetadata({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  if (!product) return { title: "المنتج غير موجود | WIND Shopping" };
+  if (!product) return { title: "المنتج غير موجود | WIND" };
+
+  // سحب بيانات السيو من حقل الـ seo (Map) في فايربيز
+  const finalTitle = product.seo?.title || `${product.title} | WIND`;
+  
+  // تنظيف الوصف الأساسي من الـ HTML كبديل آمن لو مفيش وصف سيو
+  const cleanFallbackDesc = product.description 
+    ? String(product.description).replace(/<[^>]+>/g, '').substring(0, 160) 
+    : `تسوقي ${product.title} من WIND. جودة وتصاميم عصرية.`;
+    
+  const finalDescription = product.seo?.description || cleanFallbackDesc;
 
   return {
-    title: `${product.title} | WIND Shopping`,
-    description: product.seo?.description || `تسوقي ${product.title} من WIND. جودة وتصميم عصري.`,
+    title: finalTitle,
+    description: finalDescription,
     openGraph: {
-      title: `${product.title} | WIND Shopping`,
-      description: product.seo?.description || product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160),
-      url: `https://www.windeg.com/product/${id}`,
-      siteName: 'WIND Shopping',
-      images: [{ url: product.mainImage || product.images?.[0] }],
+      title: finalTitle,
+      description: finalDescription,
+      url: `https://windeg.com/product/${id}`,
+      siteName: 'WIND',
+      images: [{ url: product.images?.[0] || product.mainImage || "" }],
       type: 'article',
     },
   };
@@ -41,30 +67,35 @@ export default async function Page({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  if (!product) return null; // Silent fallback - GlobalLoader handles initial page load
+  if (!product) return null; // Silent fallback
 
-  // البيانات المنظمة JSON-LD
+  // تنظيف الوصف الخاص بمخطط جوجل (Schema)
+  const cleanSchemaDesc = product.description 
+    ? String(product.description).replace(/<[^>]+>/g, '').substring(0, 200) 
+    : "";
+
+  // البيانات المنظمة JSON-LD لمحركات البحث
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.title,
-    "image": product.images || [product.mainImage],
-    "description": product.seo?.description || product.description?.replace(/<[^>]*>?/gm, ''),
+    "image": product.images || [product.mainImage || ""],
+    "description": product.seo?.description || cleanSchemaDesc,
     "brand": {
       "@type": "Brand",
-      "name": "WIND Shopping"
+      "name": "WIND"
     },
     "offers": {
       "@type": "Offer",
-      "url": `https://www.windeg.com/product/${id}`,
+      "url": `https://windeg.com/product/${id}`,
       "priceCurrency": "EGP",
-      "price": product.price,
-      "availability": product.quantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "price": product.price || "0",
+      "availability": (Number(product.quantity) > 0 || product.sellOutOfStock === "Yes") ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "itemCondition": "https://schema.org/NewCondition"
     }
   };
 
-  // --- الزتونة هنا: تحويل البيانات لـ Plain Object عشان تهرب من الـ Error ---
+  // تأمين أخير لضمان تمرير داتا نظيفة للواجهة
   const sanitizedProduct = JSON.parse(JSON.stringify(product));
 
   return (
@@ -73,8 +104,6 @@ export default async function Page({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      
-      {/* نمرر الـ sanitizedProduct بدل الـ product الأصلي */}
       <ProductView initialProduct={sanitizedProduct} /> 
     </>
   );
