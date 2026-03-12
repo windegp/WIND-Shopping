@@ -261,32 +261,14 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
-        
-        <div className={`absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10 transition-opacity duration-300 ${isSwipingHero ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.stopPropagation()}>
-          <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#3b82f6] transition-colors drop-shadow-md">
-            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
-              <ImageIcon size={20} />
-            </div>
-            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{gallery.length} صور</span>
-          </button>
-          
-          <button 
-            onClick={() => setIsWishlisted(!isWishlisted)} 
-            className="flex flex-col items-center gap-1 text-white hover:text-[#F5C518] transition-colors drop-shadow-md"
-          >
-            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
-              <Heart size={20} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
-            </div>
-            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">{product.likes || "1.2K"}</span>
-          </button>
-          
-          <button className="flex flex-col items-center gap-1 text-white hover:text-[#3b82f6] transition-colors drop-shadow-md">
-            <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
-              <Share2 size={20} />
-            </div>
-            <span className="text-[10px] font-bold shadow-black drop-shadow-lg">مشاركة</span>
-          </button>
-        </div>
+
+        {/* ✅ أيقونة العدسة المكبرة أعلى اليسار */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }} 
+          className="absolute top-4 left-4 z-10 bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20 text-white hover:text-[#F5C518] transition-colors drop-shadow-md cursor-zoom-in"
+        >
+          <Search size={20} />
+        </button>
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 text-white/50 text-[10px] md:text-xs font-bold font-sans tracking-[0.2em] pointer-events-none z-10">
           <span>&lt;</span>
@@ -297,10 +279,10 @@ export default function ProductView({ initialProduct, sourceCategory }) {
 
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
         <div className="mb-8 pt-2">
-          <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
+          <h1 className="text-[22px] md:text-2xl font-black text-white tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-        {/* ✅ التاجات الذكية (Breadcrumbs) مطابقة لتصميم الصورة */}
-          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
+          {/* ✅ التاجات الذكية (تم إضافة مسافة بسيطة تحت اسم المنتج: mt-3) */}
+          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mt-3 mb-5" style={{fontFamily:"Cairo,sans-serif"}}>
             
             {/* 1. ويند-السنة (جوا مربع بحواف) */}
             <span className="border border-gray-600 rounded-[4px] px-2 py-0.5 text-gray-300">
@@ -344,6 +326,31 @@ export default function ProductView({ initialProduct, sourceCategory }) {
               return null;
             })()}
           </div>
+
+          {/* ✅ أيقونات الصور، الإعجاب، والمشاركة (تم نقلها هنا بشكل أفقي أنيق وبدون اختفاء) */}
+          <div className="flex items-center gap-5 mt-5">
+            <button onClick={() => openGallery(activeIdx)} className="flex items-center gap-2 text-gray-400 hover:text-[#3b82f6] transition-colors group">
+              <div className="bg-[#1a1a1a] p-2 rounded-full border border-[#333] group-hover:border-[#3b82f6]/50 transition-colors">
+                <ImageIcon size={16} />
+              </div>
+              <span className="text-[11px] md:text-xs font-bold" style={{fontFamily:"Cairo,sans-serif"}}>{gallery.length} صور</span>
+            </button>
+            
+            <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex items-center gap-2 text-gray-400 hover:text-[#F5C518] transition-colors group">
+              <div className="bg-[#1a1a1a] p-2 rounded-full border border-[#333] group-hover:border-[#F5C518]/50 transition-colors">
+                <Heart size={16} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
+              </div>
+              <span className="text-[11px] md:text-xs font-bold" style={{fontFamily:"Cairo,sans-serif"}}>{product.likes || "1.2K"}</span>
+            </button>
+            
+            <button className="flex items-center gap-2 text-gray-400 hover:text-[#3b82f6] transition-colors group">
+              <div className="bg-[#1a1a1a] p-2 rounded-full border border-[#333] group-hover:border-[#3b82f6]/50 transition-colors">
+                <Share2 size={16} />
+              </div>
+              <span className="text-[11px] md:text-xs font-bold" style={{fontFamily:"Cairo,sans-serif"}}>مشاركة</span>
+            </button>
+          </div>
+
         </div>
 
         <div className="flex gap-4 md:gap-5 items-start border-t border-[#333]/50 pt-6">
