@@ -15,57 +15,48 @@ async function getProductData(id) {
   return null;
 }
 
-// 1. الجزء الخاص بـ Metadata (متوافق مع حقول Firebase)
+// 1. الجزء الخاص بـ Metadata
 export async function generateMetadata({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  if (!product) return { title: "المنتج غير موجود | WIND" };
-
-  // الاعتماد على حقول SEO من فايربيز (seoTitle و seoDescription)
-  const seoTitle = product.seoTitle || product.title || "WIND";
-  const seoDesc = product.seoDescription || product.seo?.description || product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || "اكتشف أحدث تشكيلة من WIND.";
-  const imageUrl = product.mainImageUrl || product.mainImage || product.images?.[0] || "";
+  if (!product) return { title: "المنتج غير موجود | WIND Shopping" };
 
   return {
-    title: `${seoTitle} | WIND`,
-    description: seoDesc,
+    title: `${product.title} | WIND Shopping`,
+    description: product.seo?.description || `تسوقي ${product.title} من WIND. جودة وتصميم عصري.`,
     openGraph: {
-      title: `${seoTitle} | WIND`,
-      description: seoDesc,
-      url: `https://windeg.com/product/${id}`,
-      siteName: 'WIND',
-      images: [{ url: imageUrl.startsWith("http") ? imageUrl : `https://windeg.com/images/products/${product.folderName}/${imageUrl}` }],
-      type: 'product',
+      title: `${product.title} | WIND Shopping`,
+      description: product.seo?.description || product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160),
+      url: `https://www.windeg.com/product/${id}`,
+      siteName: 'WIND Shopping',
+      images: [{ url: product.mainImage || product.images?.[0] }],
+      type: 'article',
     },
   };
 }
 
-// 2. الصفحة الرئيسية (تحديث الـ JSON-LD للـ SEO)
-export default async function Page({ params, searchParams }) {
+// 2. الصفحة الرئيسية
+export default async function Page({ params }) {
   const { id } = params;
   const product = await getProductData(id);
 
-  // استخدام await لحل مشكلة Next.js 14/15 مع الـ searchParams لضمان عدم ضياع الرابط
-  const resolvedSearchParams = await searchParams;
-  const sourceCategory = resolvedSearchParams?.source || null;
-
   if (!product) return null; // Silent fallback - GlobalLoader handles initial page load
 
-  // البيانات المنظمة JSON-LD متوافقة مع فايربيز
+  // البيانات المنظمة JSON-LD
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    "name": product.seoTitle || product.title,
-    "image": product.images || [product.mainImageUrl || product.mainImage],
-    "description": product.seoDescription || product.seo?.description || product.description?.replace(/<[^>]*>?/gm, ''),
+    "name": product.title,
+    "image": product.images || [product.mainImage],
+    "description": product.seo?.description || product.description?.replace(/<[^>]*>?/gm, ''),
     "brand": {
       "@type": "Brand",
-      "name": "WIND"
+      "name": "WIND Shopping"
     },
     "offers": {
       "@type": "Offer",
-      "url": `https://windeg.com/product/${id}`,
+      "url": `https://www.windeg.com/product/${id}`,
       "priceCurrency": "EGP",
       "price": product.price,
       "availability": product.quantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -83,8 +74,8 @@ export default async function Page({ params, searchParams }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      {/* نمرر الـ sanitizedProduct والـ sourceCategory لملف العرض */}
-      <ProductView initialProduct={sanitizedProduct} sourceCategory={sourceCategory} /> 
+      {/* نمرر الـ sanitizedProduct بدل الـ product الأصلي */}
+      <ProductView initialProduct={sanitizedProduct} /> 
     </>
   );
 }

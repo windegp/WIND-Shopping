@@ -1,14 +1,6 @@
 "use client";
-import Link from "next/link";
 
-// 1. استقبلنا id و sourceName من صفحة القسم
-export default function ProductCard({ id, image, title, price, rating, category, sourceName }) {
-  
-  // 2. تجهيز الرابط الذكي: لو جاي من قسم هنلزق اسمه في الرابط، لو لأ هنفتح المنتج عادي
-  const productLink = sourceName 
-    ? `/product/${id}?source=${encodeURIComponent(sourceName)}` 
-    : `/product/${id}`;
-
+export default function ProductCard({ image, title, price, rating, category }) {
   return (
     <div className="bg-[#1a1a1a] rounded overflow-hidden border border-[#333] hover:bg-[#252525] transition-all duration-300 group flex flex-col h-full shadow-lg">
       
@@ -21,14 +13,12 @@ export default function ProductCard({ id, image, title, price, rating, category,
           </svg>
         </div>
 
-        {/* 3. الصورة مع تأثير الزووم عند التمرير (مغلفة بالرابط الذكي) */}
-        <Link href={productLink} className="block w-full h-full">
-          <img 
-            src={image} 
-            alt={title}
-            className="w-full h-full object-cover transition duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100"
-          />
-        </Link>
+        {/* الصورة مع تأثير الزووم عند التمرير */}
+        <img 
+          src={image} 
+          alt={title}
+          className="w-full h-full object-cover transition duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100"
+        />
       </div>
 
       {/* تفاصيل المنتج */}
@@ -41,16 +31,14 @@ export default function ProductCard({ id, image, title, price, rating, category,
           <span className="text-sm font-bold text-gray-300">{rating}</span>
         </div>
 
-        {/* 4. العنوان والنوع (مغلف بالرابط الذكي) */}
-        <Link href={productLink}>
-          <h3 className="text-white font-bold text-base mb-1 group-hover:text-[#F5C518] transition line-clamp-1 cursor-pointer">
-            {title}
-          </h3>
-        </Link>
+        {/* العنوان والنوع */}
+        <h3 className="text-white font-bold text-base mb-1 group-hover:text-[#F5C518] transition line-clamp-1">
+          {title}
+        </h3>
         <p className="text-xs text-gray-500 mb-4">{category}</p>
 
         {/* السعر وزر الإضافة */}
-        <div className="mt-auto">
+        <div class="mt-auto">
           <div className="text-[#F5C518] font-black text-xl mb-3 tracking-tighter">
             {price} <span className="text-xs font-normal">ر.س</span>
           </div>
