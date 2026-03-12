@@ -11,16 +11,16 @@ import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/
 import SizeChartModal from "@/components/SizeChartModal";
 import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
-export default function ProductPage() {
+export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
   const pathname = usePathname();
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
   
-  const [product, setProduct]               = useState(null);
-  const [loading, setLoading]               = useState(true);
+  const [product, setProduct]               = useState(initialProduct || null);
+  const [loading, setLoading]               = useState(!initialProduct);
   const { addToCart }                       = useCart();
-  const [activeImage, setActiveImage]       = useState("");
+  const [activeImage, setActiveImage]       = useState(initialProduct?.images?.[0] || initialProduct?.mainImage || "");
   const [activeIdx, setActiveIdx]           = useState(0);
   const [selectedSize, setSelectedSize]     = useState("");
   const [selectedColor, setSelectedColor]   = useState("");
@@ -36,7 +36,6 @@ export default function ProductPage() {
   
   const [relatedProducts, setRelatedProducts] = useState([]);
 
-  // Swipe States for Hero Image
   const [isSwipingHero, setIsSwipingHero]   = useState(false);
   const heroTouchStartX                     = useRef(null);
 
@@ -60,7 +59,7 @@ export default function ProductPage() {
       
       const sp = staticProducts.find(p => p.id.toString() === id.toString());
       if (sp) {
-        setProduct(sp);
+        if (!initialProduct) setProduct(sp);
         setActiveImage(sp.mainImage);
         if (sp.sizes?.length  > 0) setSelectedSize(sp.sizes[0]);
         if (sp.colors?.length > 0) setSelectedColor(sp.colors[0].name || sp.colors[0]);
@@ -82,8 +81,8 @@ export default function ProductPage() {
         const snap = await getDoc(doc(db, "products", id));
         if (snap.exists()) {
           const fb = { id: snap.id, ...snap.data() };
-          setProduct(fb);
-          setActiveImage(fb.images?.[0] || fb.mainImageUrl || fb.image);
+          if (!initialProduct) setProduct(fb);
+          if (!activeImage) setActiveImage(fb.images?.[0] || fb.mainImageUrl || fb.image);
           
           let iS = "", iC = "";
           if (fb.options && Array.isArray(fb.options)) {
@@ -114,7 +113,7 @@ export default function ProductPage() {
                 const snapCol = await getDocs(qCol);
                 snapCol.forEach(d => { if(d.id !== id.toString()) relatedFbs.push({ id: d.id, ...d.data() }) });
               }
-            } catch (err) { console.error("Error fetching related by category:", err); }
+            } catch (err) { console.error("Error fetching related:", err); }
           }
 
           if (relatedFbs.length === 0) {
@@ -129,8 +128,9 @@ export default function ProductPage() {
       } catch(e) { console.error(e); }
       setLoading(false);
     };
+    
     fetchProduct();
-  }, [id]);
+  }, [id, initialProduct]);
 
   useEffect(() => {
     if (!loading && product) {
@@ -141,8 +141,7 @@ export default function ProductPage() {
   const shortDescription = useMemo(() => {
     if (!product?.description) return "";
     let clean = product.description.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
-    const doc = new DOMParser().parseFromString(clean, 'text/html');
-    let text = doc.body.textContent || "";
+    let text = clean.replace(/<[^>]+>/g, '') || "";
     const keywordsToRemove = [/^\s*عن المنتج\s*[:\-\s]*/i, /^\s*الوصف\s*[:\-\s]*/i, /^\s*وصف المنتج\s*[:\-\s]*/i];
     keywordsToRemove.forEach(regex => { text = text.replace(regex, ""); });
     return text.trim().substring(0, 110) + "... ";
@@ -153,22 +152,25 @@ export default function ProductPage() {
     return product.description.replace(/<details\s+open[^>]*>/gi, '<details>');
   }, [product?.description]);
 
-  if (loading) return null; 
+  if (loading && !product) return null; 
   if (!product) return null;
 
   const getImageUrl = img => {
-    if (!img) return "";
+    if (!img) return "/placeholder.png";
     if (img.startsWith("http")) return img;
-    return `/images/products/${product.folderName}/${img}`;
+    if (img.startsWith("//")) return `https:${img}`;
+    if (img.startsWith("/cdn/")) return `https://cdn.shopify.com${img}`; 
+    return `/images/products/${product.folderName || 'default'}/${img}`;
   };
 
   const getRelatedImageUrl = (rp) => {
-    if (rp.mainImage?.startsWith("http")) return rp.mainImage;
-    if (rp.mainImage && rp.folderName) return `/images/products/${rp.folderName}/${rp.mainImage}`;
-    if (rp.images && rp.images.length > 0) return rp.images[0];
-    if (rp.mainImageUrl) return rp.mainImageUrl;
-    if (rp.image) return rp.image;
-    return "";
+    let img = rp.mainImage || rp.image || rp.images?.[0];
+    if (!img) return "/placeholder.png";
+    if (img.startsWith("http")) return img;
+    if (img.startsWith("//")) return `https:${img}`;
+    if (img.startsWith("/cdn/")) return `https://cdn.shopify.com${img}`;
+    if (rp.folderName) return `/images/products/${rp.folderName}/${img}`;
+    return "/placeholder.png";
   };
 
   const gallery = product.images || [product.mainImage, ...Array.from({length: product.imagesCount || 0}, (_, i) => `${i+1}.webp`)];
@@ -177,7 +179,6 @@ export default function ProductPage() {
   const galleryNext = () => { setGalleryIdx(i => (i + 1) % gallery.length); setIsZoomed(false); };
   const galleryPrev = () => { setGalleryIdx(i => (i - 1 + gallery.length) % gallery.length); setIsZoomed(false); };
   
-  // Hero Touch Logic (Swipe left/right)
   const handleHeroTouchStart = (e) => {
     heroTouchStartX.current = e.touches[0].clientX;
     setIsSwipingHero(true);
@@ -201,7 +202,6 @@ export default function ProductPage() {
       }
     }
     heroTouchStartX.current = null;
-    // تأخير بسيط قبل إظهار الأيقونات لضمان النعومة وعدم التشتيت أثناء التقليب المستمر
     setTimeout(() => {
       setIsSwipingHero(false);
     }, 150);
@@ -246,7 +246,6 @@ export default function ProductPage() {
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#3b82f6] selection:text-white">
 
-      {/* 1. القسم السينمائي (Hero Section) مع دعم السحب */}
       <div 
         className="relative w-full h-[65vh] md:h-[75vh] bg-black group" 
         onClick={() => openGallery(activeIdx)}
@@ -261,7 +260,6 @@ export default function ProductPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
         
-        {/* إخفاء الأيقونات بسلاسة أثناء السحب */}
         <div className={`absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-10 transition-opacity duration-300 ${isSwipingHero ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.stopPropagation()}>
           <button onClick={() => openGallery(activeIdx)} className="flex flex-col items-center gap-1 text-white hover:text-[#3b82f6] transition-colors drop-shadow-md">
             <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20">
@@ -288,7 +286,6 @@ export default function ProductPage() {
           </button>
         </div>
 
-        {/* مؤشر الصور الأنيق بالأسفل (يظهر للعين فقط ولا يؤثر على الضغط) */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 text-white/50 text-[10px] md:text-xs font-bold font-sans tracking-[0.2em] pointer-events-none z-10">
           <span>&lt;</span>
           <span>{activeIdx + 1} / {gallery.length}</span>
@@ -296,27 +293,49 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* 3. منطقة الحبكة (Mini Poster & Synopsis & Options) */}
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* التاجات الديناميكية المتجددة سنوياً */}
+          {/* ✅ الفلتر الذكي للتاجات */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
             <span>منتجات ويند</span>
-            {((Array.isArray(product?.categories) ? product.categories[0] : product?.categories) || product?.type) && (
-              <>
-                <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
-                <span>{(Array.isArray(product?.categories) ? product.categories[0] : product?.categories) || product?.type}</span>
-              </>
-            )}
+            
+            {(() => {
+              // 1. تجميع كل المسارات اللي بتبدأ بـ سلاش (الصح)
+              let validPaths = [];
+              if (Array.isArray(product?.collections)) {
+                validPaths = [...validPaths, ...product.collections.filter(c => typeof c === 'string' && c.startsWith('/'))];
+              }
+              if (Array.isArray(product?.categories)) {
+                validPaths = [...validPaths, ...product.categories.filter(c => typeof c === 'string' && c.startsWith('/'))];
+              }
+              
+              // 2. البحث عن مسار مخصص وتجاهل المسارات العامة زي shop-all
+              let displayCategory = sourceCategory;
+              if (!displayCategory && validPaths.length > 0) {
+                // نفضل القسم المخصص، لو مفيش ناخد أول واحد يقابلنا
+                displayCategory = validPaths.find(c => !c.includes('shop-all') && !c.includes('best-sellers') && !c.includes('sale')) || validPaths[0];
+              }
+
+              if (displayCategory) {
+                // 3. تنظيف الاسم: إزالة السلاش الأولى، استبدال الشرط بمسافات، وجعل أول حرف كابيتال
+                const cleanName = String(displayCategory).replace(/^\//, '').replace(/-/g, ' ').trim();
+                return (
+                  <>
+                    <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
+                    <span className="capitalize">{cleanName}</span>
+                  </>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
 
         <div className="flex gap-4 md:gap-5 items-start border-t border-[#333]/50 pt-6">
-          {/* البوستر المصغر - استخدام priority لضمان التحميل الفوري وعدم التأخير للصور المكدسة */}
           <div className="w-28 h-40 md:w-32 md:h-48 flex-shrink-0 rounded-xl overflow-hidden border border-[#333] shadow-2xl relative group cursor-pointer hover:border-white/20 transition-colors" onClick={() => setImageZoomModalOpen(true)}>
             {safeColors.map((ci, i) => {
               const name  = typeof ci === "string" ? ci : ci.name;
@@ -330,7 +349,6 @@ export default function ProductPage() {
             })}
             <Image src={getImageUrl(gallery[1] || activeImage)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" priority={true} className={`object-cover transition-opacity duration-150 ${(!selectedColor || !product.colorSwatches?.[selectedColor]) ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt="poster default" />
 
-            {/* أيقونة العدسة للمؤشر المصغر */}
             <div className="absolute top-0 left-0 bg-black/70 px-1.5 py-1 rounded-br-md z-20 border-b border-r border-[#333]">
               <Search size={13} className="text-white" />
             </div>
@@ -380,7 +398,6 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* مساحات تنفس أكبر بين الأقسام */}
         <div className="mt-10 space-y-10 border-t border-[#333]/50 pt-8">
           
           {safeColors.length > 0 && (
@@ -401,7 +418,7 @@ export default function ProductPage() {
                   return (
                     <button key={i} onClick={() => { setSelectedColor(name); if (isImg) { setActiveImage(hi); setActiveIdx(0); } }} title={name} className="flex flex-col items-center group/c transition-all duration-300 ease-out">
                       <div className={`w-11 h-11 rounded-[10px] overflow-hidden transition-all duration-300 ease-out ${isSel ? "ring-2 ring-white ring-offset-2 ring-offset-[#121212] shadow-[0_4px_16px_rgba(255,255,255,0.2)] scale-[1.08]" : "ring-1 ring-white/10 hover:ring-white/30 hover:shadow-[0_4px_10px_rgba(255,255,255,0.08)] hover:-translate-y-1"}`}>
-                        {isImg ? <Image src={hi} alt={name} width={60} height={80} quality={75} className="w-full h-full object-cover" /> : <div style={{backgroundColor:hi}} className="w-full h-full" />}
+                        {isImg ? <Image src={getImageUrl(hi)} alt={name} width={60} height={80} quality={75} className="w-full h-full object-cover" /> : <div style={{backgroundColor:hi}} className="w-full h-full" />}
                       </div>
                     </button>
                   );
@@ -450,7 +467,6 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* شريط الثقة النحيف والأنيق (Slim Banner) */}
         <div className="mt-8 flex justify-between items-center bg-[#1a1a1a]/50 py-3 px-2 md:px-4 rounded-lg border border-[#333] shadow-sm">
           <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-300 font-bold flex-1 justify-center">
             <Truck size={14} className="text-[#F5C518]" />
