@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, usePathname } from "next/navigation";
+// 👇 التعديل الجديد: إضافة useSearchParams عشان نعرف نقرأ لو العميل جاي من قسم معين
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { products as staticProducts } from "../../../lib/products";
@@ -14,6 +15,10 @@ import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X
 export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
   const pathname = usePathname();
+  // 👇 التعديل الجديد: قراءة البارامتر 'cat' من الرابط
+  const searchParams = useSearchParams();
+  const urlCategory = searchParams.get('cat');
+
   const { signalPageReady } = usePageReady();
   const { isVisible: loaderActive } = useGlobalLoader();
   
@@ -297,7 +302,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white mb-2 tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* ✅ الفلتر الذكي للتاجات */}
+          {/* 👇 التعديل الجديد: التاجات الذكية (Breadcrumbs) اللي بتختار القسم الأدق */}
           <div className="flex items-center gap-2 text-[11px] md:text-xs font-bold text-gray-500 mb-1" style={{fontFamily:"Cairo,sans-serif"}}>
             <span>ويند-{new Date().getFullYear().toString().slice(-2)}</span>
             <span className="w-1 h-1 bg-[#F5C518] rounded-full"></span>
@@ -313,15 +318,23 @@ export default function ProductView({ initialProduct, sourceCategory }) {
                 validPaths = [...validPaths, ...product.categories.filter(c => typeof c === 'string' && c.startsWith('/'))];
               }
               
-              // 2. البحث عن مسار مخصص وتجاهل المسارات العامة زي shop-all
-              let displayCategory = sourceCategory;
-              if (!displayCategory && validPaths.length > 0) {
-                // نفضل القسم المخصص، لو مفيش ناخد أول واحد يقابلنا
-                displayCategory = validPaths.find(c => !c.includes('shop-all') && !c.includes('best-sellers') && !c.includes('sale')) || validPaths[0];
+              let displayCategory = "";
+
+              // 2. لو العميل جاي من قسم معين (مربوط بالرابط بـ ?cat=)
+              if (urlCategory && validPaths.includes(`/${urlCategory}`)) {
+                displayCategory = `/${urlCategory}`;
+              } 
+              // 3. لو العميل داخل مباشر، نستبعد الأقسام العامة ونجيب أدق قسم
+              else if (validPaths.length > 0) {
+                const generalTerms = ['shop-all', 'best-sellers', 'new-arrivals', 'sale', 'womens-clothing'];
+                const specificPaths = validPaths.filter(c => !generalTerms.some(term => c.includes(term)));
+                
+                // لو لقينا قسم محدد ناخده، لو ملقيناش ناخد أول حاجة تقابلنا
+                displayCategory = specificPaths[0] || validPaths[0];
               }
 
               if (displayCategory) {
-                // 3. تنظيف الاسم: إزالة السلاش الأولى، استبدال الشرط بمسافات، وجعل أول حرف كابيتال
+                // تنظيف الاسم: إزالة السلاش، استبدال الشرط بمسافات
                 const cleanName = String(displayCategory).replace(/^\//, '').replace(/-/g, ' ').trim();
                 return (
                   <>

@@ -51,6 +51,8 @@ export async function generateMetadata({ params }) {
   return {
     title: finalTitle,
     description: finalDescription,
+    // 👇 التعديل الجديد: سحب التاجات ككلمات مفتاحية لجوجل
+    keywords: product.tags ? product.tags.split(',').map(tag => tag.trim()) : [],
     openGraph: {
       title: finalTitle,
       description: finalDescription,
@@ -83,7 +85,8 @@ export default async function Page({ params }) {
     "description": product.seo?.description || cleanSchemaDesc,
     "brand": {
       "@type": "Brand",
-      "name": "WIND"
+      // 👇 التعديل الجديد: استخدام الفيندور واسم البراند
+      "name": product.vendor || "WIND"
     },
     "offers": {
       "@type": "Offer",
