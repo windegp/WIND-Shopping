@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
 import { collection, doc, query, orderBy, onSnapshot, getDocs, writeBatch, where, arrayUnion, arrayRemove } from "firebase/firestore";
-import { Plus, Edit2, Trash2, ExternalLink, Loader2, X, Save, Image as ImageIcon, Search, ArrowRight, AlertCircle, CheckSquare, Square } from "lucide-react";
+import { Plus, Edit2, Trash2, ExternalLink, Loader2, X, Save, Image as ImageIcon, Search, ArrowRight, AlertCircle, CheckSquare, Square, FolderTree } from "lucide-react";
 
 export default function CollectionsPage() {
     const [view, setView] = useState('list');
