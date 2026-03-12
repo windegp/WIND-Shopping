@@ -45,6 +45,47 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   const touchStartY = useRef(null);
   const colorsRef   = useRef(null);
 
+  // --- تفعيل أوامر المشاركة والإعجاب ---
+  useEffect(() => {
+    if (product?.id) {
+      const savedWishlist = JSON.parse(localStorage.getItem('wind_wishlist') || '[]');
+      setIsWishlisted(savedWishlist.includes(product.id));
+    }
+  }, [product?.id]);
+
+  const handleWishlistToggle = (e) => {
+    e.stopPropagation();
+    const savedWishlist = JSON.parse(localStorage.getItem('wind_wishlist') || '[]');
+    let newWishlist;
+    if (isWishlisted) {
+      newWishlist = savedWishlist.filter(id => id !== product.id);
+    } else {
+      newWishlist = [...savedWishlist, product.id];
+    }
+    localStorage.setItem('wind_wishlist', JSON.stringify(newWishlist));
+    setIsWishlisted(!isWishlisted);
+  };
+
+  const handleShare = async (e) => {
+    e.stopPropagation();
+    const shareData = {
+      title: product?.title || 'WIND Shopping',
+      text: 'تسوق هذا المنتج الرائع من WIND',
+      url: window.location.href
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('تم نسخ الرابط بنجاح!');
+      }
+    } catch (err) {
+      console.log('Share canceled or failed');
+    }
+  };
+  // ------------------------------------
+
   useEffect(() => {
     if (isGalleryOpen || isImageZoomModalOpen || isDescModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -256,24 +297,43 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         onTouchEnd={handleHeroTouchEnd}
       >
         <img 
+          key={activeImage}
           src={getImageUrl(activeImage)} 
           alt={product.title} 
-          className="w-full h-full object-cover object-top opacity-80 transition-all duration-500"
+          className="w-full h-full object-cover object-top opacity-90 transition-opacity duration-300 animate-[fadeIn_0.3s_ease-out]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-transparent pointer-events-none"></div>
 
-        {/* ✅ أيقونة العدسة المكبرة أعلى اليسار */}
+        {/* ✅ أيقونة العدسة المكبرة أعلى اليمين (في الواجهة العربي left-4 بتبقى يمين عشان الـ direction) */}
         <button 
           onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }} 
           className="absolute top-4 left-4 z-10 bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20 text-white hover:text-[#F5C518] transition-colors drop-shadow-md cursor-zoom-in"
         >
-          <Search size={20} />
+          <Search size={18} />
         </button>
 
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 text-white/50 text-[10px] md:text-xs font-bold font-sans tracking-[0.2em] pointer-events-none z-10">
-          <span>&lt;</span>
-          <span>{activeIdx + 1} / {gallery.length}</span>
-          <span>&gt;</span>
+        {/* ✅ الأيقونات التفاعلية والعداد في أسفل الصورة (أقل من عرض الشاشة ومدمجة في التدرج) */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md flex items-center justify-between z-10">
+          
+          <button onClick={handleShare} className="flex items-center gap-1.5 text-white/90 hover:text-[#3b82f6] transition-colors drop-shadow-md bg-black/40 px-3 py-2 rounded-full backdrop-blur-md border border-white/10">
+            <Share2 size={16} />
+            <span className="text-[11px] font-bold" style={{fontFamily:"Cairo,sans-serif"}}>مشاركة</span>
+          </button>
+
+          <div className="flex items-center gap-3 text-white/80 text-[11px] font-bold font-sans tracking-[0.2em] bg-black/40 px-4 py-2 rounded-full backdrop-blur-md border border-white/10" onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }}>
+            <ImageIcon size={14} className="text-white/60" />
+            <div className="flex items-center gap-2">
+              <span>&lt;</span>
+              <span>{activeIdx + 1} / {gallery.length}</span>
+              <span>&gt;</span>
+            </div>
+          </div>
+
+          <button onClick={handleWishlistToggle} className="flex items-center gap-1.5 text-white/90 hover:text-[#F5C518] transition-colors drop-shadow-md bg-black/40 px-3 py-2 rounded-full backdrop-blur-md border border-white/10">
+            <span className="text-[11px] font-bold" style={{fontFamily:"Cairo,sans-serif"}}>{product.likes || "1.2K"}</span>
+            <Heart size={16} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
+          </button>
+
         </div>
       </div>
 
@@ -281,18 +341,14 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         <div className="mb-8 pt-2">
           <h1 className="text-[22px] md:text-2xl font-black text-white tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          {/* ✅ التاجات الذكية (تم إضافة مسافة بسيطة تحت اسم المنتج: mt-3) */}
-          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mt-3 mb-5" style={{fontFamily:"Cairo,sans-serif"}}>
+          {/* ✅ التاجات الذكية (بمسافة بسيطة تحت العنوان) */}
+          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mt-3 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
             
-            {/* 1. ويند-السنة (جوا مربع بحواف) */}
             <span className="border border-gray-600 rounded-[4px] px-2 py-0.5 text-gray-300">
               ويند-{new Date().getFullYear().toString().slice(-2)}
             </span>
             
-            {/* فاصل مربع صغير */}
             <span className="w-1.5 h-1.5 bg-gray-500 rounded-sm"></span>
-            
-            {/* 2. منتجات ويند */}
             <span className="text-gray-300">منتجات ويند</span>
             
             {(() => {
@@ -305,7 +361,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
               }
               
               let displayCategory = sourceCategory;
-              
               if (!displayCategory && validPaths.length > 0) {
                 const generalTerms = ['shop-all', 'best-sellers', 'new-arrivals', 'sale', 'womens-clothing'];
                 const specificPaths = validPaths.filter(c => !generalTerms.some(term => c.includes(term)));
@@ -316,9 +371,7 @@ export default function ProductView({ initialProduct, sourceCategory }) {
                 const cleanName = String(displayCategory).replace(/^\//, '').replace(/-/g, ' ').trim();
                 return (
                   <>
-                    {/* فاصل مربع صغير */}
                     <span className="w-1.5 h-1.5 bg-gray-500 rounded-sm"></span>
-                    {/* 3. اسم القسم (باللون الأصفر) */}
                     <span className="capitalize text-[#F5C518] font-bold">{cleanName}</span>
                   </>
                 );
@@ -326,31 +379,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
               return null;
             })()}
           </div>
-
-          {/* ✅ أيقونات الصور، الإعجاب، والمشاركة (تم نقلها هنا بشكل أفقي أنيق وبدون اختفاء) */}
-          <div className="flex items-center gap-5 mt-5">
-            <button onClick={() => openGallery(activeIdx)} className="flex items-center gap-2 text-gray-400 hover:text-[#3b82f6] transition-colors group">
-              <div className="bg-[#1a1a1a] p-2 rounded-full border border-[#333] group-hover:border-[#3b82f6]/50 transition-colors">
-                <ImageIcon size={16} />
-              </div>
-              <span className="text-[11px] md:text-xs font-bold" style={{fontFamily:"Cairo,sans-serif"}}>{gallery.length} صور</span>
-            </button>
-            
-            <button onClick={() => setIsWishlisted(!isWishlisted)} className="flex items-center gap-2 text-gray-400 hover:text-[#F5C518] transition-colors group">
-              <div className="bg-[#1a1a1a] p-2 rounded-full border border-[#333] group-hover:border-[#F5C518]/50 transition-colors">
-                <Heart size={16} fill={isWishlisted ? "#F5C518" : "none"} color={isWishlisted ? "#F5C518" : "currentColor"} />
-              </div>
-              <span className="text-[11px] md:text-xs font-bold" style={{fontFamily:"Cairo,sans-serif"}}>{product.likes || "1.2K"}</span>
-            </button>
-            
-            <button className="flex items-center gap-2 text-gray-400 hover:text-[#3b82f6] transition-colors group">
-              <div className="bg-[#1a1a1a] p-2 rounded-full border border-[#333] group-hover:border-[#3b82f6]/50 transition-colors">
-                <Share2 size={16} />
-              </div>
-              <span className="text-[11px] md:text-xs font-bold" style={{fontFamily:"Cairo,sans-serif"}}>مشاركة</span>
-            </button>
-          </div>
-
         </div>
 
         <div className="flex gap-4 md:gap-5 items-start border-t border-[#333]/50 pt-6">
