@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { auth } from "@/lib/firebase"; 
 import { ADMIN_UID } from "@/lib/constants";
+
+// 👇 دمجنا كل الأيقونات في استدعاء واحد فقط عشان نمنع أي خطأ
 import { 
-  LayoutDashboard, ShoppingBag, PlusCircle, 
-  Palette, FolderTree, Menu, 
-  FileText, LogOut, ChevronLeft, Lock,
-  Package, Users, Settings
+  LayoutDashboard, Package, Users, ShoppingBag, 
+  PlusCircle, FolderTree, Palette, Menu, 
+  FileText, Settings, Star, LogOut, 
+  ChevronLeft, Lock 
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
