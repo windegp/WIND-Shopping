@@ -19,7 +19,6 @@ const segmentsList = [
 ];
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState([]);
   const [allRawCustomers, setAllRawCustomers] = useState([]); // مخزن البيانات الخام
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,41 +34,43 @@ export default function CustomersPage() {
   
   const router = useRouter();
 
+  // 🔥 1. سحب البيانات مرة واحدة فقط عند تحميل الصفحة
   useEffect(() => { 
-    // تم إزالة الاعتماد على activeSegment لمنع الـ Loop وإعادة التحميل
     fetchCustomers(); 
   }, []);
 
+  // 🔥 2. تصفية التحديد عند تغيير الشريحة أو التبويب
   useEffect(() => {
-    setSelectedCustomers([]); // تصفية التحديد عند تغيير الشريحة
-  }, [activeSegment]);
+    setSelectedCustomers([]); 
+  }, [activeSegment, activeTab]);
 
-  // فلترة متقدمة (بحث + تبويبات المنشأ + ترتيب زمني)
+  // 🔥 3. فلترة متقدمة (بحث + تبويبات المنشأ + ترتيب زمني) - تتم محلياً دون سحب جديد
   useEffect(() => {
-    // الفلترة تبدأ دائماً من البيانات الخام وليس الـ State المتغير
-    let result = allRawCustomers;
+    // الفلترة تبدأ دائماً من البيانات الخام
+    let result = [...allRawCustomers];
 
-    // 0. الفلترة حسب الشريحة (Segments) - أصبحت هنا بدلاً من دالة السحب
+    // الفلترة حسب الشريحة (Segments)
     if (activeSegment !== 'all') {
-      result = result.filter(c => c.segments.includes(activeSegment));
+      result = result.filter(c => c.segments && c.segments.includes(activeSegment));
     }
 
-    // 1. الفلترة حسب المنشأ
+    // الفلترة حسب المنشأ
     if (activeTab === 'shopify') {
       result = result.filter(c => c.data_source === 'Shopify_Import' || !c.data_source);
     } else if (activeTab === 'wind') {
       result = result.filter(c => c.data_source === 'WIND_Web'); 
     }
 
-    // 2. الفلترة حسب البحث
+    // الفلترة حسب البحث
     if (search) {
       result = result.filter(c => 
         (c.Email||'').toLowerCase().includes(search.toLowerCase()) || 
-        (c['First Name']||'').toLowerCase().includes(search.toLowerCase())
+        (c['First Name']||'').toLowerCase().includes(search.toLowerCase()) ||
+        (c.Phone||'').includes(search)
       );
     }
 
-    // 3. 🔥 ترتيب صارم: الأحدث فوق دايماً بناءً على أخر نشاط (last_active)
+    // ترتيب صارم: الأحدث فوق دايماً بناءً على أخر نشاط (last_active)
     result.sort((a, b) => {
       const dateA = a.last_active ? new Date(a.last_active).getTime() : 0;
       const dateB = b.last_active ? new Date(b.last_active).getTime() : 0;
@@ -77,8 +78,7 @@ export default function CustomersPage() {
     });
 
     setFilteredCustomers(result);
-    // إضافة allRawCustomers و activeSegment للمراقبة
-  }, [search, activeTab, allRawCustomers, activeSegment]);
+  }, [search, activeTab, activeSegment, allRawCustomers]);
 
   // 🔥 دالة الحذف النهائي للعملاء المحددين
   const handleDeleteSelected = async () => {
@@ -236,17 +236,14 @@ export default function CustomersPage() {
             }
           } else {
             // 🚀 عملاء WIND_Web: نعتمد على الحقيقة فقط من الطلبات!
-            // لو العميل معندوش أوردر ومعندوش سلة متروكة كمان (hasAbandoned = false)
-            // يبقى ده "شبح" نتج عن تغيير العميل لبياناته وهو بيكتب.. نتجاهله وميظهرش خالص!
             if (!c.hasAbandoned) return; 
 
-            // لو داس كاشير (pending_payment) أو ساب سلة ومكملش (Draft)، هينزل هنا بشكل سليم
             segments.push('Potential_Customer');
             segments.push('Abandoned_Checkout');
             c['Total Orders'] = 0;
           }
         } else {
-          // لو عنده أوردرات حقيقية في السيستم (الدفع تم بنجاح أو دفع عند الاستلام)
+          // لو عنده أوردرات حقيقية في السيستم
           c['Total Orders'] = realOrdersCount;
           c['Total Spent'] = c['Calculated Spent'];
 
@@ -259,7 +256,7 @@ export default function CustomersPage() {
         customersArray.push(c);
       });
 
-      // الحفظ في المخزن الرئيسي والفرعي
+      // حفظ الداتا الكاملة في المخزن الرئيسي
       setAllRawCustomers(customersArray);
 
     } catch (err) {
@@ -312,7 +309,6 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-black flex items-center gap-2"><Users className="text-[#008060]" /> إدارة العملاء</h1>
           
         <div className="flex items-center gap-3">
-            {/* 🔥 زر الحذف يظهر فقط لو في حد متحدد */}
             {selectedCustomers.length > 0 && (
               <button 
                 onClick={() => setShowDeleteModal(true)} 
@@ -370,7 +366,6 @@ export default function CustomersPage() {
               <table className="w-full text-right">
                 <thead className="bg-white border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   <tr>
-                    {/* 🔥 Checkbox بتاع تحديد الكل */}
                     <th className="px-6 py-5 w-12 text-center">
                       <input 
                         type="checkbox" 
@@ -401,7 +396,6 @@ export default function CustomersPage() {
                       
                       return (
                         <tr key={c.id} className="hover:bg-gray-50/80 cursor-pointer group transition-all" onClick={() => router.push(`/admin/customers/${encodeURIComponent(safeId)}`)}>
-                          {/* 🔥 Checkbox بتاع كل عميل */}
                           <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                             <input 
                               type="checkbox" 
@@ -431,7 +425,6 @@ export default function CustomersPage() {
                 </tbody>
               </table>
 
-              {/* 🔥 نافذة التأكيد قبل الحذف (Modal) */}
               {showDeleteModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm slide-down">
                   <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">

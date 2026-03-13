@@ -13,7 +13,7 @@ export default function OrdersListPage() {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [search, setSearch] = useState("");
- const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
+  const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20; 
   
@@ -53,10 +53,7 @@ export default function OrdersListPage() {
     // 1. استبعاد الأوردرات المحذوفة
     let result = orders.filter(o => o['Financial Status'] !== 'deleted');
     
-    // 🔥 2. فلترة صارمة: نعتبر الطلب "سلة متروكة" وميظهرش في الأوردرات الأساسية في الحالات دي فقط:
-    // - حالته abandoned (سلة عادية)
-    // - حالته pending_payment (معناه إنه فتح بوابة الدفع ومكملش/مراحش لصفحة شكراً)
-    // - اسمه بيبدأ بـ DRAFT-
+    // 🔥 2. فلترة صارمة: نعتبر الطلب "سلة متروكة" وميظهرش في الأوردرات الأساسية
     const isAbandonedDraft = (o) => {
       return o['Financial Status'] === 'abandoned' || 
              o['Financial Status'] === 'pending_payment' || 
@@ -97,8 +94,8 @@ export default function OrdersListPage() {
 
   const fetchOrders = async () => {
     try {
-      // هنجيب كل الطلبات، والـ useEffect اللي فوق هيتولى مهمة الترتيب الدقيق والفلترة
-      const q = query(collection(db, "Orders"));
+      // 🔥 التعديل هنا فقط: جلب أحدث 300 طلب فقط لتسريع النظام ومنع التهنيج
+      const q = query(collection(db, "Orders"), orderBy("Created at", "desc"), limit(300));
       const querySnapshot = await getDocs(q);
       const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOrders(docs);
