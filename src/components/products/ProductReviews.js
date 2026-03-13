@@ -1,23 +1,25 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { Star, X, CheckCircle, ImageIcon, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Star, X, CheckCircle, ImageIcon } from 'lucide-react';
 
 export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // حالات التنقل بين التقييمات (Pagination)
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 2; // عرض كارتين فقط في كل مرة
-  const totalPages = Math.ceil(reviews.length / itemsPerPage);
 
   // حالات إضافة تقييم جديد
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newReview, setNewReview] = useState({ name: '', rating: 5, text: '', imageUrl: '' });
   const [hoverRating, setHoverRating] = useState(0);
+
+  // مراجع للتحكم في الشريط المتحرك (السحب والإفلات)
+  const scrollRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
 
   const fetchProductReviews = async () => {
     if(!productHandle) return;
@@ -26,7 +28,6 @@ export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
       const snap = await getDocs(q);
       const fetchedReviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // الترتيب من الأحدث للأقدم
       fetchedReviews.sort((a, b) => new Date(b.date) - new Date(a.date));
       setReviews(fetchedReviews);
       
@@ -44,6 +45,49 @@ export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
   useEffect(() => {
     fetchProductReviews();
   }, [productHandle]);
+
+  // 🔥 ضبط موضع البداية في المنتصف لضمان التمرير اللانهائي
+  useEffect(() => {
+    if (scrollRef.current && reviews.length > 0) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth / 2;
+    }
+  }, [reviews]);
+
+  // 🔥 محرك التمرير التلقائي (يتجه لليمين، ويقف عند اللمس)
+  useEffect(() => {
+    let animationId;
+    const scroll = () => {
+      if (scrollRef.current && !isPaused && !isDragging.current) {
+        // تقليل الـ scrollLeft بيخلي العناصر تتحرك ناحية اليمين (نفس اتجاه طلبك)
+        scrollRef.current.scrollLeft -= 1; 
+        
+        // حيلة التمرير اللانهائي (لما يوصل لأقصى اليسار يرجع للنص بذكاء)
+        if (scrollRef.current.scrollLeft <= 0) {
+          scrollRef.current.scrollLeft = scrollRef.current.scrollWidth / 2;
+        }
+      }
+      animationId = requestAnimationFrame(scroll);
+    };
+    animationId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animationId);
+  }, [isPaused]);
+
+  // دوال السحب بالماوس (للدسكتوب)
+  const handleMouseDown = (e) => {
+    isDragging.current = true;
+    setIsPaused(true);
+    startX.current = e.pageX - scrollRef.current.offsetLeft;
+    scrollLeft.current = scrollRef.current.scrollLeft;
+  };
+  const handleMouseLeave = () => { isDragging.current = false; setIsPaused(false); };
+  const handleMouseUp = () => { isDragging.current = false; setIsPaused(false); };
+  const handleMouseMove = (e) => {
+    if (!isDragging.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX.current) * 2; // سرعة السحب
+    scrollRef.current.scrollLeft = scrollLeft.current - walk;
+  };
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -65,7 +109,6 @@ export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
       setShowAddModal(false);
       setNewReview({ name: '', rating: 5, text: '', imageUrl: '' });
       fetchProductReviews(); 
-      setCurrentPage(0); // العودة للصفحة الأولى لرؤية التقييم الجديد
     } catch (error) {
       console.error("Error adding review:", error);
       alert("حدث خطأ أثناء الإرسال.");
@@ -74,22 +117,17 @@ export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
     }
   };
 
-  // دوال التنقل بين التقييمات
-  const nextPage = () => { if (currentPage < totalPages - 1) setCurrentPage(p => p + 1); };
-  const prevPage = () => { if (currentPage > 0) setCurrentPage(p => p - 1); };
-
-  // تحديد الكروت التي ستظهر حالياً
-  const currentReviews = reviews.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+  // تكرار التقييمات لخلق حلقة لا نهائية للمتحرك
+  const infiniteReviews = Array(6).fill(reviews).flat();
 
   return (
     <>
       <section className="bg-[#1a1a1a] py-20 relative overflow-hidden border-y border-[#222] mt-10" id="reviews-section" dir="rtl">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         
-        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
+        <div className="max-w-[1400px] mx-auto relative z-10">
           
-          {/* الهيدر وزر الإضافة */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-right">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-right px-6">
             <div>
               <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter" style={{fontFamily:"Cairo,sans-serif"}}>آراء عائلة WIND</h2>
               <p className="text-[#F5C518] text-sm font-bold mt-2 uppercase tracking-[0.2em]" style={{fontFamily:"Cairo,sans-serif"}}>أصوات حقيقية - تجارب صادقة</p>
@@ -104,84 +142,65 @@ export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
           </div>
 
           {loading ? (
-            <div className="text-center text-[#F5C518] py-10 text-sm font-bold animate-pulse">جاري سحب التقييمات...</div>
+            <div className="text-center text-[#F5C518] py-10 text-sm font-bold animate-pulse px-6">جاري سحب التقييمات...</div>
           ) : reviews.length === 0 ? (
-            <div className="text-center bg-[#121212] rounded-lg p-10 border border-[#333]">
+            <div className="text-center bg-[#121212] rounded-lg p-10 border border-[#333] mx-6">
               <Star className="mx-auto text-[#333] mb-4" size={40} />
               <p className="text-gray-400 font-bold mb-2">كن أول من يشاركنا رأيه في هذا المنتج!</p>
             </div>
           ) : (
-            <>
-              {/* عرض الكروت المحددة (2 كارت كحد أقصى) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[220px]">
-                {currentReviews.map((rev, index) => (
-                  <div key={`${rev.id}-${index}`} className="bg-[#121212] border border-[#333] p-6 rounded-lg hover:border-[#F5C518]/50 transition-all duration-500 flex flex-col justify-between animate-[fadeIn_0.5s_ease-out]">
-                    <div>
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center text-[#F5C518] font-black text-lg border border-[#333] shrink-0">
-                          {rev.reviewerName?.charAt(0) || 'W'}
-                        </div>
-                        <div className="text-right">
-                          <h4 className="text-white font-black text-sm" style={{fontFamily:"Cairo,sans-serif"}}>{rev.reviewerName}</h4>
-                          <div className="flex gap-0.5 mt-1">
-                            {[...Array(5)].map((_, i) => (
-                              <span key={i} className={`text-[12px] ${i < rev.rating ? 'text-[#F5C518]' : 'text-[#333]'}`}>★</span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-gray-400 text-sm leading-relaxed italic text-right mb-4">"{rev.text}"</p>
-                    </div>
+            <div className="relative w-full overflow-hidden cursor-grab active:cursor-grabbing">
+              {/* شريط الكروت المتحرك */}
+              <div 
+                ref={scrollRef}
+                className="flex gap-6 overflow-x-auto hide-scrollbar py-4 px-6"
+                dir="ltr" // ضروري لتوحيد سلوك التمرير عبر كل المتصفحات
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+                onTouchStart={() => setIsPaused(true)}
+                onTouchEnd={() => setIsPaused(false)}
+              >
+                {infiniteReviews.map((rev, index) => (
+                  <div key={`${rev.id || index}-${index}`} className="min-w-[300px] md:min-w-[380px] bg-[#121212] border border-[#333] p-6 rounded-2xl flex flex-col items-center shrink-0 hover:border-[#F5C518]/40 transition-colors" dir="rtl">
                     
-                    {/* عرض صورة التقييم لو العميل رفع صورة */}
-                    {rev.imageUrls && rev.imageUrls.length > 0 && (
-                      <div className="mt-2">
-                        <img src={rev.imageUrls[0]} alt="تصوير العميل" className="w-20 h-24 object-cover rounded-md border border-[#333]" />
+                    {/* الاسم، التوثيق، النجوم */}
+                    <div className="flex flex-col items-center mb-6 w-full">
+                      <div className="flex items-center gap-1.5 justify-center mb-2">
+                        <span className="text-white font-black text-base" style={{fontFamily:"Cairo,sans-serif"}}>{rev.reviewerName}</span>
+                        <CheckCircle size={14} className="text-[#F5C518]" />
+                        <span className="text-[#F5C518] text-[10px] font-bold">موثق</span>
+                      </div>
+                      <div className="flex gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} size={14} fill={i < rev.rating ? "#F5C518" : "none"} className={i < rev.rating ? "text-[#F5C518]" : "text-[#333]"} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* إطار التقييم الشفاف بالنص الناعم */}
+                    <div className="w-full bg-transparent border border-white/10 rounded-xl p-5 text-center mt-auto flex-1 flex items-center justify-center shadow-inner">
+                      <p className="text-gray-300 text-[14px] leading-relaxed font-medium" style={{fontFamily:"Tajawal,sans-serif"}}>
+                        {rev.text}
+                      </p>
+                    </div>
+
+                    {/* صورة العميل (إن وجدت) */}
+                    {rev.imageUrls?.length > 0 && (
+                      <div className="mt-4 flex justify-center w-full">
+                        <img src={rev.imageUrls[0]} alt="تصوير العميل" className="w-16 h-16 object-cover rounded-lg border border-[#333]" />
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-
-              {/* أزرار التنقل (Arrows & Dots) تظهر فقط لو في أكتر من صفحة */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-6 mt-10">
-                  {/* السهم اليمين (السابق) */}
-                  <button 
-                    onClick={prevPage} 
-                    disabled={currentPage === 0}
-                    className="w-10 h-10 rounded-full border border-[#333] flex items-center justify-center text-white hover:border-[#F5C518] hover:text-[#F5C518] disabled:opacity-30 disabled:hover:border-[#333] disabled:hover:text-white transition-all"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-
-                  {/* النقاط (Dots) */}
-                  <div className="flex items-center gap-2" dir="ltr">
-                    {Array.from({length: totalPages}).map((_, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => setCurrentPage(i)}
-                        className={`transition-all duration-300 rounded-full ${i === currentPage ? 'w-6 h-1.5 bg-[#F5C518]' : 'w-1.5 h-1.5 bg-[#333] hover:bg-[#555]'}`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* السهم اليسار (التالي) */}
-                  <button 
-                    onClick={nextPage} 
-                    disabled={currentPage === totalPages - 1}
-                    className="w-10 h-10 rounded-full border border-[#333] flex items-center justify-center text-white hover:border-[#F5C518] hover:text-[#F5C518] disabled:opacity-30 disabled:hover:border-[#333] disabled:hover:text-white transition-all"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
       </section>
 
-      {/* 🔥 Modal: أضف تجربتك (تصميم داكن متناسق) */}
+      {/* نافذة إضافة تقييم */}
       {showAddModal && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.3s_ease-out]" dir="rtl">
           <div className="bg-[#121212] rounded-lg p-6 max-w-md w-full border border-[#333] shadow-2xl relative">
@@ -190,7 +209,6 @@ export default function ProductReviews({ productHandle, onReviewStatsUpdate }) {
             <h2 className="text-xl font-black text-white mb-6 tracking-tighter" style={{fontFamily:"Cairo,sans-serif"}}>شاركنا تجربتك</h2>
             
             <form onSubmit={handleSubmitReview} className="space-y-4">
-              {/* اختيار النجوم */}
               <div className="flex items-center justify-center gap-2 mb-6" dir="ltr">
                 {[...Array(5)].map((_, index) => {
                   const ratingValue = index + 1;
