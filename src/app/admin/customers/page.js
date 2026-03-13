@@ -20,6 +20,7 @@ const segmentsList = [
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
+  const [allRawCustomers, setAllRawCustomers] = useState([]); // مخزن البيانات الخام
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -35,13 +36,23 @@ export default function CustomersPage() {
   const router = useRouter();
 
   useEffect(() => { 
+    // تم إزالة الاعتماد على activeSegment لمنع الـ Loop وإعادة التحميل
     fetchCustomers(); 
+  }, []);
+
+  useEffect(() => {
     setSelectedCustomers([]); // تصفية التحديد عند تغيير الشريحة
   }, [activeSegment]);
 
   // فلترة متقدمة (بحث + تبويبات المنشأ + ترتيب زمني)
   useEffect(() => {
-    let result = customers;
+    // الفلترة تبدأ دائماً من البيانات الخام وليس الـ State المتغير
+    let result = allRawCustomers;
+
+    // 0. الفلترة حسب الشريحة (Segments) - أصبحت هنا بدلاً من دالة السحب
+    if (activeSegment !== 'all') {
+      result = result.filter(c => c.segments.includes(activeSegment));
+    }
 
     // 1. الفلترة حسب المنشأ
     if (activeTab === 'shopify') {
@@ -66,7 +77,8 @@ export default function CustomersPage() {
     });
 
     setFilteredCustomers(result);
-  }, [search, activeTab, customers]);
+    // إضافة allRawCustomers و activeSegment للمراقبة
+  }, [search, activeTab, allRawCustomers, activeSegment]);
 
   // 🔥 دالة الحذف النهائي للعملاء المحددين
   const handleDeleteSelected = async () => {
@@ -92,7 +104,7 @@ export default function CustomersPage() {
       }
       
       // 4. تحديث الشاشة فوراً وتنظيف التحديد
-      setCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
+      setAllRawCustomers(prev => prev.filter(c => !selectedCustomers.includes(c.id)));
       setSelectedCustomers([]);
       setShowDeleteModal(false);
       
@@ -247,12 +259,8 @@ export default function CustomersPage() {
         customersArray.push(c);
       });
 
-      // 4. فلترة الشاشة
-      if (activeSegment !== 'all') {
-        customersArray = customersArray.filter(c => c.segments.includes(activeSegment));
-      }
-
-      setCustomers(customersArray);
+      // الحفظ في المخزن الرئيسي والفرعي
+      setAllRawCustomers(customersArray);
 
     } catch (err) {
       console.error("Error generating customers from orders:", err);

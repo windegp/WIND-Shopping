@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
-import { collection, query, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, getDocs, deleteDoc, doc, orderBy, limit } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, Search, Filter, Monitor, Archive, Layers,
