@@ -2,22 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
-import { collection, query, getDocs, deleteDoc, doc, orderBy, limit } from "firebase/firestore";
+import { collection, query, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, Search, Filter, Monitor, Archive, Layers,
-  ChevronLeft, ChevronRight, Trash2, AlertTriangle, X
+  ChevronLeft, ChevronRight, Trash2, AlertTriangle, X, Download
 } from "lucide-react";
 
 export default function OrdersListPage() {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState('wind'); // الافتراضي
+  const [activeTab, setActiveTab] = useState('wind'); 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20; 
   
-  // 🔥 متغيرات ميزة الحذف للطلبات
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -26,12 +25,10 @@ export default function OrdersListPage() {
 
   useEffect(() => { fetchOrders(); }, []);
 
-  // تفريغ التحديد لو غيرنا التبويب أو بحثنا
   useEffect(() => {
     setSelectedOrders([]);
   }, [activeTab, search]);
 
-  // 🔥 دالة الحذف النهائي للطلبات
   const handleDeleteSelected = async () => {
     setIsDeleting(true);
     try {
@@ -50,10 +47,8 @@ export default function OrdersListPage() {
   };
 
   useEffect(() => {
-    // 1. استبعاد الأوردرات المحذوفة
     let result = orders.filter(o => o['Financial Status'] !== 'deleted');
     
-    // 🔥 2. فلترة صارمة: نعتبر الطلب "سلة متروكة" وميظهرش في الأوردرات الأساسية
     const isAbandonedDraft = (o) => {
       return o['Financial Status'] === 'abandoned' || 
              o['Financial Status'] === 'pending_payment' || 
@@ -63,9 +58,7 @@ export default function OrdersListPage() {
     if (activeTab === 'abandoned') {
       result = result.filter(isAbandonedDraft);
     } else {
-      // إخفاء أي سلة متروكة أو طلب غير مكتمل الدفع من التبويبات الرئيسية
       result = result.filter(o => !isAbandonedDraft(o));
-      
       if (activeTab === 'shopify') {
         result = result.filter(o => o.data_source === 'Shopify_Import' || !o.data_source);
       } else if (activeTab === 'wind') {
@@ -81,7 +74,6 @@ export default function OrdersListPage() {
       );
     }
 
-    // 3. ترتيب صارم: الأحدث يظهر فوق
     result.sort((a, b) => {
       const dateA = new Date(a['Created at'] || 0).getTime();
       const dateB = new Date(b['Created at'] || 0).getTime();
@@ -94,8 +86,8 @@ export default function OrdersListPage() {
 
   const fetchOrders = async () => {
     try {
-      // 🔥 التعديل هنا فقط: جلب أحدث 300 طلب فقط لتسريع النظام ومنع التهنيج
-      const q = query(collection(db, "Orders"), orderBy("Created at", "desc"), limit(300));
+      // 🔥 تم إزالة الـ limit(300) بناءً على طلبك، لجلب كل الأرشيف (600+ طلب)
+      const q = query(collection(db, "Orders"));
       const querySnapshot = await getDocs(q);
       const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOrders(docs);
@@ -104,13 +96,43 @@ export default function OrdersListPage() {
     }
   };
 
+  // 🔥 دالة تصدير الطلبات إلى إكسيل (مضافة حديثاً)
+  const exportOrdersToExcel = () => {
+    if(filteredOrders.length === 0) return alert("لا توجد طلبات للتصدير");
+
+    const headers = ["Order Number,Date,Customer Name,Email,Phone,Product,Quantity,Total,Status,Source"];
+
+    const rows = filteredOrders.map(o => {
+      const isWind = o.data_source === 'WIND_Web';
+      const orderLink = isWind ? (o.Name || '') : (o.Name?.replace('#', '') || '');
+      const date = o['Created at']?.split(' ')[0] || o['Created at'] || '';
+      const customerName = (o['Billing Name'] || 'عميل مجهول').replace(/"/g, '""');
+      const email = (o.Email || '').toLowerCase();
+      const phone = (o.Phone || o['Shipping Phone'] || '').replace(/[^0-9+]/g, '');
+      const product = (isWind ? (o.lineItems?.[0]?.name || '') : (o['Lineitem name'] || '')).replace(/"/g, '""');
+      const qty = isWind ? (o.lineItems?.[0]?.quantity || 1) : (o['Lineitem quantity'] || 1);
+      const total = o.Total || 0;
+      const status = o['Financial Status'] || '';
+      const source = o.data_source || 'Shopify_Import';
+
+      return `"${orderLink}","${date}","${customerName}","${email}","${phone}","${product}","${qty}","${total}","${status}","${source}"`;
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.concat(rows).join("\n");
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    const fileName = activeTab === 'all' ? 'All_Orders' : `${activeTab}_Orders`;
+    link.download = `WIND_${fileName}.csv`;
+    link.click();
+  };
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'paid': return 'bg-green-100 text-green-700 border-green-200';
       case 'pending': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'pending_payment': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'refunded': return 'bg-red-100 text-red-700 border-red-200';
-      case 'abandoned': return 'bg-gray-100 text-gray-500 border-gray-200'; // لون المتروكة
+      case 'abandoned': return 'bg-gray-100 text-gray-500 border-gray-200'; 
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -130,16 +152,24 @@ export default function OrdersListPage() {
           <h1 className="text-2xl font-black flex items-center gap-2">
             <ShoppingBag className="text-[#008060]" /> جميع الطلبات
           </h1>
-          <span className="text-xs font-bold text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-            إجمالي المعروض: <span className="text-[#008060] font-black">{filteredOrders.length}</span> طلب
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm hidden sm:block">
+              إجمالي المعروض: <span className="text-[#008060] font-black">{filteredOrders.length}</span> طلب
+            </span>
+            {/* 🔥 زر التصدير (Export) */}
+            <button 
+              onClick={exportOrdersToExcel} 
+              className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-gray-50 transition-all"
+            >
+              <Download size={16} /> تصدير الطلبات
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2 sm:gap-6 mb-6 border-b border-gray-200 overflow-x-auto scrollbar-hide">
           <button onClick={() => setActiveTab('wind')} className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'wind' ? 'border-b-2 border-[#008060] text-[#008060]' : 'text-gray-400 hover:text-gray-600'}`}>
             <Monitor size={16}/> طلبات موقع WIND
           </button>
-          {/* التبويب الجديد للسلة المتروكة */}
           <button onClick={() => setActiveTab('abandoned')} className={`flex items-center gap-2 pb-3 px-2 font-black text-sm transition-all whitespace-nowrap ${activeTab === 'abandoned' ? 'border-b-2 text-red-600 border-red-600' : 'text-gray-400 hover:text-gray-600'}`}>
             <Archive size={16}/> سلات متروكة
           </button>
@@ -159,7 +189,6 @@ export default function OrdersListPage() {
               <input type="text" placeholder="ابحث برقم الطلب، أو الهاتف..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pr-12 pl-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-[#008060] transition-all shadow-sm" />
             </div>
             <div className="flex items-center gap-2">
-              {/* 🔥 زر الحذف يظهر فقط عند تحديد طلبات */}
               {selectedOrders.length > 0 && (
                 <button 
                   onClick={() => setShowDeleteModal(true)}
@@ -178,7 +207,6 @@ export default function OrdersListPage() {
             <table className="w-full text-right border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-white border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                  {/* 🔥 Checkbox بتاع تحديد الكل */}
                   <th className="px-6 py-5 w-12 text-center">
                     <input 
                       type="checkbox" 
@@ -223,7 +251,6 @@ export default function OrdersListPage() {
 
                     return (
                       <tr key={order.id} className="hover:bg-gray-50/80 transition-all cursor-pointer group" onClick={() => router.push(`/admin/orders/${encodeURIComponent(orderLink)}`)}>
-                        {/* 🔥 Checkbox بتاع كل طلب */}
                         <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <input 
                             type="checkbox" 
@@ -268,7 +295,6 @@ export default function OrdersListPage() {
               </tbody>
             </table>
 
-            {/* 🔥 نافذة التأكيد قبل حذف الطلبات (Modal) */}
             {showDeleteModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm slide-down">
                 <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
