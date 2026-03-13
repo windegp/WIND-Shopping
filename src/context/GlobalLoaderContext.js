@@ -22,6 +22,14 @@ export function GlobalLoaderProvider({ children }) {
   useEffect(() => {
     // إجبار المتصفح على بدء أي صفحة من الأعلى فوراً وبدون أي تأثيرات تأخير
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    
+    // 🔥 الحل الجذري للأدمن: لو المسار خاص بلوحة التحكم، اقتل اللودر فوراً
+    if (pathname?.startsWith("/admin")) {
+      setIsVisible(false);
+      setIsReceding(false);
+      setPageReady(true);
+      return; // خروج مباشر لمنع تشغيل مؤقت الـ 8 ثواني
+    }
 
     // Reset loader state for new route
     setIsVisible(true);
