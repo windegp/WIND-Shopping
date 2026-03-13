@@ -11,11 +11,13 @@ export default function CustomerDetailsPage() {
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
+  // ✅ أضف السطر ده فوراً لإصلاح الخطأ
+  const [loading, setLoading] = useState(true); 
 
   useEffect(() => { if (email) fetchAllData(); }, [email]);
 
   const fetchAllData = async () => {
-    setLoading(true);
+    setLoading(true); // الآن ستعمل بدون أخطاء
     try {
       const decodedParam = decodeURIComponent(email).trim();
       let cData = null;
