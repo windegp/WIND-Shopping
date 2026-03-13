@@ -10,6 +10,7 @@ import { usePageReady, useGlobalLoader } from "../../../context/GlobalLoaderCont
 import { db } from "../../../lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore"; 
 import SizeChartModal from "@/components/SizeChartModal";
+import ProductReviews from "@/components/product/ProductReviews";
 import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
 export default function ProductView({ initialProduct, sourceCategory }) {
@@ -569,6 +570,11 @@ export default function ProductView({ initialProduct, sourceCategory }) {
             </div>
           </div>
         )}
+        
+        {/* ✅ قسم تقييمات المنتج */}
+        <div className="py-4 mt-2">
+          <ProductReviews productHandle={product.handle || product.id} />
+        </div>
 
         {relatedProducts.length > 0 && (
           <div className="py-8 border-t border-[#333]/50 mt-4">

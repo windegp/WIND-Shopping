@@ -32,11 +32,12 @@ export default function AdminLayout({ children }) {
     { name: 'العملاء', path: '/admin/customers', icon: <Users size={20}/> },
     { name: 'المنتجات', path: '/admin/products', icon: <ShoppingBag size={20}/> },
     { name: 'إضافة منتج', path: '/admin/products/create', icon: <PlusCircle size={20}/> },
+    { name: 'التقييمات', path: '/admin/reviews', icon: <Star size={20}/> }, // ← قسم التقييمات الجديد
     { name: 'الأقسام', path: '/admin/collections', icon: <FolderTree size={20}/> },
     { name: 'إدارة الواجهة', path: '/admin/home-manager', icon: <Palette size={20}/> },
     { name: 'المنيو', path: '/admin/menu', icon: <Menu size={20}/> },
     { name: 'الصفحات', path: '/admin/pages', icon: <FileText size={20}/> },
-    { name: 'الإعدادات', path: '/admin/settings', icon: <Settings size={20}/> }, // ← زر الإعدادات الجديد
+    { name: 'الإعدادات', path: '/admin/settings', icon: <Settings size={20}/> },
   ];
 
   if (loading) {
