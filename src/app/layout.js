@@ -1,13 +1,12 @@
 import "./globals.css"; 
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
-import ScrollToTop from "../components/layout/ScrollToTop";
 import { CartProvider } from "../context/CartContext";
 import { GlobalLoaderProvider } from "../context/GlobalLoaderContext";
-import CartDrawer from "../components/layout/CartDrawer";
 import GlobalLoader from "../components/GlobalLoader";
 import Script from 'next/script';
 import { Cairo } from 'next/font/google';
+
+// 🔥 استدعاء الوسيط الجديد اللي هيتحكم في ظهور النافبار والفوتر
+import StoreLayout from "../components/layout/StoreLayout";
 
 const cairo = Cairo({
   subsets: ['arabic'],
@@ -36,16 +35,10 @@ export default function RootLayout({ children }) {
           <GlobalLoader />
           
           <CartProvider>
-            <Navbar />
-            <CartDrawer /> 
-
-          <main className="min-h-screen">
+            {/* 🔥 الوسيط هنا هيغلف المحتوى ويقرر يظهر إيه حسب المسار */}
+            <StoreLayout>
               {children}
-            </main>
-
-            <Footer />
-            {/* زر العودة للأعلى يظهر فوق الفوتر */}
-            <ScrollToTop />
+            </StoreLayout>
           </CartProvider>
         </GlobalLoaderProvider>
       </body>
