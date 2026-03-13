@@ -3,16 +3,22 @@ import { NextResponse } from 'next/server';
 export function middleware(request) {
   const url = request.nextUrl.clone();
 
-  // 1. السماح بمرور ملفات النظام والصور لضمان عمل شاشة "قريباً" بشكل سليم وسريع
+  // 1. السماح بمرور ملفات النظام والصور وواجهات الـ API لضمان عمل الموقع والمصادقة بشكل سليم
   if (
     url.pathname.startsWith('/_next') || 
-    url.pathname.includes('/api/') || 
+    url.pathname.startsWith('/api/') || 
     url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/)
   ) {
     return NextResponse.next();
   }
 
-  // 2. الباب السري: التحقق من الرابط الخاص بك (مفتاح الدخول)
+  // 2. 🟢 الباب المفتوح للأدمن والمصادقة (الاستثناء الجديد) 🟢
+  // السماح بمرور أي مسار يبدأ بـ /admin أو /login 
+  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/login')) {
+    return NextResponse.next();
+  }
+
+  // 3. الباب السري: التحقق من الرابط الخاص بك (مفتاح الدخول للمتجر نفسه)
   if (url.searchParams.get('vip') === 'wind2026') {
     // بمجرد استخدام الرابط، نقوم بتوجيهك للرئيسية وإعطائك تصريح (كوكيز) الدخول
     const response = NextResponse.redirect(new URL('/', request.url));
@@ -20,17 +26,16 @@ export function middleware(request) {
     return response;
   }
 
-  // 3. التحقق مما إذا كان المتصفح الحالي يمتلك تصريح الدخول (أنت)
+  // 4. التحقق مما إذا كان المتصفح الحالي يمتلك تصريح الدخول (للمتجر كزائر VIP)
   const hasAccess = request.cookies.get('wind_admin_access')?.value === 'granted';
 
-  // 4. إذا لم يكن يمتلك تصريح (زائر عادي)، وهو ليس في صفحة "قريباً"، قم بتحويله إليها بصمت
-  // استخدام Rewrite يجعل الرابط بالأعلى windeg.com كما هو بدون تغيير شكله للزائر
+  // 5. إذا لم يكن يمتلك تصريح (زائر عادي للمتجر)، وهو ليس في صفحة "قريباً"، قم بتحويله إليها بصمت
   if (!hasAccess && url.pathname !== '/coming-soon') {
     url.pathname = '/coming-soon';
     return NextResponse.rewrite(url);
   }
 
-  // 5. السماح بالمرور وعرض الموقع بالكامل (إذا كان يمتلك التصريح)
+  // 6. السماح بالمرور وعرض الموقع بالكامل (إذا كان يمتلك التصريح)
   return NextResponse.next();
 }
 
