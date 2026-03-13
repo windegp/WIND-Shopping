@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-// 👇 التعديل الجديد: إضافة useSearchParams عشان نعرف نقرأ لو العميل جاي من قسم معين
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,7 +10,7 @@ import { db } from "../../../lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore"; 
 import SizeChartModal from "@/components/SizeChartModal";
 import ProductReviews from "@/components/products/ProductReviews";
-import { Play, Plus, Minus, Star, Info, Share2, Heart, ImageIcon, ChevronDown, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
+import { Plus, Minus, Star, Info, Share2, Heart, ImageIcon, X, Truck, Eye, ShieldCheck, ChevronLeft, Search, ChevronRight, ShoppingBag, CreditCard, Banknote } from "lucide-react";
 
 export default function ProductView({ initialProduct, sourceCategory }) {
   const { id } = useParams();
@@ -35,9 +34,12 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   const [isZoomed, setIsZoomed]             = useState(false); 
   const [isImageZoomModalOpen, setImageZoomModalOpen] = useState(false); 
   const [isDescModalOpen, setDescModalOpen] = useState(false); 
-  const [heroLoaded, setHeroLoaded]         = useState(false);
   
   const [relatedProducts, setRelatedProducts] = useState([]);
+  
+  // 🔥 حالات التقييم الحقيقية (ستصلنا من كومبوننت ProductReviews)
+  const [realRating, setRealRating] = useState(0);
+  const [realReviewsCount, setRealReviewsCount] = useState(0);
 
   const [isSwipingHero, setIsSwipingHero]   = useState(false);
   const heroTouchStartX                     = useRef(null);
@@ -99,7 +101,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
-      setHeroLoaded(false);
       
       const sp = staticProducts.find(p => p.id.toString() === id.toString());
       if (sp) {
@@ -287,6 +288,15 @@ export default function ProductView({ initialProduct, sourceCategory }) {
     return gallery[1] || activeImage;
   };
 
+  // 🔥 دالة التمرير لسكشن التقييمات بنعومة
+  const scrollToReviews = (e) => {
+    e.preventDefault();
+    const reviewsElement = document.getElementById("reviews-section");
+    if (reviewsElement) {
+      reviewsElement.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="bg-[#121212] min-h-screen text-white pb-10 selection:bg-[#F5C518] selection:text-black">
 
@@ -297,7 +307,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         onTouchMove={handleHeroTouchMove}
         onTouchEnd={handleHeroTouchEnd}
       >
-        {/* ✅ استرجاع التأثير السينمائي للصورة */}
         <img 
           key={activeImage}
           src={getImageUrl(activeImage)} 
@@ -306,7 +315,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent pointer-events-none"></div>
 
-        {/* ✅ العدسة المكبرة (على الصورة الرئيسية) - جهة اليمين */}
         <button 
           onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }} 
           className="absolute top-4 right-4 z-10 bg-black/40 p-2.5 rounded-full backdrop-blur-md border border-white/20 text-white hover:text-[#F5C518] transition-colors drop-shadow-md cursor-zoom-in"
@@ -314,7 +322,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           <Search size={18} />
         </button>
 
-        {/* العداد القديم للصور داخل الصورة الرئيسية */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 text-white/50 text-[10px] md:text-xs font-bold font-sans tracking-[0.2em] pointer-events-none z-10">
           <span>&lt;</span>
           <span>{activeIdx + 1} / {gallery.length}</span>
@@ -324,7 +331,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
 
       <div className="px-4 py-4 max-w-4xl mx-auto" dir="rtl">
         
-        {/* ✅ أيقونات التفاعل (الصور، الإعجاب، المشاركة) مجمعة جهة اليمين فوق اسم المنتج */}
         <div className="mb-4 flex items-center gap-6 pt-1">
           <button onClick={(e) => { e.stopPropagation(); openGallery(activeIdx); }} className="flex items-center gap-1.5 text-gray-300 hover:text-[#F5C518] transition-colors">
             <ImageIcon size={18} />
@@ -343,9 +349,21 @@ export default function ProductView({ initialProduct, sourceCategory }) {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-[22px] md:text-2xl font-black text-white tracking-tight leading-tight" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
+          <h1 className="text-[22px] md:text-2xl font-black text-white tracking-tight leading-tight mb-2" style={{fontFamily:"Cairo,sans-serif"}}>{product.title}</h1>
           
-          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mt-3 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
+          {/* 🔥 التقييمات الحقيقية قابلة للضغط أسفل العنوان مباشرة */}
+          <a href="#reviews-section" onClick={scrollToReviews} className="flex items-center gap-2 group w-fit hover:opacity-80 transition-opacity">
+            <div className="flex gap-0.5 text-[#F5C518]">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} size={14} fill={i < Math.round(realRating) ? "currentColor" : "none"} className={i >= Math.round(realRating) ? "text-gray-500" : ""} />
+              ))}
+            </div>
+            <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors" style={{fontFamily:"Cairo,sans-serif"}}>
+              {realReviewsCount > 0 ? `(${realReviewsCount} تقييم)` : "(أضف أول تقييم)"}
+            </span>
+          </a>
+          
+          <div className="flex items-center gap-3 text-[11px] md:text-[13px] font-medium text-gray-400 mt-4 mb-2" style={{fontFamily:"Cairo,sans-serif"}}>
             
             <span className="border border-gray-600 rounded-[4px] px-2 py-0.5 text-gray-300">
               ويند-{new Date().getFullYear().toString().slice(-2)}
@@ -398,7 +416,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
             })}
             <Image src={getImageUrl(gallery[1] || activeImage)} fill quality={70} sizes="(max-width: 768px) 112px, 128px" priority={true} className={`object-cover transition-opacity duration-150 ${(!selectedColor || !product.colorSwatches?.[selectedColor]) ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} alt="poster default" />
 
-            {/* ✅ العدسة المكبرة (على البوستر الصغير) - جهة اليمين */}
             <div className="absolute top-0 right-0 bg-black/70 px-1.5 py-1 rounded-bl-md z-20 border-b border-l border-[#333]">
               <Search size={13} className="text-white" />
             </div>
@@ -437,7 +454,6 @@ export default function ProductView({ initialProduct, sourceCategory }) {
                   </p>
                   <div className="absolute bottom-0 w-full h-8 bg-gradient-to-t from-[#121212] via-[#121212]/90 to-transparent pointer-events-none"></div>
                 </div>
-                {/* ✅ تغيير لون رابط تفاصيل المنتج إلى الأزرق المطلوب */}
                 <button 
                   onClick={() => setDescModalOpen(true)}
                   className="text-[#036EE7] text-[10px] font-bold flex items-center gap-1 hover:underline underline-offset-4 w-fit pt-1 pr-1 transition-opacity hover:opacity-80"
@@ -549,18 +565,8 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col items-center justify-center border-t border-[#333]/50 pt-6 gap-1.5">
-          <div className="flex gap-1">
-            {[...Array(5)].map((_,i) => <Star key={i} size={16} className={i<Math.round(product.rating||5)?"text-[#F5C518]":"text-white/20"} fill={i<Math.round(product.rating||5)?"#F5C518":"transparent"} />)}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-black text-xl text-white">{product.rating || "4.9"}</span>
-            <span className="text-gray-500 text-xs">/ 5  ({product.reviewsCount || "490K"} تقييم)</span>
-          </div>
-        </div>
-
         {product.description && (
-          <div className="py-8 border-t border-[#333]/50 mt-6">
+          <div className="py-8 border-t border-[#333]/50 mt-8">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-1 h-5 bg-[#F5C518] rounded-sm" />
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest" style={{fontFamily:"Cairo,sans-serif"}}>تفاصيل المنتج</span>
@@ -571,9 +577,15 @@ export default function ProductView({ initialProduct, sourceCategory }) {
           </div>
         )}
         
-        {/* ✅ قسم تقييمات المنتج */}
+        {/* 🔥 قسم تقييمات المنتج الحقيقية (بإرسال دوال التحديث للاستماع للأرقام) */}
         <div className="py-4 mt-2">
-          <ProductReviews productHandle={product.handle || product.id} />
+          <ProductReviews 
+            productHandle={product.handle || product.id} 
+            onReviewStatsUpdate={(rating, count) => {
+               setRealRating(rating);
+               setRealReviewsCount(count);
+            }}
+          />
         </div>
 
         {relatedProducts.length > 0 && (
