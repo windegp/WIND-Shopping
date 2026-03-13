@@ -6,7 +6,8 @@ import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/fire
 import { useRouter } from 'next/navigation';
 import { 
   Users, Target, Mail, ShoppingCart, Download, Crown, 
-  UserMinus, Search, Monitor, Archive, Layers, Trash2, AlertTriangle, X 
+  UserMinus, Search, Monitor, Archive, Layers, Trash2, AlertTriangle, X,
+  ChevronLeft, ChevronRight 
 } from "lucide-react";
 
 const segmentsList = [
@@ -27,6 +28,10 @@ export default function CustomersPage() {
   const [activeTab, setActiveTab] = useState('wind'); 
   const [search, setSearch] = useState("");
   
+  // 🔥 متغيرات الـ Pagination الجديدة
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  
   // 🔥 متغيرات ميزة الحذف الجديدة
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -42,7 +47,7 @@ export default function CustomersPage() {
   // 🔥 2. تصفية التحديد عند تغيير الشريحة أو التبويب
   useEffect(() => {
     setSelectedCustomers([]); 
-  }, [activeSegment, activeTab]);
+  }, [activeSegment, activeTab, search]);
 
   // 🔥 3. فلترة متقدمة (بحث + تبويبات المنشأ + ترتيب زمني) - تتم محلياً دون سحب جديد
   useEffect(() => {
@@ -78,6 +83,7 @@ export default function CustomersPage() {
     });
 
     setFilteredCustomers(result);
+    setCurrentPage(1); // إرجاع الصفحة للأولى عند أي فلترة جديدة
   }, [search, activeTab, activeSegment, allRawCustomers]);
 
   // 🔥 دالة الحذف النهائي للعملاء المحددين
@@ -236,14 +242,17 @@ export default function CustomersPage() {
             }
           } else {
             // 🚀 عملاء WIND_Web: نعتمد على الحقيقة فقط من الطلبات!
+            // لو العميل معندوش أوردر ومعندوش سلة متروكة كمان (hasAbandoned = false)
+            // يبقى ده "شبح" نتج عن تغيير العميل لبياناته وهو بيكتب.. نتجاهله وميظهرش خالص!
             if (!c.hasAbandoned) return; 
 
+            // لو داس كاشير (pending_payment) أو ساب سلة ومكملش (Draft)، هينزل هنا بشكل سليم
             segments.push('Potential_Customer');
             segments.push('Abandoned_Checkout');
             c['Total Orders'] = 0;
           }
         } else {
-          // لو عنده أوردرات حقيقية في السيستم
+          // لو عنده أوردرات حقيقية في السيستم (الدفع تم بنجاح أو دفع عند الاستلام)
           c['Total Orders'] = realOrdersCount;
           c['Total Spent'] = c['Calculated Spent'];
 
@@ -301,6 +310,14 @@ export default function CustomersPage() {
     link.download = `WIND_Ads_${fileName}.csv`;
     link.click();
   };
+
+  // 🔥 حسابات الـ Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCustomers = filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1;
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] p-4 sm:p-8 font-sans text-[#202223]" dir="rtl">
@@ -370,9 +387,9 @@ export default function CustomersPage() {
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 accent-[#008060] rounded cursor-pointer"
-                        checked={filteredCustomers.length > 0 && selectedCustomers.length === filteredCustomers.length}
+                        checked={currentCustomers.length > 0 && selectedCustomers.length === currentCustomers.length}
                         onChange={(e) => {
-                          if(e.target.checked) setSelectedCustomers(filteredCustomers.map(c => c.id));
+                          if(e.target.checked) setSelectedCustomers(currentCustomers.map(c => c.id));
                           else setSelectedCustomers([]);
                         }}
                       />
@@ -386,10 +403,10 @@ export default function CustomersPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {loading ? <tr><td colSpan="6" className="text-center py-20 text-[#008060] font-black animate-pulse">جاري سحب الداتا...</td></tr> : 
-                    filteredCustomers.length === 0 ? (
+                    currentCustomers.length === 0 ? (
                       <tr><td colSpan="6" className="text-center py-20 text-gray-400 font-bold"><Archive size={40} className="mx-auto mb-3 opacity-20"/>لا يوجد عملاء في هذا القسم</td></tr>
                     ) : (
-                    filteredCustomers.map((c) => {
+                    currentCustomers.map((c) => {
                       const safeId = c.Email || c.Phone || c.id; 
                       const displayEmail = c.Email || c.email;
                       const displayPhone = c.Phone || c['Default Address Phone'];
@@ -459,6 +476,21 @@ export default function CustomersPage() {
                 </div>
               )}
             </div>
+
+            {/* 🔥 شريط الـ Pagination */}
+            {filteredCustomers.length > 0 && (
+              <div className="p-4 sm:p-6 bg-white border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <p className="text-xs font-bold text-gray-500">
+                  عرض <span className="text-black">{indexOfFirstItem + 1}</span> إلى <span className="text-black">{Math.min(indexOfLastItem, filteredCustomers.length)}</span> من أصل <span className="text-black">{filteredCustomers.length}</span> عميل
+                </p>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"><ChevronRight size={18} /></button>
+                  <span className="text-xs font-bold px-4 py-2 bg-gray-50 rounded-lg border border-gray-100">صفحة {currentPage} من {totalPages}</span>
+                  <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"><ChevronLeft size={18} /></button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </div>
